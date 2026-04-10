@@ -539,6 +539,29 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
+/* Document zoom badge in the workspace subheader. Click resets to 100%.
+   Compact pill matching the visual weight of header__pill. */
+.velum-workspace__scale-indicator {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, color 120ms ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.velum-workspace__scale-indicator:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
 .velum-workspace__close {
   padding: 5px 12px;
   border: 1px solid var(--border-strong);
@@ -1216,35 +1239,4 @@ h1, h2, h3, h4 {
 .velum-selection__type {
   width: 100%;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 5px;
-  border: 0;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 100ms ease;
-}
-
-.velum-selection__type:hover {
-  background: var(--bg-secondary);
-}
-.velum-selection__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
-  flex-shrink: 0;
-}
-
-.velum-selection__error {
-  margin-top: 6px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: hsl(0 70% 50% / 0.08);
-  color: var(--error);
-  font-size: 0.75rem;
-}
+  al

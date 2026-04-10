@@ -38,7 +38,9 @@
     "chars": "символов",
     "exportDocx": "Скачать DOCX",
     "exportDocxBusy": "Готовим файл…",
-    "exportDocxError": "Не удалось выгрузить документ"
+    "exportDocxError": "Не удалось выгрузить документ",
+    "zoomLevel": "Масштаб документа:",
+    "resetZoom": "Сбросить масштаб (Ctrl+0)"
   },
   "legend": {
     "title": "Сущности",

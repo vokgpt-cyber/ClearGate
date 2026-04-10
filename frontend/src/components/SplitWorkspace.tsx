@@ -69,6 +69,13 @@ interface SplitWorkspaceProps {
 
 const ACTIVE_CLASS = 'velum-entity--active';
 
+// Document zoom limits. Step is fine-grained enough that Ctrl+wheel
+// feels smooth on a typical mouse, but coarse enough that the rounding
+// to whole-percent display stays accurate.
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2.0;
+const SCALE_STEP = 0.1;
+
 export function SplitWorkspace({
   documentId,
   documentName,
@@ -100,6 +107,22 @@ export function SplitWorkspace({
   const [exportBusy, setExportBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const detectionStartedRef = useRef(false);
+
+  // Synchronized document zoom (both panes scale together).
+  // Implemented via the CSS `zoom` property on the docx-preview
+  // container, NOT via `transform: scale()`. Two reasons:
+  //   - `zoom` cooperates with the surrounding scroll container so
+  //     scrollbars adapt automatically; `transform: scale` does not.
+  //   - `zoom` does not change the underlying DOM, so the existing
+  //     anchor maps and selection offsets remain valid as-is.
+  const [docScale, setDocScale] = useState<number>(1);
+  const adjustScale = useCallback((delta: number) => {
+    setDocScale((prev) => {
+      const next = Math.round((prev + delta) * 100) / 100;
+      return Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+    });
+  }, []);
+  const resetScale = useCallback(() => setDocScale(1), []);
 
   // The entity set actually drawn on screen after filters are applied.
   const visibleEntities = useMemo(() => {
@@ -188,7 +211,65 @@ export function SplitWorkspace({
     rightCleanHtmlRef.current = null;
     leftMapRef.current = null;
     rightMapRef.current = null;
+    setDocScale(1);
   }, [documentId]);
+
+  // ─── document zoom: apply, wheel, keyboard ───────────────────────
+  //
+  // The zoom is applied imperatively so the DocxViewer does not need
+  // to know about it. We re-apply on every change AND on every
+  // bothReady transition because the underlying container element
+  // gets replaced when a document switch remounts the panes.
+  useEffect(() => {
+    const apply = (el: HTMLElement | null) => {
+      if (!el) return;
+      // `zoom` is a non-standard CSS property that Chromium and
+      // Firefox both implement; it does not appear in TypeScript's
+      // CSSStyleDeclaration typings, so we set it via setProperty.
+      el.style.setProperty('zoom', String(docScale));
+    };
+    apply(leftContainerRef.current);
+    apply(rightContainerRef.current);
+  }, [docScale, bothReady]);
+
+  // Ctrl + mouse wheel inside either pane changes the document zoom
+  // without zooming the surrounding app chrome. preventDefault() is
+  // required to suppress the browser's native page zoom; that needs
+  // a non-passive listener.
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      const target = e.target as Node | null;
+      const inLeft = target ? leftContainerRef.current?.contains(target) : false;
+      const inRight = target ? rightContainerRef.current?.contains(target) : false;
+      if (!inLeft && !inRight) return;
+      e.preventDefault();
+      adjustScale(e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP);
+    };
+    document.addEventListener('wheel', onWheel, { passive: false });
+    return () => document.removeEventListener('wheel', onWheel);
+  }, [adjustScale]);
+
+  // Ctrl+0 / Ctrl++ / Ctrl+- keyboard shortcuts. We listen at the
+  // window level so they work no matter which element has focus,
+  // but we only act when one of the docx panes is on screen.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === '0') {
+        e.preventDefault();
+        resetScale();
+      } else if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        adjustScale(SCALE_STEP);
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        adjustScale(-SCALE_STEP);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [adjustScale, resetScale]);
 
   // ─── explicit rerender helper ─────────────────────────────────────
   //
@@ -668,6 +749,15 @@ export function SplitWorkspace({
           <span className="velum-workspace__doc-name" title={documentName}>
             {documentName}
           </span>
+          <button
+            type="button"
+            className="velum-workspace__scale-indicator"
+            onClick={resetScale}
+            title={t('workspace.resetZoom')}
+            aria-label={`${t('workspace.zoomLevel')} ${Math.round(docScale * 100)}%`}
+          >
+            {Math.round(docScale * 100)}%
+          </button>
         </div>
         <div className="velum-workspace__actions">
           <button

@@ -38,7 +38,9 @@
     "chars": "characters",
     "exportDocx": "Download DOCX",
     "exportDocxBusy": "Preparing file…",
-    "exportDocxError": "Could not export document"
+    "exportDocxError": "Could not export document",
+    "zoomLevel": "Document zoom:",
+    "resetZoom": "Reset zoom (Ctrl+0)"
   },
   "legend": {
     "title": "Entities",
