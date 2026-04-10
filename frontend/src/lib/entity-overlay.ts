@@ -74,6 +74,14 @@ export interface ApplyEntitiesOptions {
    * and for the interactive layer in future iterations.
    */
   onApplied?: (entity: OverlayEntity, marks: HTMLElement[]) => void;
+  /**
+   * Optional callback to rebuild the anchor map against the CURRENT,
+   * post-mutation DOM. When provided, `applyEntities` will invoke it
+   * after each successful wrap and use the fresh map for subsequent
+   * entities. This is what makes overlapping / nested custom entities
+   * render without crashing — see the long note inside `applyEntities`.
+   */
+  rebuildAnchorMap?: () => DocxAnchorMap;
 }
 
 /**
@@ -99,8 +107,37 @@ export function applyEntities(
   const applied: AppliedEntity[] = [];
   let skipped = 0;
 
+  // NOTE on overlapping / nested entities:
+  //
+  // Even with right-most-first ordering, two entities can reference the
+  // same underlying Text node when one contains or partially overlaps
+  // the other (this happens the moment the user adds a custom entity
+  // that selects across an already-detected span, e.g. selecting a
+  // phrase that includes `[ЛИЦО_1]`). The first wrap calls `splitText`
+  // on that shared Text node, leaving the original node short. The
+  // second entity's anchor-map position — built BEFORE the mutation —
+  // now points past the truncated node and we'd crash with
+  // `IndexSizeError: offset larger than node length`.
+  //
+  // Fix: after every successful wrap we call `options.rebuildAnchorMap()`
+  // (if provided) to get a fresh map against the post-mutation DOM and
+  // use it for every subsequent entity. `docx-anchor-map.toRange` also
+  // clamps offsets and returns null on failure as a belt-and-braces,
+  // so one pathological entity can never nuke the whole pass.
+  let liveMap = anchorMap;
+
   for (const entity of sorted) {
-    const range = anchorMap.toRange(entity.start, entity.end);
+    let range: Range | null = null;
+    try {
+      range = liveMap.toRange(entity.start, entity.end);
+    } catch (e) {
+      // toRange is defensive and shouldn't throw, but catch anyway so
+      // one bad anchor lookup can never crash the whole render pass.
+      skipped++;
+      // eslint-disable-next-line no-console
+      console.warn('[Velum] toRange threw — skipping entity', entity, e);
+      continue;
+    }
     if (!range) {
       skipped++;
       continue;
@@ -142,6 +179,21 @@ export function applyEntities(
 
     applied.push({ entity, marks });
     options.onApplied?.(entity, marks);
+
+    // Refresh the anchor map for the next iteration — the DOM has just
+    // been mutated by the wrap above, so any offsets cached in `liveMap`
+    // that pointed to Text nodes inside the wrapped range are now
+    // stale. `rebuildAnchorMap` is optional for legacy callers.
+    if (options.rebuildAnchorMap) {
+      try {
+        liveMap = options.rebuildAnchorMap();
+      } catch (e) {
+        // If the rebuild itself fails, keep the stale map and rely on
+        // the defensive clamp in toRange for the remaining entities.
+        // eslint-disable-next-line no-console
+        console.warn('[Velum] rebuildAnchorMap failed — continuing with stale map', e);
+      }
+    }
   }
 
   if (skipped > 0) {
@@ -367,7 +419,10 @@ export function rerenderPaneFromClean(
       ? entities.filter((e) => e.state !== 'rejected')
       : entities;
 
-  const applied = applyEntities(container, pristineMap, visible, options);
+  const applied = applyEntities(container, pristineMap, visible, {
+    ...options,
+    rebuildAnchorMap: () => buildAnchorMap(container),
+  });
 
   // Rebuild the anchor map against the post-mutation DOM so that the
   // selection handler's Range→offset lookups land on the correct Text

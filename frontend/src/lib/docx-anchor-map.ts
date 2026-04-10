@@ -177,9 +177,24 @@ export function buildDocxAnchorMap(container: HTMLElement): DocxAnchorMap {
       const startPos = resolveOffset(segments, start);
       const endPos = resolveOffset(segments, end);
       if (!startPos || !endPos) return null;
+      // Defensive clamp: the anchor map may be stale relative to the live
+      // DOM if an earlier mutation in the same batch has split the
+      // underlying Text node (e.g. overlapping/nested entities). Clamping
+      // to the current node length prevents an IndexSizeError from
+      // nuking the whole render. The calling layer additionally rebuilds
+      // the anchor map after each successful mutation, but this guard
+      // stays as a last line of defense.
+      const startNodeLen = startPos.node.data.length;
+      const endNodeLen = endPos.node.data.length;
+      const startOffset = Math.min(startPos.offset, startNodeLen);
+      const endOffset = Math.min(endPos.offset, endNodeLen);
       const range = document.createRange();
-      range.setStart(startPos.node, startPos.offset);
-      range.setEnd(endPos.node, endPos.offset);
+      try {
+        range.setStart(startPos.node, startOffset);
+        range.setEnd(endPos.node, endOffset);
+      } catch {
+        return null;
+      }
       return range;
     },
     rangeToOffsets(range: Range) {
