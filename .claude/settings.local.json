@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv .venv)",
+      "Bash(.venv/Scripts/python.exe -m pip install -e \".[dev]\")",
+      "Bash(where python:*)",
+      "Bash(py -3.12 --version)",
+      "Bash(py --list)",
+      "Bash(.venv/Scripts/python.exe -m pip install --upgrade pip)"
+    ]
+  }
+}

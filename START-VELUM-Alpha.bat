@@ -26,10 +26,33 @@ if %errorlevel% neq 0 (
 )
 
 if not exist "%ROOT%frontend\node_modules" (
-    echo   ERROR: Frontend deps not installed.
-    echo   Run: cd frontend ^& npm install
-    pause
-    exit /b 1
+    echo   Frontend deps not installed - running npm install...
+    pushd "%ROOT%frontend"
+    call npm install
+    if errorlevel 1 (
+        echo   ERROR: npm install failed.
+        popd
+        pause
+        exit /b 1
+    )
+    popd
+) else (
+    rem Re-run npm install automatically if package.json is newer than
+    rem node_modules\.package-lock.json. Catches the case where a new
+    rem dependency was added but npm install has not been run yet.
+    powershell -NoProfile -Command "$pkg = Get-Item '%ROOT%frontend\package.json'; $lock = Get-Item '%ROOT%frontend\node_modules\.package-lock.json' -ErrorAction SilentlyContinue; if (-not $lock -or $pkg.LastWriteTime -gt $lock.LastWriteTime) { exit 1 } else { exit 0 }"
+    if errorlevel 1 (
+        echo   package.json changed - syncing with npm install...
+        pushd "%ROOT%frontend"
+        call npm install
+        if errorlevel 1 (
+            echo   ERROR: npm install failed.
+            popd
+            pause
+            exit /b 1
+        )
+        popd
+    )
 )
 
 echo   OK - all prerequisites found.
