@@ -298,7 +298,12 @@ export function groupEntityCounts(
 }
 
 export interface RerenderResult {
-  /** Anchor map built for the clean HTML. */
+  /**
+   * Anchor map built AFTER entity application — references the
+   * post-mutation Text nodes, which is what the selection handler
+   * needs for Range→offset lookups. See the comment in
+   * `rerenderPaneFromClean` below for the full rationale.
+   */
   anchorMap: DocxAnchorMap;
   /** Entities actually applied after filtering and DOM mutation. */
   applied: AppliedEntity[];
@@ -318,6 +323,32 @@ export interface RerenderResult {
  * Rejected entities are still overlaid in `highlight` mode (so the
  * user sees what will NOT be anonymized), but skipped entirely in
  * `placeholder` mode (so the right pane keeps the original text).
+ *
+ * ANCHOR MAP LIFECYCLE — the subtle bit
+ * -------------------------------------
+ * `applyEntities` needs an anchor map to translate each entity's
+ * plain-text `[start, end)` into a DOM Range. That map MUST be built
+ * on the pristine (pre-mark) DOM, because the plain-text offsets were
+ * computed against pristine text.
+ *
+ * However, wrapping a range with `<mark>` (or replacing it with a
+ * placeholder) SPLITS Text nodes. The Text nodes referenced by the
+ * initial map's `nodeToSegment` lookup table are now either truncated
+ * or live alongside brand-new sibling Text nodes that the map has
+ * never seen. If we returned the initial map, every subsequent
+ * user-selection that started inside one of those post-mutation Text
+ * nodes would miss the map lookup and `rangeToOffsets` would return
+ * `null` → the selection toolbar would never fire. (This was the
+ * root cause of the iter3.1/3.2 "popover never appears" bug.)
+ *
+ * Fix: after `applyEntities` runs, rebuild the anchor map on the now-
+ * mutated container. The plain text is identical for `highlight` mode
+ * (marks preserve text content) and intentionally different for
+ * `placeholder` mode (marks contain the `[LICO_1]` substitute, which
+ * is exactly what the right-pane selection handler wants to see).
+ * Either way, the returned map references the Text nodes that are
+ * actually live in the DOM, so selection → Range → offset lookups
+ * work reliably.
  */
 export function rerenderPaneFromClean(
   container: HTMLElement,
@@ -328,14 +359,21 @@ export function rerenderPaneFromClean(
 ): RerenderResult {
   // Reset DOM.
   container.innerHTML = cleanHtml;
-  const anchorMap = buildAnchorMap(container);
+  // Pristine map — used ONLY to resolve pre-mutation entity offsets.
+  const pristineMap = buildAnchorMap(container);
 
   const visible =
     options.mode === 'placeholder'
       ? entities.filter((e) => e.state !== 'rejected')
       : entities;
 
-  const applied = applyEntities(container, anchorMap, visible, options);
+  const applied = applyEntities(container, pristineMap, visible, options);
+
+  // Rebuild the anchor map against the post-mutation DOM so that the
+  // selection handler's Range→offset lookups land on the correct Text
+  // nodes. This is the map we return and that callers store in their
+  // refs.
+  const anchorMap = buildAnchorMap(container);
   return { anchorMap, applied };
 }
 
