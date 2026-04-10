@@ -7,13 +7,15 @@
  *   1. Detection pass identical to iteration 2: render original +
  *      anonymized panes from the same DOCX, run `/anonymize` once the
  *      left pane's anchor map is ready, overlay the result.
- *   2. After the first render, we snapshot the CLEAN innerHTML of each
- *      pane. Every subsequent state change (accept / reject / change
- *      type / add / remove / filter toggle) calls `rerenderPaneFromClean`
- *      which restores the clean HTML, rebuilds the anchor map, and
- *      re-applies the current filtered entity set. This is cheap for
- *      contract-sized documents and much easier to reason about than
- *      surgical DOM patches.
+ *   2. Each pane is wrapped in a `DocxPane` instance whose constructor
+ *      snapshots the CLEAN post-render innerHTML. Every subsequent state
+ *      change (accept / reject / change type / add / remove / filter
+ *      toggle) calls `pane.rerender(entities, mode)`, which restores the
+ *      clean HTML and re-applies the current filtered entity set in one
+ *      shot. The DocxPane also owns anchor-map access — every selection
+ *      handler reads through `pane.getAnchorMap()`, which always builds
+ *      a fresh map against the live DOM, so stale-map bugs (the iter3.x
+ *      IndexSizeError class) are structurally impossible by design.
  *   3. Click on any `<mark.velum-entity>` in either pane opens the
  *      EntityPopover with accept / reject / change type / remove actions.
  *   4. Hovering over a mark adds `.velum-entity--active` to every mark
@@ -41,13 +43,9 @@ import {
   SelectionToolbar,
   type SelectionInfo,
 } from './SelectionToolbar';
-import {
-  buildDocxAnchorMap,
-  type DocxAnchorMap,
-} from '@/lib/docx-anchor-map';
+import { DocxPane } from '@/lib/docx-pane';
 import {
   groupEntityCounts,
-  rerenderPaneFromClean,
   rightOffsetsToLeft,
   type InteractiveEntity,
   type OverlayEntity,
@@ -83,13 +81,17 @@ export function SplitWorkspace({
 }: SplitWorkspaceProps) {
   const { t } = useLocale();
 
-  // Pane containers and their clean (pre-overlay) HTML snapshots.
+  // Pane containers + DocxPane wrappers. The DocxPane is the single
+  // owner of the (cleanHtml, anchorMap) state for each pane; callers
+  // can never get a stale anchor map because every read goes through
+  // pane.getAnchorMap() which builds fresh against the live DOM.
+  // The bare container ref is kept alongside because the wheel/zoom/
+  // click handlers below need .contains() checks against a plain
+  // HTMLElement and benefit from not going through a method call.
   const leftContainerRef = useRef<HTMLElement | null>(null);
   const rightContainerRef = useRef<HTMLElement | null>(null);
-  const leftCleanHtmlRef = useRef<string | null>(null);
-  const rightCleanHtmlRef = useRef<string | null>(null);
-  const leftMapRef = useRef<DocxAnchorMap | null>(null);
-  const rightMapRef = useRef<DocxAnchorMap | null>(null);
+  const leftPaneRef = useRef<DocxPane | null>(null);
+  const rightPaneRef = useRef<DocxPane | null>(null);
 
   const [status, setStatus] = useState<LegendStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -155,10 +157,8 @@ export function SplitWorkspace({
     if (
       leftContainerRef.current &&
       rightContainerRef.current &&
-      leftCleanHtmlRef.current != null &&
-      rightCleanHtmlRef.current != null &&
-      leftMapRef.current &&
-      rightMapRef.current
+      leftPaneRef.current &&
+      rightPaneRef.current
     ) {
       setBothReady(true);
     }
@@ -167,11 +167,11 @@ export function SplitWorkspace({
   const handleOriginalReady = useCallback(
     (container: HTMLElement) => {
       leftContainerRef.current = container;
-      leftCleanHtmlRef.current = container.innerHTML;
-      leftMapRef.current = buildDocxAnchorMap(container);
+      const pane = new DocxPane(container);
+      leftPaneRef.current = pane;
       // eslint-disable-next-line no-console
       console.info('[Velum] original pane ready', {
-        chars: leftMapRef.current.plainText.length,
+        chars: pane.getPlainText().length,
       });
       markBothReadyIfPossible();
     },
@@ -181,8 +181,7 @@ export function SplitWorkspace({
   const handleAnonymizedReady = useCallback(
     (container: HTMLElement) => {
       rightContainerRef.current = container;
-      rightCleanHtmlRef.current = container.innerHTML;
-      rightMapRef.current = buildDocxAnchorMap(container);
+      rightPaneRef.current = new DocxPane(container);
       // eslint-disable-next-line no-console
       console.info('[Velum] anonymized pane ready');
       markBothReadyIfPossible();
@@ -207,10 +206,8 @@ export function SplitWorkspace({
     detectionStartedRef.current = false;
     leftContainerRef.current = null;
     rightContainerRef.current = null;
-    leftCleanHtmlRef.current = null;
-    rightCleanHtmlRef.current = null;
-    leftMapRef.current = null;
-    rightMapRef.current = null;
+    leftPaneRef.current = null;
+    rightPaneRef.current = null;
     setDocScale(1);
   }, [documentId]);
 
@@ -279,38 +276,15 @@ export function SplitWorkspace({
   // control exactly when the panes are redrawn and avoid the subtle
   // effect-ordering race that used to require a manual reload.
   const rerenderBothPanes = useCallback((entitiesToDraw: InteractiveEntity[]) => {
-    const leftContainer = leftContainerRef.current;
-    const rightContainer = rightContainerRef.current;
-    const leftClean = leftCleanHtmlRef.current;
-    const rightClean = rightCleanHtmlRef.current;
-    if (
-      !leftContainer ||
-      !rightContainer ||
-      leftClean == null ||
-      rightClean == null
-    ) {
+    const leftPane = leftPaneRef.current;
+    const rightPane = rightPaneRef.current;
+    if (!leftPane || !rightPane) {
       // eslint-disable-next-line no-console
       console.warn('[Velum] rerender skipped — panes not ready');
       return;
     }
-
-    const left = rerenderPaneFromClean(
-      leftContainer,
-      leftClean,
-      buildDocxAnchorMap,
-      entitiesToDraw,
-      { mode: 'highlight' },
-    );
-    leftMapRef.current = left.anchorMap;
-
-    const right = rerenderPaneFromClean(
-      rightContainer,
-      rightClean,
-      buildDocxAnchorMap,
-      entitiesToDraw,
-      { mode: 'placeholder' },
-    );
-    rightMapRef.current = right.anchorMap;
+    leftPane.rerender(entitiesToDraw, { mode: 'highlight' });
+    rightPane.rerender(entitiesToDraw, { mode: 'placeholder' });
   }, []);
 
   // ─── initial detection ───────────────────────────────────────────
@@ -323,8 +297,9 @@ export function SplitWorkspace({
     if (detectionStartedRef.current) return;
     detectionStartedRef.current = true;
 
-    const leftMap = leftMapRef.current;
-    if (!leftMap) return;
+    const leftPane = leftPaneRef.current;
+    if (!leftPane) return;
+    const plainText = leftPane.getPlainText();
 
     let cancelled = false;
     setStatus('detecting');
@@ -335,9 +310,9 @@ export function SplitWorkspace({
         // eslint-disable-next-line no-console
         console.info('[Velum] anonymize start', {
           documentId,
-          chars: leftMap.plainText.length,
+          chars: plainText.length,
         });
-        const response = await anonymizeText(documentId, leftMap.plainText);
+        const response = await anonymizeText(documentId, plainText);
         // eslint-disable-next-line no-console
         console.info('[Velum] anonymize response', {
           entities: response.entities?.length ?? 0,
@@ -520,21 +495,24 @@ export function SplitWorkspace({
       let leftOffsets: { start: number; end: number } | null = null;
 
       if (inLeft) {
-        const leftMap = leftMapRef.current;
-        if (!leftMap) {
+        const leftPane = leftPaneRef.current;
+        if (!leftPane) {
           // eslint-disable-next-line no-console
-          console.warn('[Velum] selection: left anchor map missing');
+          console.warn('[Velum] selection: left pane not ready');
           return;
         }
-        leftOffsets = leftMap.rangeToOffsets(range);
+        // Always-fresh map: leftPane.getAnchorMap() rebuilds against the
+        // live DOM, so even if entity overlays were re-applied between
+        // mouseup and now, the offsets we compute here are honest.
+        leftOffsets = leftPane.getAnchorMap().rangeToOffsets(range);
       } else {
-        const rightMap = rightMapRef.current;
-        if (!rightMap) {
+        const rightPane = rightPaneRef.current;
+        if (!rightPane) {
           // eslint-disable-next-line no-console
-          console.warn('[Velum] selection: right anchor map missing');
+          console.warn('[Velum] selection: right pane not ready');
           return;
         }
-        const rightOffsets = rightMap.rangeToOffsets(range);
+        const rightOffsets = rightPane.getAnchorMap().rangeToOffsets(range);
         if (!rightOffsets) {
           setSelection(null);
           return;
