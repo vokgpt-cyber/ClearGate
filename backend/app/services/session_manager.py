@@ -46,6 +46,12 @@ class Session:
             session_id=session_id,
             locale=locale,
         )
+        # Raw DOCX bytes kept in-memory so the frontend can render the
+        # original document with Word-like fidelity via docx-preview.
+        # Only DOCX is stored; other formats are not kept after parsing.
+        # Cleared on session close together with registry contents.
+        self.docx_bytes: bytes | None = None
+        self.docx_filename: str | None = None
 
 
 class SessionManager:
@@ -118,6 +124,14 @@ class SessionManager:
         session = self._sessions.pop(session_id, None)
         if session:
             session.registry.clear()
+            # Wipe raw DOCX bytes from memory — privacy-by-design.
+            if session.docx_bytes is not None:
+                # Overwrite reference; Python GC will release memory.
+                # We intentionally do not touch the bytes object in-place
+                # because bytes are immutable; dropping the reference is
+                # the strongest guarantee we have in CPython.
+                session.docx_bytes = None
+                session.docx_filename = None
             logger.info("session.closed", session_id=session_id)
 
     def _is_expired(self, session: Session) -> bool:
