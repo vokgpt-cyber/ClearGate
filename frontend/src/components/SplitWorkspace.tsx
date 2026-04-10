@@ -1,0 +1,634 @@
+'use client';
+
+/**
+ * SplitWorkspace — two-pane interactive workspace.
+ *
+ * Iteration 3 scope (this file):
+ *   1. Detection pass identical to iteration 2: render original +
+ *      anonymized panes from the same DOCX, run `/anonymize` once the
+ *      left pane's anchor map is ready, overlay the result.
+ *   2. After the first render, we snapshot the CLEAN innerHTML of each
+ *      pane. Every subsequent state change (accept / reject / change
+ *      type / add / remove / filter toggle) calls `rerenderPaneFromClean`
+ *      which restores the clean HTML, rebuilds the anchor map, and
+ *      re-applies the current filtered entity set. This is cheap for
+ *      contract-sized documents and much easier to reason about than
+ *      surgical DOM patches.
+ *   3. Click on any `<mark.velum-entity>` in either pane opens the
+ *      EntityPopover with accept / reject / change type / remove actions.
+ *   4. Hovering over a mark adds `.velum-entity--active` to every mark
+ *      sharing the same `data-entity-id` in BOTH panes, so the user
+ *      can see at a glance how a span maps across panes.
+ *   5. Selecting text in the LEFT pane surfaces the SelectionToolbar:
+ *      picking a type POSTs to the new `/entities` endpoint, receives
+ *      a placeholder, and appends the new InteractiveEntity to state.
+ *   6. EntityLegend is now interactive: clicking a chip hides/shows
+ *      that type, "Only unreviewed" toggles the pending-only filter,
+ *      and "Reset" clears every filter.
+ */
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { DocxViewer } from './DocxViewer';
+import { EntityLegend, type LegendStatus } from './EntityLegend';
+import { EntityPopover, type EntityPopoverAnchor } from './EntityPopover';
+import {
+  SelectionToolbar,
+  type SelectionInfo,
+} from './SelectionToolbar';
+import {
+  buildDocxAnchorMap,
+  type DocxAnchorMap,
+} from '@/lib/docx-anchor-map';
+import {
+  groupEntityCounts,
+  rerenderPaneFromClean,
+  type InteractiveEntity,
+  type OverlayEntity,
+} from '@/lib/entity-overlay';
+import { addCustomEntity, anonymizeText } from '@/lib/api';
+import { useLocale } from '@/hooks/useLocale';
+import type { EntityTypeCode } from '@/lib/entity-types';
+
+interface SplitWorkspaceProps {
+  documentId: string;
+  documentName: string;
+  onClose: () => void;
+}
+
+const ACTIVE_CLASS = 'velum-entity--active';
+
+export function SplitWorkspace({
+  documentId,
+  documentName,
+  onClose,
+}: SplitWorkspaceProps) {
+  const { t } = useLocale();
+
+  // Pane containers and their clean (pre-overlay) HTML snapshots.
+  const leftContainerRef = useRef<HTMLElement | null>(null);
+  const rightContainerRef = useRef<HTMLElement | null>(null);
+  const leftCleanHtmlRef = useRef<string | null>(null);
+  const rightCleanHtmlRef = useRef<string | null>(null);
+  const leftMapRef = useRef<DocxAnchorMap | null>(null);
+  const rightMapRef = useRef<DocxAnchorMap | null>(null);
+
+  const [status, setStatus] = useState<LegendStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [entities, setEntities] = useState<InteractiveEntity[]>([]);
+
+  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
+  const [onlyUnconfirmed, setOnlyUnconfirmed] = useState(false);
+
+  const [popover, setPopover] = useState<EntityPopoverAnchor | null>(null);
+  const [selection, setSelection] = useState<SelectionInfo | null>(null);
+  const [selectionBusy, setSelectionBusy] = useState(false);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+
+  const [bothReady, setBothReady] = useState(false);
+  const detectionStartedRef = useRef(false);
+
+  // The entity set actually drawn on screen after filters are applied.
+  const visibleEntities = useMemo(() => {
+    return entities.filter((e) => {
+      if (hiddenTypes.has(e.entity_type)) return false;
+      if (onlyUnconfirmed && e.state !== 'pending') return false;
+      return true;
+    });
+  }, [entities, hiddenTypes, onlyUnconfirmed]);
+
+  const counts = useMemo(() => groupEntityCounts(entities), [entities]);
+
+  // ─── pane lifecycle ──────────────────────────────────────────────
+  //
+  // IMPORTANT: we flip `bothReady` to true from inside the ready
+  // handlers AFTER checking that the OTHER pane is also ready. This
+  // makes the "both panes rendered" transition explicit and removes
+  // the race condition where the detection effect could fire against
+  // stale refs (e.g. if a pane re-rendered between status updates).
+
+  const markBothReadyIfPossible = useCallback(() => {
+    if (
+      leftContainerRef.current &&
+      rightContainerRef.current &&
+      leftCleanHtmlRef.current != null &&
+      rightCleanHtmlRef.current != null &&
+      leftMapRef.current &&
+      rightMapRef.current
+    ) {
+      setBothReady(true);
+    }
+  }, []);
+
+  const handleOriginalReady = useCallback(
+    (container: HTMLElement) => {
+      leftContainerRef.current = container;
+      leftCleanHtmlRef.current = container.innerHTML;
+      leftMapRef.current = buildDocxAnchorMap(container);
+      // eslint-disable-next-line no-console
+      console.info('[Velum] original pane ready', {
+        chars: leftMapRef.current.plainText.length,
+      });
+      markBothReadyIfPossible();
+    },
+    [markBothReadyIfPossible],
+  );
+
+  const handleAnonymizedReady = useCallback(
+    (container: HTMLElement) => {
+      rightContainerRef.current = container;
+      rightCleanHtmlRef.current = container.innerHTML;
+      rightMapRef.current = buildDocxAnchorMap(container);
+      // eslint-disable-next-line no-console
+      console.info('[Velum] anonymized pane ready');
+      markBothReadyIfPossible();
+    },
+    [markBothReadyIfPossible],
+  );
+
+  // Reset everything when the document changes.
+  //
+  // Thanks to `key={sessionId}` in the parent we now remount on every
+  // document switch, so this effect is primarily a belt-and-braces
+  // cleanup; keeping it makes hot reload during dev saner.
+  useEffect(() => {
+    setStatus('idle');
+    setError(null);
+    setEntities([]);
+    setHiddenTypes(new Set());
+    setOnlyUnconfirmed(false);
+    setPopover(null);
+    setSelection(null);
+    setBothReady(false);
+    detectionStartedRef.current = false;
+    leftContainerRef.current = null;
+    rightContainerRef.current = null;
+    leftCleanHtmlRef.current = null;
+    rightCleanHtmlRef.current = null;
+    leftMapRef.current = null;
+    rightMapRef.current = null;
+  }, [documentId]);
+
+  // ─── explicit rerender helper ─────────────────────────────────────
+  //
+  // Called directly by the detection effect and by every state-change
+  // handler (accept / reject / add / …). Re-rendering is driven
+  // imperatively instead of via a `[visibleEntities]` useEffect so we
+  // control exactly when the panes are redrawn and avoid the subtle
+  // effect-ordering race that used to require a manual reload.
+  const rerenderBothPanes = useCallback((entitiesToDraw: InteractiveEntity[]) => {
+    const leftContainer = leftContainerRef.current;
+    const rightContainer = rightContainerRef.current;
+    const leftClean = leftCleanHtmlRef.current;
+    const rightClean = rightCleanHtmlRef.current;
+    if (
+      !leftContainer ||
+      !rightContainer ||
+      leftClean == null ||
+      rightClean == null
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn('[Velum] rerender skipped — panes not ready');
+      return;
+    }
+
+    const left = rerenderPaneFromClean(
+      leftContainer,
+      leftClean,
+      buildDocxAnchorMap,
+      entitiesToDraw,
+      { mode: 'highlight' },
+    );
+    leftMapRef.current = left.anchorMap;
+
+    const right = rerenderPaneFromClean(
+      rightContainer,
+      rightClean,
+      buildDocxAnchorMap,
+      entitiesToDraw,
+      { mode: 'placeholder' },
+    );
+    rightMapRef.current = right.anchorMap;
+  }, []);
+
+  // ─── initial detection ───────────────────────────────────────────
+  //
+  // Fires exactly once per document (guarded by detectionStartedRef).
+  // We trigger it from `bothReady` rather than from `readyTick` to
+  // guarantee refs were observed as populated atomically.
+  useEffect(() => {
+    if (!bothReady) return;
+    if (detectionStartedRef.current) return;
+    detectionStartedRef.current = true;
+
+    const leftMap = leftMapRef.current;
+    if (!leftMap) return;
+
+    let cancelled = false;
+    setStatus('detecting');
+    setError(null);
+
+    (async () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.info('[Velum] anonymize start', {
+          documentId,
+          chars: leftMap.plainText.length,
+        });
+        const response = await anonymizeText(documentId, leftMap.plainText);
+        // eslint-disable-next-line no-console
+        console.info('[Velum] anonymize response', {
+          entities: response.entities?.length ?? 0,
+        });
+        if (cancelled) return;
+        const raw = (response.entities as OverlayEntity[]) ?? [];
+        const interactive: InteractiveEntity[] = raw.map((e, idx) => ({
+          ...e,
+          id:
+            (e.metadata?.id as string | undefined) ??
+            `det-${idx}-${e.start}-${e.end}-${e.entity_type}`,
+          state: 'pending',
+        }));
+        setEntities(interactive);
+        setStatus('detected');
+        // Explicit rerender with the fresh entity list — do not wait
+        // for the `[visibleEntities]` effect to fire. This is the key
+        // fix for "только после повторной загрузки документа".
+        rerenderBothPanes(interactive);
+      } catch (e) {
+        if (cancelled) return;
+        // eslint-disable-next-line no-console
+        console.error('[Velum] anonymize failed', e);
+        setError(e instanceof Error ? e.message : String(e));
+        setStatus('error');
+        // Allow the user to retry via the legend "retry" button.
+        detectionStartedRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bothReady, documentId, rerenderBothPanes]);
+
+  // ─── rerender on filter / state changes (NOT initial detection) ──
+  //
+  // Once detection has completed, any subsequent filter toggle or
+  // entity state change should redraw both panes. We skip this until
+  // detection has actually produced entities to avoid racing with the
+  // explicit rerender above.
+  useEffect(() => {
+    if (status !== 'detected') return;
+    rerenderBothPanes(visibleEntities);
+  }, [visibleEntities, status, rerenderBothPanes]);
+
+  // ─── click → popover + hover sync ────────────────────────────────
+  useEffect(() => {
+    const leftContainer = leftContainerRef.current;
+    const rightContainer = rightContainerRef.current;
+    if (!leftContainer || !rightContainer) return;
+
+    const findMark = (target: EventTarget | null): HTMLElement | null => {
+      if (!(target instanceof Element)) return null;
+      return target.closest('mark.velum-entity') as HTMLElement | null;
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const mark = findMark(e.target);
+      if (!mark) return;
+      const id = mark.dataset.entityId;
+      if (!id) return;
+      const entity = entities.find((ent) => ent.id === id);
+      if (!entity) return;
+      e.stopPropagation();
+      setPopover({ rect: mark.getBoundingClientRect(), entity });
+    };
+
+    const markActive = (id: string, on: boolean) => {
+      for (const container of [leftContainer, rightContainer]) {
+        const marks = container.querySelectorAll<HTMLElement>(
+          `mark.velum-entity[data-entity-id="${CSS.escape(id)}"]`,
+        );
+        marks.forEach((m) => m.classList.toggle(ACTIVE_CLASS, on));
+      }
+    };
+
+    let activeId: string | null = null;
+    const handleOver = (e: MouseEvent) => {
+      const mark = findMark(e.target);
+      const id = mark?.dataset.entityId ?? null;
+      if (id === activeId) return;
+      if (activeId) markActive(activeId, false);
+      activeId = id;
+      if (activeId) markActive(activeId, true);
+    };
+    const handleOut = (e: MouseEvent) => {
+      // Only clear when leaving the workspace entirely.
+      const related = e.relatedTarget as Node | null;
+      if (related && (leftContainer.contains(related) || rightContainer.contains(related))) {
+        return;
+      }
+      if (activeId) markActive(activeId, false);
+      activeId = null;
+    };
+
+    leftContainer.addEventListener('click', handleClick);
+    rightContainer.addEventListener('click', handleClick);
+    leftContainer.addEventListener('mouseover', handleOver);
+    rightContainer.addEventListener('mouseover', handleOver);
+    leftContainer.addEventListener('mouseout', handleOut);
+    rightContainer.addEventListener('mouseout', handleOut);
+    return () => {
+      leftContainer.removeEventListener('click', handleClick);
+      rightContainer.removeEventListener('click', handleClick);
+      leftContainer.removeEventListener('mouseover', handleOver);
+      rightContainer.removeEventListener('mouseover', handleOver);
+      leftContainer.removeEventListener('mouseout', handleOut);
+      rightContainer.removeEventListener('mouseout', handleOut);
+    };
+    // Re-bind when entities change so the click closure sees fresh data.
+  }, [entities, visibleEntities]);
+
+  // ─── text selection → SelectionToolbar ───────────────────────────
+  //
+  // Fires on every selection change. We debounce by waiting for
+  // `mouseup` instead of reacting to `selectionchange` directly,
+  // because selectionchange fires on every mouse-move during a drag
+  // and the transient intermediate selections made the toolbar flash.
+  useEffect(() => {
+    const handleSelection = () => {
+      const leftContainer = leftContainerRef.current;
+      if (!leftContainer) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum] selection: no left container');
+        return;
+      }
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setSelection(null);
+        setSelectionError(null);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+
+      // The selection must at least START inside the left container.
+      // If it doesn't, it's a selection in the right pane / legend /
+      // elsewhere and we ignore it.
+      const startNode =
+        range.startContainer.nodeType === Node.TEXT_NODE
+          ? range.startContainer.parentElement
+          : (range.startContainer as Element);
+      if (!startNode || !leftContainer.contains(startNode)) {
+        setSelection(null);
+        return;
+      }
+
+      // If the selection starts INSIDE an existing mark, we leave it
+      // alone — clicking the mark opens the popover instead.
+      const startInMark = startNode.closest('mark.velum-entity');
+      if (startInMark) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum] selection: starts inside existing mark — skipping');
+        setSelection(null);
+        return;
+      }
+
+      const leftMap = leftMapRef.current;
+      if (!leftMap) {
+        // eslint-disable-next-line no-console
+        console.warn('[Velum] selection: no anchor map yet');
+        return;
+      }
+      const offsets = leftMap.rangeToOffsets(range);
+      if (!offsets || offsets.start === offsets.end) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum] selection: offsets empty', offsets);
+        setSelection(null);
+        return;
+      }
+      const text = range.toString();
+      if (text.trim().length === 0) {
+        setSelection(null);
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.info('[Velum] selection captured', {
+        text: text.slice(0, 40),
+        start: offsets.start,
+        end: offsets.end,
+      });
+      setSelection({
+        rect: range.getBoundingClientRect(),
+        text,
+        start: offsets.start,
+        end: offsets.end,
+      });
+      setSelectionError(null);
+    };
+
+    // mouseup is a one-shot signal that the drag is finished, so we
+    // read the final selection exactly once per user action. We also
+    // listen for keyup so keyboard selection (Shift+arrows) still
+    // works. Finally we listen for selectionchange *only* to clear
+    // the toolbar when the user clicks away.
+    const handleMouseUp = () => {
+      // Give the browser a tick to finalise the selection.
+      setTimeout(handleSelection, 0);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.shiftKey || e.key === 'Shift') {
+        setTimeout(handleSelection, 0);
+      }
+    };
+    const handleSelectionChangeForClear = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setSelection(null);
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('selectionchange', handleSelectionChangeForClear);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener(
+        'selectionchange',
+        handleSelectionChangeForClear,
+      );
+    };
+  }, []);
+
+  // ─── handlers ────────────────────────────────────────────────────
+
+  const closePopover = useCallback(() => setPopover(null), []);
+
+  const accept = useCallback((target: InteractiveEntity) => {
+    setEntities((prev) =>
+      prev.map((e) => (e.id === target.id ? { ...e, state: 'accepted' } : e)),
+    );
+    setPopover(null);
+  }, []);
+
+  const reject = useCallback((target: InteractiveEntity) => {
+    setEntities((prev) =>
+      prev.map((e) => (e.id === target.id ? { ...e, state: 'rejected' } : e)),
+    );
+    setPopover(null);
+  }, []);
+
+  const changeType = useCallback(
+    (target: InteractiveEntity, newType: string) => {
+      setEntities((prev) =>
+        prev.map((e) =>
+          e.id === target.id ? { ...e, entity_type: newType } : e,
+        ),
+      );
+      setPopover(null);
+    },
+    [],
+  );
+
+  const remove = useCallback((target: InteractiveEntity) => {
+    setEntities((prev) => prev.filter((e) => e.id !== target.id));
+    setPopover(null);
+  }, []);
+
+  const toggleType = useCallback((code: string) => {
+    setHiddenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }, []);
+
+  const toggleOnlyUnconfirmed = useCallback(
+    () => setOnlyUnconfirmed((v) => !v),
+    [],
+  );
+
+  const resetFilters = useCallback(() => {
+    setHiddenTypes(new Set());
+    setOnlyUnconfirmed(false);
+  }, []);
+
+  const addFromSelection = useCallback(
+    async (info: SelectionInfo, entityType: EntityTypeCode) => {
+      setSelectionBusy(true);
+      setSelectionError(null);
+      try {
+        const result = await addCustomEntity(documentId, {
+          text: info.text,
+          entity_type: entityType,
+          start: info.start,
+          end: info.end,
+        });
+        const added: InteractiveEntity = {
+          text: result.entity.text,
+          entity_type: result.entity.entity_type,
+          start: result.entity.start,
+          end: result.entity.end,
+          score: result.entity.score,
+          source_layer: result.entity.source_layer,
+          metadata: {
+            ...result.entity.metadata,
+            placeholder: result.placeholder,
+          },
+          id: result.id,
+          state: 'custom',
+        };
+        setEntities((prev) => [...prev, added]);
+        setSelection(null);
+        // Clear the browser's text selection so the toolbar disappears.
+        window.getSelection()?.removeAllRanges();
+      } catch (e) {
+        setSelectionError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setSelectionBusy(false);
+      }
+    },
+    [documentId],
+  );
+
+  const dismissSelection = useCallback(() => {
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+  }, []);
+
+  return (
+    <div className="velum-workspace">
+      <div className="velum-workspace__subheader">
+        <div className="velum-workspace__doc-title">
+          <span className="velum-workspace__doc-icon" aria-hidden>
+            ¶
+          </span>
+          <span className="velum-workspace__doc-name" title={documentName}>
+            {documentName}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="velum-workspace__close"
+          onClick={onClose}
+          title={t('workspace.close')}
+        >
+          {t('workspace.close')}
+        </button>
+      </div>
+
+      <div className="velum-workspace__split">
+        <DocxViewer
+          documentId={documentId}
+          label={t('editor.original')}
+          onReady={handleOriginalReady}
+          className="velum-workspace__pane"
+        />
+        <div className="velum-workspace__divider" aria-hidden />
+        <DocxViewer
+          documentId={documentId}
+          label={t('editor.anonymized')}
+          onReady={handleAnonymizedReady}
+          className="velum-workspace__pane"
+        />
+      </div>
+
+      <EntityLegend
+        counts={counts}
+        totalEntities={entities.length}
+        visibleEntities={visibleEntities.length}
+        hiddenTypes={hiddenTypes}
+        onlyUnconfirmed={onlyUnconfirmed}
+        status={status}
+        error={error}
+        onToggleType={toggleType}
+        onToggleOnlyUnconfirmed={toggleOnlyUnconfirmed}
+        onResetFilters={resetFilters}
+      />
+
+      <EntityPopover
+        anchor={popover}
+        onAccept={accept}
+        onReject={reject}
+        onChangeType={changeType}
+        onRemove={remove}
+        onClose={closePopover}
+      />
+
+      <SelectionToolbar
+        selection={selection}
+        busy={selectionBusy}
+        error={selectionError}
+        onAddEntity={(info, type) => addFromSelection(info, type)}
+        onDismiss={dismissSelection}
+      />
+    </div>
+  );
+}
