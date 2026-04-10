@@ -52,7 +52,12 @@ import {
   type InteractiveEntity,
   type OverlayEntity,
 } from '@/lib/entity-overlay';
-import { addCustomEntity, anonymizeText } from '@/lib/api';
+import {
+  addCustomEntity,
+  anonymizeText,
+  downloadBlob,
+  exportAnonymizedDocx,
+} from '@/lib/api';
 import { clearSelectionLog, logSel } from '@/lib/debug-log';
 import { useLocale } from '@/hooks/useLocale';
 import type { EntityTypeCode } from '@/lib/entity-types';
@@ -93,6 +98,8 @@ export function SplitWorkspace({
   const [selectionError, setSelectionError] = useState<string | null>(null);
 
   const [bothReady, setBothReady] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const detectionStartedRef = useRef(false);
 
   // The entity set actually drawn on screen after filters are applied.
@@ -691,6 +698,33 @@ export function SplitWorkspace({
     window.getSelection()?.removeAllRanges();
   }, []);
 
+  // ─── export anonymized DOCX ──────────────────────────────────────
+  //
+  // Simple demo exporter: POST current entities to the backend, get
+  // a fresh DOCX with placeholders substituted into the original
+  // document, and trigger a browser download. The backend filters
+  // out rejected entities server-side to match the right pane.
+  const handleExport = useCallback(async () => {
+    if (exportBusy) return;
+    setExportBusy(true);
+    setExportError(null);
+    try {
+      const { blob, filename } = await exportAnonymizedDocx(
+        documentId,
+        entities,
+      );
+      downloadBlob(blob, filename);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[Velum] export failed', e);
+      setExportError(
+        e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      setExportBusy(false);
+    }
+  }, [documentId, entities, exportBusy]);
+
   return (
     <div className="velum-workspace">
       <div className="velum-workspace__subheader">
@@ -702,14 +736,32 @@ export function SplitWorkspace({
             {documentName}
           </span>
         </div>
-        <button
-          type="button"
-          className="velum-workspace__close"
-          onClick={onClose}
-          title={t('workspace.close')}
-        >
-          {t('workspace.close')}
-        </button>
+        <div className="velum-workspace__actions">
+          <button
+            type="button"
+            className="velum-workspace__export"
+            onClick={handleExport}
+            disabled={exportBusy || !bothReady}
+            title={
+              exportError ??
+              (exportBusy
+                ? t('workspace.exportDocxBusy')
+                : t('workspace.exportDocx'))
+            }
+          >
+            {exportBusy
+              ? t('workspace.exportDocxBusy')
+              : t('workspace.exportDocx')}
+          </button>
+          <button
+            type="button"
+            className="velum-workspace__close"
+            onClick={onClose}
+            title={t('workspace.close')}
+          >
+            {t('workspace.close')}
+          </button>
+        </div>
       </div>
 
       <div className="velum-workspace__split">

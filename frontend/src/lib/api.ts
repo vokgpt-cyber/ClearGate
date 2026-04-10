@@ -124,3 +124,84 @@ export async function healthCheck(): Promise<{
 }> {
   return request('/health');
 }
+
+
+/**
+ * Export the anonymized version of the original uploaded DOCX.
+ *
+ * The backend loads the raw DOCX that was attached to the session
+ * during upload, walks its paragraphs, and replaces every non-rejected
+ * entity's original text with its registry-assigned placeholder. The
+ * returned blob is an `application/vnd.openxmlformats-...` file ready
+ * to hand to a download helper.
+ *
+ * @param sessionId - Session that owns the DOCX (aka documentId).
+ * @param entities - Current in-memory entity list from the workspace.
+ *                   Rejected entities are ignored by the backend.
+ * @returns Blob + suggested filename parsed from Content-Disposition.
+ */
+export async function exportAnonymizedDocx(
+  sessionId: string,
+  entities: Array<{
+    text: string;
+    state?: string;
+    metadata?: Record<string, unknown>;
+  }>,
+): Promise<{ blob: Blob; filename: string }> {
+  const payload = {
+    entities: entities.map((e) => ({
+      text: e.text,
+      placeholder: (e.metadata?.placeholder as string | undefined) ?? '',
+      state: e.state ?? 'pending',
+    })),
+  };
+
+  const response = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/export-anonymized`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Export failed (${response.status}): ${errorText}`);
+  }
+
+  const blob = await response.blob();
+
+  // Parse filename* (RFC 5987) or filename= from Content-Disposition.
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const starMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  const plainMatch = /filename="([^"]+)"/i.exec(disposition);
+  let filename = 'document_anonymized.docx';
+  if (starMatch) {
+    try {
+      filename = decodeURIComponent(starMatch[1]);
+    } catch {
+      filename = starMatch[1];
+    }
+  } else if (plainMatch) {
+    filename = plainMatch[1];
+  }
+
+  return { blob, filename };
+}
+
+/**
+ * Trigger a browser download for a Blob. Works in both the regular
+ * browser and Tauri's WebView2 — no filesystem access needed, the
+ * webview handles the save dialog.
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Defer revoke slightly so the click handler has finished.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

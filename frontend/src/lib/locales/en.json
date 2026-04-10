@@ -35,7 +35,10 @@
     "close": "Close document",
     "iteration1Notice": "Iteration 1: DOCX rendering. Anonymization and interactivity land in later iterations.",
     "segments": "segments",
-    "chars": "characters"
+    "chars": "characters",
+    "exportDocx": "Download DOCX",
+    "exportDocxBusy": "Preparing file…",
+    "exportDocxError": "Could not export document"
   },
   "legend": {
     "title": "Entities",
