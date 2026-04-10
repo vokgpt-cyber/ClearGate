@@ -21,20 +21,41 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
+/** Default theme used on the server and on the very first client render
+ * to keep SSR markup stable. The user's real preference is applied in a
+ * post-mount effect below. */
+const DEFAULT_THEME: Theme = 'dark';
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
+  // Always start with DEFAULT_THEME so SSR markup matches the first
+  // client render. localStorage / system preference is applied after
+  // mount, which avoids React hydration mismatches.
+  const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem('velum_theme') as Theme | null;
-      if (saved) return saved;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      if (saved === 'light' || saved === 'dark') {
+        setThemeState(saved);
+        return;
+      }
+    } catch {
+      // localStorage unavailable — fall through to media query.
     }
-    return 'dark';
-  });
+    try {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setThemeState(prefersDark ? 'dark' : 'light');
+    } catch {
+      // matchMedia unavailable — stay on default.
+    }
+  }, []);
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem('velum_theme', newTheme);
+    } catch {
+      // no-op
     }
   }, []);
 
