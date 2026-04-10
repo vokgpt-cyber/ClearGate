@@ -1,0 +1,100 @@
+@import "tailwindcss";
+/* Fonts loaded via <link> in layout.tsx */
+
+/* ============================================================
+   VELUM Design System — EPAM Law Brand
+   Burgundy accent, warm grays, serif headings, clean dividers
+   ============================================================ */
+
+:root {
+  --color-brand: #8B1A2B;
+  --color-brand-light: #A83245;
+
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F5F2;
+  --bg-elevated: #FFFFFF;
+  --bg-input: #FFFFFF;
+
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B6B6B;
+  --text-muted: #9A9A9A;
+
+  --border: #E8E8E8;
+  --border-strong: #D0D0D0;
+
+  --accent: #8B1A2B;
+  --accent-hover: #6B1420;
+  --success: #2D7A3A;
+  --error: #C62828;
+  --warning: #E6A817;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+
+  --font-serif: 'PT Serif', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --header-height: 52px;
+  --sidebar-width: 260px;
+  --entity-panel-width: 280px;
+}
+
+[data-theme="dark"] {
+  --color-brand: #B83D4F;
+  --color-brand-light: #D4576A;
+
+  --bg-primary: #0F0F11;
+  --bg-secondary: #1A1A1E;
+  --bg-elevated: #222226;
+  --bg-input: #1A1A1E;
+
+  --text-primary: #F0EDE8;
+  --text-secondary: #A8A4A0;
+  --text-muted: #6B6866;
+
+  --border: #2A2A2E;
+  --border-strong: #3A3A3E;
+
+  --accent: #B83D4F;
+  --accent-hover: #D4576A;
+  --success: #4CAF50;
+  --error: #EF5350;
+  --warning: #FFB74D;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+}
+
+::selection {
+  background-color: var(--color-brand);
+  color: #fff;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
