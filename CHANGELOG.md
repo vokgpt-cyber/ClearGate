@@ -1,0 +1,120 @@
+# Changelog
+
+Все значимые изменения в VELUM документируются в этом файле.
+
+Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
+проект следует [Semantic Versioning](https://semver.org/lang/ru/).
+
+## [Unreleased]
+
+### Added
+- Документация и ADR (7 архитектурных решений)
+- Task files для Claude Code (10 задач MVP)
+- Pre-commit hooks, pyproject.toml, docker-compose
+
+---
+
+## [0.1.1-alpha] — 2026-04-10
+
+Вторая итерация Alpha — улучшение качества NER, новый дизайн в стиле АБ ЕПАМ.
+
+### Added
+- **Stopwords system** — фильтрация ~80 юридических терминов («Исполнитель», «Заказчик»,
+  «Генеральный директор», «БИК», «Арбитражный суд», «Приложение №N», «Устав» и др.)
+  с fuzzy-stem matching для падежных форм
+- **ContractNumberRecognizer** — распознавание номеров договоров
+  (ТЛ-2026/047, 12-А/2026, 2026-001)
+- **Adjacent PER merging** — соседние PER-сущности в пределах 3 символов
+  сливаются в одну («Петрова» + «Алексея Николаевича»)
+- **Regression test suite** — 9 тестов для конкретных багов из Alpha v0.1.0
+- **EPAM design system** — бордовый акцент `#8B1A2B`, PT Serif для заголовков,
+  Inter для текста, тёплые серые тона
+- **Entity highlighting** — подсветка сущностей цветными `<mark>` тегами
+  в левой панели после анонимизации
+- **DocumentUpload** — drag-and-drop загрузка DOCX/PDF/TXT в split-screen
+- **EntityNavigator** — правая боковая панель с группировкой сущностей по типам
+- **HTTP LLM endpoint** (`POST /api/sessions/{id}/llm`) — синхронная альтернатива
+  WebSocket стримингу для надёжности
+
+### Changed
+- INN base score повышен с 0.3 до 0.5 (исправляет конфликт с Passport recognizer)
+- Passport regex теперь требует пробел между серией и номером
+- Header переработан в стиле ЕПАМ (бренд-метка V, status dot, локализованные тоглы)
+- LLMPanel переключён с WebSocket на HTTP POST для надёжности
+- Layout перестроен: трёхколоночная схема (SplitScreen + LLM Panel + Entity Navigator)
+
+### Fixed
+- ИНН организации (10 цифр) больше не определяется как паспорт
+- ОГРН корректно распознаётся (overlap resolution отдаёт приоритет regex-validated сущностям)
+- «Генерального директора» в любом падеже не попадает в сущности
+- «Исполнитель», «Заказчик», «Заявки», «БИК», «МО», «Устав», «Арбитражный суд» —
+  отфильтровываются как false positives
+- ФИО («Петрова Алексея Николаевича») сливается в одну PER-сущность
+- LLM-запрос возвращает понятную ошибку вместо «Internal Error»
+
+---
+
+## [0.1.0-alpha] — 2026-04-09
+
+Первый запуск Alpha-конфигурации на ASUS ROG G14 (RTX 4060).
+
+### Added
+- **Backend**: FastAPI 0.135 + Pydantic v2, Python 3.12
+- **Task 01**: Health endpoint, базовый skeleton с тестами (8 тестов, 100% coverage)
+- **Task 02**: 9 Presidio regex-распознавателей российских PII
+  (ИНН, ОГРН, СНИЛС, паспорт, банк. счёт, телефон, email, дата, номер дела)
+  с валидацией контрольных сумм (30 тестов)
+- **Task 03**: Трёхслойный NER pipeline (regex + spaCy ru_core_news_sm + GLiNER + Ollama Qwen)
+  с post-processing (slow span merging, overlap resolution)
+- **Task 04**: EntityRegistry с консистентным маппингом placeholder'ов,
+  pymorphy3 нормализацией, Levenshtein fuzzy matching, AES-256-GCM шифрованием
+- **Task 06**: REST API — sessions, documents/upload, anonymize, deanonymize, entities
+- **Task 07**: ClaudeAdapter — нативный Anthropic SDK, extended thinking,
+  streaming, cost estimation
+- **Task 08**: WebSocket `/ws/stream` для стриминга ответов LLM
+- **Frontend**: Tauri 2.10 + Next.js 15 + React 19 + TypeScript strict
+- **Tasks 05/09/10**: SplitScreen, LLMPanel, theme (light/dark), i18n (RU/EN)
+- **START-VELUM-Alpha.bat** — launcher для быстрого запуска
+
+### Security
+- AES-256-GCM шифрование mapping table в памяти
+- HKDF-SHA256 деривация сессионных ключей из мастер-ключа
+- Whitelist логирование (никаких PII в логах)
+- 4 неприкосновенных принципа из `SECURITY_MODEL.md`
+
+---
+
+## Шаблон записи
+
+```markdown
+## [X.Y.Z] — YYYY-MM-DD
+
+### Added
+- Новые фичи
+
+### Changed
+- Изменения существующих фич
+
+### Deprecated
+- Фичи, которые скоро будут удалены
+
+### Removed
+- Удалённые фичи
+
+### Fixed
+- Исправления багов
+
+### Security
+- Изменения, связанные с безопасностью
+```
+
+## Категории Conventional Commits → Changelog
+
+| Commit prefix | Раздел changelog |
+|---------------|------------------|
+| `feat:` | Added |
+| `fix:` | Fixed |
+| `refactor:` | Changed |
+| `perf:` | Changed |
+| `security:` | Security |
+| `BREAKING CHANGE:` | ⚠️ выделить отдельно с эмодзи |

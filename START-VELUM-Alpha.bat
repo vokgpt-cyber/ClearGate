@@ -1,0 +1,62 @@
+@echo off
+title VELUM Alpha Launcher
+
+echo.
+echo  ============================================
+echo   VELUM Alpha - Launcher
+echo  ============================================
+echo.
+
+set ROOT=%~dp0
+
+echo [1/4] Checking prerequisites...
+
+if not exist "%ROOT%backend\.venv\Scripts\python.exe" (
+    echo   ERROR: Backend venv not found.
+    echo   Run: cd backend ^& py -3.12 -m venv .venv ^& .venv\Scripts\pip install -e ".[dev]"
+    pause
+    exit /b 1
+)
+
+where npm >nul 2>&1
+if %errorlevel% neq 0 (
+    echo   ERROR: npm not found. Install Node.js 20+.
+    pause
+    exit /b 1
+)
+
+if not exist "%ROOT%frontend\node_modules" (
+    echo   ERROR: Frontend deps not installed.
+    echo   Run: cd frontend ^& npm install
+    pause
+    exit /b 1
+)
+
+echo   OK - all prerequisites found.
+echo.
+
+echo [2/4] Starting backend on http://localhost:8000 ...
+start "VELUM Backend" cmd /k "cd /d %ROOT%backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+
+timeout /t 3 /nobreak >nul
+
+echo [3/4] Starting frontend on http://localhost:3000 ...
+start "VELUM Frontend" cmd /k "cd /d %ROOT%frontend && npm run dev"
+
+timeout /t 5 /nobreak >nul
+
+echo [4/4] Opening browser...
+start http://localhost:3000
+
+echo.
+echo  ============================================
+echo   VELUM Alpha is running!
+echo.
+echo   Frontend:  http://localhost:3000
+echo   Backend:   http://localhost:8000
+echo   API docs:  http://localhost:8000/docs
+echo.
+echo   Close the terminal windows to stop.
+echo  ============================================
+echo.
+pause
