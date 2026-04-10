@@ -1,57 +1,115 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+/**
+ * VELUM — root page.
+ *
+ * Shell layout:
+ *   ┌──────────┬────────────────────────────────────────┐
+ *   │          │ Header (brand status, locale, theme)   │
+ *   │ Sidebar  ├────────────────────────────────────────┤
+ *   │          │ SplitWorkspace  /or/  EmptyState       │
+ *   └──────────┴────────────────────────────────────────┘
+ *
+ * We now maintain a *list* of uploaded sessions so the user can open
+ * several documents in one run and freely switch between them via the
+ * sidebar. Each session owns its own SplitWorkspace instance (keyed by
+ * sessionId) so the anonymization state of one document never leaks
+ * into another.
+ */
+
+import { useCallback, useState } from 'react';
 import { Header } from '@/components/Header';
-import { SplitScreen } from '@/components/SplitScreen';
-import { LLMPanel } from '@/components/LLMPanel';
-import { EntityNavigator } from '@/components/EntityNavigator';
-import type { DetectedEntity } from '@/types/entities';
+import { Sidebar } from '@/components/Sidebar';
+import { EmptyState } from '@/components/EmptyState';
+import { SplitWorkspace } from '@/components/SplitWorkspace';
+import { createSession, uploadDocx } from '@/lib/api';
+
+interface LoadedDoc {
+  sessionId: string;
+  name: string;
+  openedAt: number;
+}
 
 export default function Home() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [anonymizedText, setAnonymizedText] = useState('');
-  const [entities, setEntities] = useState<DetectedEntity[]>([]);
+  const [sessions, setSessions] = useState<LoadedDoc[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isPicking, setIsPicking] = useState(false);
+  const [isWorking, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAnonymized = useCallback(
-    (sid: string, text: string, ents: DetectedEntity[]) => {
-      setSessionId(sid);
-      setAnonymizedText(text);
-      setEntities(ents);
-    },
-    [],
-  );
+  const handleFile = useCallback(async (file: File) => {
+    setWorking(true);
+    setError(null);
+    try {
+      const session = await createSession();
+      await uploadDocx(session.session_id, file);
+      const doc: LoadedDoc = {
+        sessionId: session.session_id,
+        name: file.name,
+        openedAt: Date.now(),
+      };
+      setSessions((prev) => [doc, ...prev]);
+      setActiveId(doc.sessionId);
+      setIsPicking(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWorking(false);
+    }
+  }, []);
+
+  const handleNewDocument = useCallback(() => {
+    setIsPicking(true);
+    setError(null);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setIsPicking(true);
+    setError(null);
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveId(id);
+    setIsPicking(false);
+  }, []);
+
+  const activeDoc = activeId
+    ? sessions.find((s) => s.sessionId === activeId) ?? null
+    : null;
+
+  const sidebarSessions = sessions.map((s) => ({
+    id: s.sessionId,
+    title: s.name,
+    openedAt: s.openedAt,
+  }));
+
+  const showWorkspace = activeDoc && !isPicking;
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      height: '100vh', backgroundColor: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-    }}>
-      {/* Header */}
-      <Header sessionEntityCount={entities.length} />
-
-      {/* Main area: SplitScreen + Entity Navigator */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Center: SplitScreen */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Split editor */}
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <SplitScreen onAnonymized={handleAnonymized} />
-          </div>
-
-          {/* LLM Panel — bottom of center column */}
-          <LLMPanel sessionId={sessionId} anonymizedText={anonymizedText} />
-        </div>
-
-        {/* Right sidebar: Entity Navigator */}
-        <div style={{
-          width: 'var(--entity-panel-width)',
-          borderLeft: '1px solid var(--border)',
-          backgroundColor: 'var(--bg-primary)',
-          overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          <EntityNavigator entities={entities} />
+    <div className="velum-app">
+      <Sidebar
+        sessions={sidebarSessions}
+        activeSessionId={showWorkspace ? activeDoc.sessionId : null}
+        onNewDocument={handleNewDocument}
+        onSelectSession={handleSelectSession}
+      />
+      <div className="velum-app__main">
+        <Header />
+        <div className="velum-app__content">
+          {showWorkspace ? (
+            <SplitWorkspace
+              key={activeDoc.sessionId}
+              documentId={activeDoc.sessionId}
+              documentName={activeDoc.name}
+              onClose={handleClose}
+            />
+          ) : (
+            <EmptyState
+              onFile={handleFile}
+              isWorking={isWorking}
+              error={error}
+            />
+          )}
         </div>
       </div>
     </div>

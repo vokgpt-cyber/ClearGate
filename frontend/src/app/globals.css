@@ -34,9 +34,16 @@
   --font-serif: 'PT Serif', Georgia, serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --header-height: 52px;
-  --sidebar-width: 260px;
+  --header-height: 56px;
+  --sidebar-width: 248px;
   --entity-panel-width: 280px;
+
+  /* DOCX page tokens — the document "paper" itself always stays light
+     so the rendered text remains readable regardless of app theme. */
+  --docx-page-bg: #FFFFFF;
+  --docx-page-shadow: 0 1px 2px rgba(15, 15, 17, 0.06), 0 8px 32px rgba(15, 15, 17, 0.08);
+  --docx-viewer-bg: #EFECE6;
+  --docx-page-border: rgba(15, 15, 17, 0.08);
 }
 
 [data-theme="dark"] {
@@ -63,6 +70,14 @@
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+
+  /* In dark mode we keep the document "paper" slightly off-white with
+     a warm tint so it reads like a backlit legal document. Text stays
+     dark because docx-preview uses colours baked into the DOCX. */
+  --docx-page-bg: #F3EFE7;
+  --docx-viewer-bg: #0A0A0C;
+  --docx-page-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 12px 40px rgba(0, 0, 0, 0.6);
+  --docx-page-border: rgba(0, 0, 0, 0.2);
 }
 
 *, *::before, *::after {
@@ -94,7 +109,1110 @@ h1, h2, h3, h4 {
   color: #fff;
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   App shell — Sidebar | Main (Header + Content)
+   ============================================================ */
+
+.velum-app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.velum-app__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.velum-app__content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+
+.velum-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.velum-header__left,
+.velum-header__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.velum-header__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+}
+
+.velum-header__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--error);
+}
+
+.velum-header__status-dot[data-ok="true"] {
+  background-color: var(--success);
+}
+
+.velum-header__status-text {
+  letter-spacing: 0.02em;
+}
+
+.velum-header__profile {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+}
+
+.velum-header__pill {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.velum-header__pill:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
+.velum-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 18px 16px 16px;
+}
+
+.velum-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+
+.velum-sidebar__brand-bar {
+  width: 3px;
+  height: 30px;
+  background-color: var(--color-brand);
+  border-radius: 1px;
+}
+
+.velum-sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.velum-sidebar__brand-name {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.velum-sidebar__brand-tag {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.velum-sidebar__new-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  background-color: var(--accent);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.velum-sidebar__new-btn:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.velum-sidebar__new-btn-plus {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.velum-sidebar__section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 24px 4px 10px;
+}
+
+.velum-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.velum-sidebar__empty {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 8px 4px;
+  line-height: 1.5;
+}
+
+.velum-sidebar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.velum-sidebar__item:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.velum-sidebar__item.is-active {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--color-brand);
+}
+
+.velum-sidebar__item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.velum-sidebar__item-meta {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   Empty state (drop zone)
+   ============================================================ */
+
+.velum-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: var(--bg-primary);
+  transition: background-color 150ms ease;
+}
+
+.velum-empty.is-drag {
+  background-color: var(--bg-secondary);
+}
+
+.velum-empty__card {
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  padding: 56px 48px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.velum-empty.is-drag .velum-empty__card {
+  border-color: var(--color-brand);
+  background-color: var(--bg-secondary);
+}
+
+.velum-empty__eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-brand);
+  margin-bottom: 18px;
+}
+
+.velum-empty__title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
+}
+
+.velum-empty__lede {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.velum-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 28px;
+  border: 1px solid var(--accent);
+  background-color: var(--accent);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.velum-empty__cta:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.velum-empty__cta:active {
+  transform: translateY(1px);
+}
+
+.velum-empty__cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.velum-empty__hint {
+  margin-top: 22px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.velum-empty__error {
+  margin-top: 18px;
+  font-size: 0.75rem;
+  color: var(--error);
+  padding: 8px 12px;
+  border: 1px solid var(--error);
+  border-radius: 3px;
+  background-color: rgba(198, 40, 40, 0.05);
+}
+
+/* ============================================================
+   Split workspace
+   ============================================================ */
+
+.velum-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background-color: var(--bg-primary);
+}
+
+.velum-workspace__subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.velum-workspace__doc-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.velum-workspace__doc-icon {
+  font-family: var(--font-serif);
+  color: var(--color-brand);
+  font-size: 1.125rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.velum-workspace__doc-name {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.velum-workspace__doc-stats {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  padding: 3px 8px;
+  background-color: var(--bg-secondary);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.velum-workspace__close {
+  padding: 5px 12px;
+  border: 1px solid var(--border-strong);
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+  flex-shrink: 0;
+}
+
+.velum-workspace__close:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.velum-workspace__split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.velum-workspace__pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.velum-workspace__pane--placeholder .velum-docx-viewer__container {
+  opacity: 0.55;
+  filter: grayscale(0.3);
+}
+
+.velum-workspace__divider {
+  width: 1px;
+  background-color: var(--border);
+  flex-shrink: 0;
+}
+
+.velum-workspace__iteration-banner {
+  padding: 6px 20px;
+  font-size: 0.6875rem;
+  font-style: italic;
+  font-family: var(--font-serif);
+  color: var(--text-muted);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   DocxViewer — the actual rendered DOCX container
+   ============================================================ */
+
+.velum-docx-viewer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  background-color: var(--docx-viewer-bg);
+}
+
+.velum-docx-viewer__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.velum-docx-viewer__spinner {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.6875rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.velum-docx-viewer__scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 20px;
+  min-height: 0;
+  position: relative;
+}
+
+.velum-docx-viewer__container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.velum-docx-viewer__placeholder,
+.velum-docx-viewer__error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.velum-docx-viewer__error {
+  color: var(--error);
+  font-style: normal;
+}
+
+.velum-docx-viewer__error strong {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------
+   docx-preview output — style the rendered Word pages
+   ------------------------------------------------------------
+   docx-preview wraps the document in `.velum-docx-wrapper` (our
+   chosen className + "-wrapper"). Each page becomes a `<section
+   class="velum-docx">`. We override the outer background and
+   add a paper shadow to make it feel like Word.
+   ------------------------------------------------------------ */
+
+.velum-docx-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0 40px;
+  background: transparent;
+  width: 100%;
+  /* Chrome/Edge (Tauri WebView2) supports `zoom` natively; it scales
+     both layout *and* hit-testing, which is exactly what we want so
+     entity click targets line up with their visual rects.
+     0.88 brings the Word page down ~12% for a more comfortable
+     information density without losing legibility. */
+  zoom: 0.88;
+}
+
+.velum-docx-wrapper section.velum-docx,
+.velum-docx-wrapper article.velum-docx,
+.velum-docx-wrapper .velum-docx {
+  background: var(--docx-page-bg) !important;
+  box-shadow: var(--docx-page-shadow);
+  border: 1px solid var(--docx-page-border);
+  border-radius: 2px;
+  color: #1A1A1A;
+  margin: 0 auto;
+  position: relative;
+}
+
+.velum-docx-wrapper p,
+.velum-docx-wrapper span,
+.velum-docx-wrapper td,
+.velum-docx-wrapper th,
+.velum-docx-wrapper li {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------
+   Entity overlays — colored highlights on detected PII spans
+   ------------------------------------------------------------
+   Each entity type has its own hue via CSS custom properties so
+   the base .velum-entity rule can stay tiny. States:
+     - default   → soft tinted background
+     - accepted  → solid underline, slightly stronger fill
+     - rejected  → dashed outline, no fill (kept as-is)
+     - custom    → double underline (user-added span)
+     - active    → boost fill + outline for hover/sync
+   ------------------------------------------------------------ */
+
+.velum-entity {
+  --entity-hue: 220;
+  --entity-sat: 60%;
+  background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.16);
+  border-bottom: 1.5px solid hsl(var(--entity-hue) var(--entity-sat) 45% / 0.55);
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.velum-entity:hover,
+.velum-entity--active {
+  background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.32);
+  border-bottom-color: hsl(var(--entity-hue) var(--entity-sat) 40% / 0.9);
+  box-shadow: 0 0 0 1px hsl(var(--entity-hue) var(--entity-sat) 45% / 0.4);
+}
+
+.velum-entity--accepted {
+  background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.26);
+  border-bottom: 2px solid hsl(var(--entity-hue) var(--entity-sat) 40% / 0.95);
+}
+
+.velum-entity--rejected {
+  background-color: transparent;
+  border-bottom: 1.5px dashed hsl(var(--entity-hue) var(--entity-sat) 45% / 0.7);
+  color: var(--text-secondary);
+}
+
+.velum-entity--custom {
+  border-bottom: double 3px hsl(var(--entity-hue) var(--entity-sat) 40% / 0.95);
+}
+
+[data-theme="dark"] .velum-entity {
+  background-color: hsl(var(--entity-hue) var(--entity-sat) 60% / 0.22);
+  border-bottom-color: hsl(var(--entity-hue) var(--entity-sat) 65% / 0.7);
+}
+
+[data-theme="dark"] .velum-entity:hover,
+[data-theme="dark"] .velum-entity--active {
+  background-color: hsl(var(--entity-hue) var(--entity-sat) 60% / 0.38);
+}
+
+/* Per-type hue/sat overrides.
+   Keys correspond to cssKey in src/lib/entity-types.ts. */
+.velum-entity--per      { --entity-hue: 355; --entity-sat: 72%; } /* crimson */
+.velum-entity--position { --entity-hue: 340; --entity-sat: 55%; } /* pink */
+.velum-entity--org      { --entity-hue: 210; --entity-sat: 70%; } /* blue */
+.velum-entity--project  { --entity-hue: 195; --entity-sat: 65%; } /* cyan */
+.velum-entity--loc      { --entity-hue: 145; --entity-sat: 55%; } /* green */
+.velum-entity--addr     { --entity-hue: 125; --entity-sat: 50%; } /* olive-green */
+.velum-entity--inn      { --entity-hue:  35; --entity-sat: 85%; } /* amber */
+.velum-entity--ogrn     { --entity-hue:  25; --entity-sat: 80%; } /* orange */
+.velum-entity--snils    { --entity-hue:  45; --entity-sat: 80%; } /* gold */
+.velum-entity--passport { --entity-hue:  15; --entity-sat: 75%; } /* burnt-orange */
+.velum-entity--bank     { --entity-hue: 270; --entity-sat: 55%; } /* purple */
+.velum-entity--phone    { --entity-hue: 180; --entity-sat: 55%; } /* teal */
+.velum-entity--email    { --entity-hue: 250; --entity-sat: 60%; } /* indigo */
+.velum-entity--case     { --entity-hue:  85; --entity-sat: 55%; } /* lime */
+.velum-entity--contract { --entity-hue: 100; --entity-sat: 50%; } /* fern */
+.velum-entity--mon      { --entity-hue:  55; --entity-sat: 80%; } /* yellow */
+.velum-entity--date     { --entity-hue: 230; --entity-sat: 55%; } /* slate-blue */
+.velum-entity--other    { --entity-hue: 220; --entity-sat: 10%; } /* neutral */
+
+/* Right pane: placeholders for anonymized text.
+   Slightly muted pill so juries know it's replaced text. */
+.velum-placeholder {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--font-sans);
+  font-size: 0.95em;
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 55% / 0.18);
+  border: 1px solid hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 45% / 0.45);
+  color: var(--text-primary);
+}
+
+.velum-placeholder--active {
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 55% / 0.35);
+  box-shadow: 0 0 0 1px hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 45% / 0.6);
+}
+
+/* ------------------------------------------------------------
+   Entity legend — bottom bar with per-type chips + filters
+   ------------------------------------------------------------ */
+
+.velum-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}
+
+.velum-legend__title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.velum-legend__status {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.velum-legend__status--working {
+  color: var(--accent);
+}
+
+.velum-legend__error {
+  color: var(--error);
+}
+
+.velum-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  color: inherit;
+  font: inherit;
+}
+
+.velum-legend__item:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-strong);
+}
+
+.velum-legend__item--hidden {
+  opacity: 0.42;
+  text-decoration: line-through;
+}
+
+.velum-legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.velum-legend__label {
+  white-space: nowrap;
+}
+
+.velum-legend__count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.velum-legend__toggle,
+.velum-legend__reset {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.velum-legend__reset {
+  margin-left: 0;
+}
+
+.velum-legend__toggle:hover,
+.velum-legend__reset:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.velum-legend__toggle--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.velum-legend__toggle--on:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------
+   Entity popover — floating action menu on click
+   ------------------------------------------------------------ */
+
+.velum-popover {
+  position: fixed;
+  z-index: 90;
+  min-width: 220px;
+  max-width: 280px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  animation: velum-popover-in 120ms ease-out;
+}
+
+@keyframes velum-popover-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.velum-popover__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.velum-popover__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
+  flex-shrink: 0;
+}
+
+.velum-popover__title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.velum-popover__text {
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: auto;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.velum-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.velum-popover__action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+
+.velum-popover__action:hover {
+  background: var(--bg-secondary);
+}
+
+.velum-popover__action--accept:hover {
+  background: hsl(145 55% 45% / 0.12);
+  color: var(--success);
+}
+
+.velum-popover__action--reject:hover {
+  background: hsl(25 75% 50% / 0.12);
+  color: var(--warning);
+}
+
+.velum-popover__action--danger:hover {
+  background: hsl(0 70% 50% / 0.12);
+  color: var(--error);
+}
+
+.velum-popover__icon {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.velum-popover__submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.velum-popover__submenu-title {
+  padding: 4px 6px;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.velum-popover__types {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.velum-popover__type {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.velum-popover__type:hover {
+  background: var(--bg-secondary);
+}
+
+.velum-popover__type--current {
+  background: var(--bg-secondary);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.velum-popover__back {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.velum-popover__back:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+/* ------------------------------------------------------------
+   Selection toolbar — "Add as …" menu when user selects text
+   ------------------------------------------------------------ */
+
+.velum-selection {
+  position: fixed;
+  z-index: 85;
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  animation: velum-popover-in 120ms ease-out;
+}
+
+.velum-selection__primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.velum-selection__primary:hover {
+  background: var(--bg-secondary);
+}
+
+.velum-selection__icon {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.velum-selection__title {
+  padding: 4px 6px;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.velum-selection__types {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.velum-selection__type {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.velum-selection__type:hover {
+  background: var(--bg-secondary);
+}
+.velum-selection__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
+  flex-shrink: 0;
+}
+
+.velum-selection__error {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: hsl(0 70% 50% / 0.08);
+  color: var(--error);
+  font-size: 0.75rem;
+}
