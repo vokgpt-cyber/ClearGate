@@ -1,0 +1,49 @@
+"""Application configuration via environment variables and .env file."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from pydantic import computed_field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Root .env is one level above backend/
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
+
+_DEFAULT_CORS = "http://localhost:3000,http://localhost:1420,tauri://localhost"
+
+
+class Settings(BaseSettings):
+    """VELUM backend settings loaded from environment / .env file."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else None,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Deployment profile
+    velum_profile: str = "alpha"
+
+    # Server
+    backend_host: str = "0.0.0.0"  # noqa: S104
+    backend_port: int = 8000
+
+    # CORS — stored as comma-separated string to avoid pydantic-settings JSON parsing
+    backend_cors_origins: str = _DEFAULT_CORS
+
+    # Logging
+    log_level: str = "INFO"
+
+    # Version (not from env — hardcoded to match pyproject.toml)
+    version: str = "0.1.0-alpha"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS origins from comma-separated string."""
+        return [o.strip() for o in self.backend_cors_origins.split(",") if o.strip()]
+
+
+settings = Settings()

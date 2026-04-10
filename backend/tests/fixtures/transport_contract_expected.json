@@ -1,0 +1,23 @@
+{
+  "document": "transport_contract_regression",
+  "expected_entities": [
+    {"type": "RU_INN", "text": "7707083893"},
+    {"type": "RU_OGRN", "text": "1027700132195"},
+    {"type": "RU_INN", "text": "5024002119"},
+    {"type": "RU_OGRN", "text": "1037739169335"},
+    {"type": "RU_DATE", "text": "10.01.2026"},
+    {"type": "RU_BANK_ACCOUNT", "text": "40702810100000012345"},
+    {"type": "RU_BANK_ACCOUNT", "text": "40702810200000054321"}
+  ],
+  "must_not_contain": [
+    "Генерального директора",
+    "Директора по логистике",
+    "Исполнитель",
+    "Заказчик",
+    "Заявки",
+    "Заявками",
+    "БИК",
+    "Приложение"
+  ],
+  "expected_entity_count_range": [10, 35]
+}

@@ -1,0 +1,204 @@
+[project]
+name = "velum-backend"
+version = "0.1.0"
+description = "VELUM — On-premise anonymization gateway for legal AI workflows at EPAM"
+authors = [{ name = "EPAM Legal", email = "dev@epam.ru" }]
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.32.0",
+    "websockets>=14.0",
+    "python-multipart>=0.0.18",
+
+    # Data validation
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+
+    # NER & ML
+    "presidio-analyzer>=2.2.357",
+    "presidio-anonymizer>=2.2.357",
+    "spacy>=3.8.0",
+    "gliner>=0.2.13",
+    "natasha>=1.6.0",
+    "yargy>=0.16.0",
+    "pymorphy3>=2.0.2",
+
+    # Local LLM
+    "ollama>=0.4.0",
+
+    # Cloud LLM SDKs (native, not unified shim)
+    "anthropic>=0.40.0",
+    "openai>=1.58.0",
+    "google-genai>=0.3.0",
+
+    # Document processing
+    "python-docx>=1.1.2",
+    "pymupdf>=1.25.0",
+
+    # HTTP & async
+    "httpx>=0.28.0",
+    "aiofiles>=24.1.0",
+
+    # Crypto
+    "cryptography>=44.0.0",
+    "pynacl>=1.5.0",
+
+    # Utilities
+    "python-Levenshtein>=0.26.0",
+    "structlog>=24.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "httpx>=0.28.0",  # для FastAPI TestClient
+
+    # Linting & formatting
+    "ruff>=0.8.0",
+    "black>=24.10.0",
+    "mypy>=1.13.0",
+
+    # Type stubs
+    "types-aiofiles",
+
+    # Pre-commit
+    "pre-commit>=4.0.0",
+
+    # Security scanning
+    "detect-secrets>=1.5.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# =============================================================================
+# Ruff — линтер и форматтер
+# =============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "models",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "S",   # flake8-bandit (security)
+    "T20", # flake8-print
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "B008",   # function calls in argument defaults (FastAPI Depends)
+    "S101",   # use of assert (нужны в тестах)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106", "ARG"]
+"app/config.py" = ["S105", "S106"]
+"app/services/regex_recognizers.py" = ["RUF001", "RUF002", "RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true
+
+# =============================================================================
+# Black — форматтер
+# =============================================================================
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+skip-string-normalization = false
+
+# =============================================================================
+# Mypy — type checker
+# =============================================================================
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# =============================================================================
+# Pytest
+# =============================================================================
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=70",
+]
+markers = [
+    "unit: unit tests",
+    "integration: integration tests requiring external services",
+    "slow: slow tests (>1s)",
+    "ner: NER pipeline tests",
+    "llm: tests requiring LLM API calls",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "app/main.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
