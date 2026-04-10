@@ -34,9 +34,9 @@
   --font-serif: 'PT Serif', Georgia, serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --header-height: 56px;
-  --sidebar-width: 248px;
-  --entity-panel-width: 280px;
+  --header-height: 44px;
+  --sidebar-width: 200px;
+  --entity-panel-width: 228px;
 
   /* DOCX page tokens — the document "paper" itself always stays light
      so the rendered text remains readable regardless of app theme. */
@@ -152,7 +152,7 @@ h1, h2, h3, h4 {
   align-items: center;
   justify-content: space-between;
   height: var(--header-height);
-  padding: 0 20px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--border);
   background-color: var(--bg-primary);
   flex-shrink: 0;
@@ -257,7 +257,7 @@ h1, h2, h3, h4 {
 
 .velum-sidebar__brand-name {
   font-family: var(--font-serif);
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--text-primary);
@@ -281,7 +281,7 @@ h1, h2, h3, h4 {
   background-color: var(--accent);
   color: #fff;
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   border-radius: 3px;
@@ -295,7 +295,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-sidebar__new-btn-plus {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   line-height: 1;
   font-weight: 400;
   opacity: 0.9;
@@ -356,7 +356,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-sidebar__item-title {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 500;
   max-width: 100%;
   overflow: hidden;
@@ -391,7 +391,7 @@ h1, h2, h3, h4 {
   max-width: 560px;
   width: 100%;
   text-align: center;
-  padding: 56px 48px;
+  padding: 44px 40px;
   border: 1px dashed var(--border-strong);
   border-radius: 4px;
   background-color: var(--bg-primary);
@@ -415,7 +415,7 @@ h1, h2, h3, h4 {
 
 .velum-empty__title {
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: 1.625rem;
   font-weight: 700;
   line-height: 1.15;
   color: var(--text-primary);
@@ -425,7 +425,7 @@ h1, h2, h3, h4 {
 
 .velum-empty__lede {
   font-family: var(--font-serif);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-style: italic;
   line-height: 1.55;
   color: var(--text-secondary);
@@ -441,7 +441,7 @@ h1, h2, h3, h4 {
   background-color: var(--accent);
   color: #fff;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   border-radius: 3px;
@@ -496,10 +496,10 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background-color: var(--bg-primary);
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
@@ -514,7 +514,7 @@ h1, h2, h3, h4 {
 .velum-workspace__doc-icon {
   font-family: var(--font-serif);
   color: var(--color-brand);
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -522,7 +522,7 @@ h1, h2, h3, h4 {
 .velum-workspace__doc-name {
   font-family: var(--font-serif);
   font-weight: 700;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -693,7 +693,7 @@ h1, h2, h3, h4 {
   padding: 20px;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   text-align: center;
   pointer-events: none;
@@ -865,7 +865,7 @@ h1, h2, h3, h4 {
   background: var(--bg-elevated);
   border-top: 1px solid var(--border);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-primary);
 }
 
@@ -984,7 +984,7 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
   padding: 8px;
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-primary);
   animation: velum-popover-in 120ms ease-out;
 }
@@ -1161,7 +1161,7 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
   padding: 8px;
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-primary);
   animation: velum-popover-in 120ms ease-out;
 }
