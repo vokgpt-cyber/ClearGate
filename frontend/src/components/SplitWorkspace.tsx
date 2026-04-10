@@ -390,7 +390,17 @@ export function SplitWorkspace({
       }
 
       const sel = window.getSelection();
+      // [Velum/sel] diagnostic log C — raw selection state
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] C selection raw', {
+        has: !!sel,
+        rangeCount: sel?.rangeCount,
+        collapsed: sel?.isCollapsed,
+        len: sel?.toString().length ?? 0,
+      });
       if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum/sel] C.1 dropped: empty or collapsed');
         setSelection(null);
         setSelectionError(null);
         return;
@@ -398,7 +408,16 @@ export function SplitWorkspace({
 
       const range = sel.getRangeAt(0);
       const text = range.toString();
+      // [Velum/sel] diagnostic log D — range text
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] D range text', {
+        len: text.length,
+        trimmed: text.trim().length,
+        sample: text.slice(0, 30),
+      });
       if (text.trim().length === 0) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum/sel] D.1 dropped: whitespace-only');
         setSelection(null);
         return;
       }
@@ -415,8 +434,18 @@ export function SplitWorkspace({
 
       const inLeft = leftContainer.contains(startNode);
       const inRight = rightContainer.contains(startNode);
+      // [Velum/sel] diagnostic log E — pane containment
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] E startNode', {
+        tag: startNode.tagName,
+        cls: (startNode as Element).className,
+        inLeft,
+        inRight,
+      });
       if (!inLeft && !inRight) {
         // Selection is in the sidebar / legend / subheader / toolbar.
+        // eslint-disable-next-line no-console
+        console.info('[Velum/sel] E.1 dropped: outside both panes');
         setSelection(null);
         return;
       }
@@ -424,8 +453,9 @@ export function SplitWorkspace({
       // Selections that start inside an existing entity mark belong to
       // the popover flow, not the "add new entity" flow.
       if (startNode.closest('mark.velum-entity')) {
+        // [Velum/sel] diagnostic log F — starts inside existing entity mark
         // eslint-disable-next-line no-console
-        console.info('[Velum] selection: starts inside existing mark — popover flow');
+        console.info('[Velum/sel] F dropped: starts inside existing mark');
         setSelection(null);
         return;
       }
@@ -469,16 +499,26 @@ export function SplitWorkspace({
         }
       }
 
+      // [Velum/sel] diagnostic log G — resolved offsets
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] G offsets', {
+        pane,
+        leftOffsets,
+      });
       if (!leftOffsets || leftOffsets.start === leftOffsets.end) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum/sel] G.1 dropped: null or zero-length offsets');
         setSelection(null);
         return;
       }
 
+      // [Velum/sel] diagnostic log H — committing selection to state
       // eslint-disable-next-line no-console
-      console.info('[Velum] selection captured', {
+      console.info('[Velum/sel] H committing', {
         pane,
         leftStart: leftOffsets.start,
         leftEnd: leftOffsets.end,
+        anchor: { x: anchorX, y: anchorY },
         text: text.slice(0, 40),
       });
 
@@ -493,6 +533,14 @@ export function SplitWorkspace({
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      // [Velum/sel] diagnostic log A — mouseup received
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] A mouseup', {
+        x: e.clientX,
+        y: e.clientY,
+        tag: (e.target as Element | null)?.tagName,
+        cls: (e.target as Element | null)?.className,
+      });
       // Clicks inside the floating toolbar or entity popover are
       // user interactions with those controls — do NOT re-evaluate
       // the selection (which would clear the toolbar instantly).
@@ -501,8 +549,13 @@ export function SplitWorkspace({
         target?.closest?.('.velum-selection') ||
         target?.closest?.('.velum-popover')
       ) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum/sel] A.1 dropped: click inside toolbar/popover');
         return;
       }
+      // [Velum/sel] diagnostic log B — passed toolbar/popover guard
+      // eslint-disable-next-line no-console
+      console.info('[Velum/sel] B passed toolbar guard');
       const { clientX, clientY } = e;
       // Let the browser finalise its selection state, then read it.
       setTimeout(() => processSelection(clientX, clientY), 0);

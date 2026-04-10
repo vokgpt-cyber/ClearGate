@@ -59,6 +59,16 @@ export function SelectionToolbar({
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
+  // [Velum/sel] diagnostic log I — every render of the toolbar
+  // eslint-disable-next-line no-console
+  console.info('[Velum/sel] I toolbar render', {
+    hasSelection: !!selection,
+    pane: selection?.pane,
+    start: selection?.start,
+    end: selection?.end,
+    position,
+  });
+
   // Reset the expanded state whenever we get a fresh selection.
   useEffect(() => {
     setOpen(false);
@@ -89,6 +99,19 @@ export function SelectionToolbar({
     // Clamp horizontally and vertically inside the viewport.
     left = Math.min(Math.max(left, margin), vw - width - margin);
     top = Math.min(Math.max(top, margin), vh - height - margin);
+
+    // [Velum/sel] diagnostic log J — layout pass
+    // eslint-disable-next-line no-console
+    console.info('[Velum/sel] J toolbar layout', {
+      hasRef: !!el,
+      width,
+      height,
+      vw,
+      vh,
+      anchor: selection.anchor,
+      top,
+      left,
+    });
 
     setPosition({ top, left });
   }, [selection]);
