@@ -21,6 +21,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale } from '@/hooks/useLocale';
+import { logSel } from '@/lib/debug-log';
 import {
   ENTITY_TYPES,
   LEGEND_ORDER,
@@ -60,8 +61,7 @@ export function SelectionToolbar({
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   // [Velum/sel] diagnostic log I — every render of the toolbar
-  // eslint-disable-next-line no-console
-  console.info('[Velum/sel] I toolbar render', {
+  logSel('I toolbar render', {
     hasSelection: !!selection,
     pane: selection?.pane,
     start: selection?.start,
@@ -101,8 +101,7 @@ export function SelectionToolbar({
     top = Math.min(Math.max(top, margin), vh - height - margin);
 
     // [Velum/sel] diagnostic log J — layout pass
-    // eslint-disable-next-line no-console
-    console.info('[Velum/sel] J toolbar layout', {
+    logSel('J toolbar layout', {
       hasRef: !!el,
       width,
       height,

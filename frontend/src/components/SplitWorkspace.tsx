@@ -53,6 +53,7 @@ import {
   type OverlayEntity,
 } from '@/lib/entity-overlay';
 import { addCustomEntity, anonymizeText } from '@/lib/api';
+import { clearSelectionLog, logSel } from '@/lib/debug-log';
 import { useLocale } from '@/hooks/useLocale';
 import type { EntityTypeCode } from '@/lib/entity-types';
 
@@ -159,6 +160,20 @@ export function SplitWorkspace({
     },
     [markBothReadyIfPossible],
   );
+
+  // Clear the server-side diagnostic log once per SplitWorkspace mount
+  // and emit a marker line so Claude can find the start of this run
+  // when reading `backend/logs/selection-diagnostic.jsonl`.
+  useEffect(() => {
+    clearSelectionLog();
+    logSel('X workspace mounted', {
+      documentId,
+      ua: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      vw: typeof window !== 'undefined' ? window.innerWidth : null,
+      vh: typeof window !== 'undefined' ? window.innerHeight : null,
+      dpr: typeof window !== 'undefined' ? window.devicePixelRatio : null,
+    });
+  }, [documentId]);
 
   // Reset everything when the document changes.
   //
@@ -391,16 +406,14 @@ export function SplitWorkspace({
 
       const sel = window.getSelection();
       // [Velum/sel] diagnostic log C — raw selection state
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] C selection raw', {
+      logSel('C selection raw', {
         has: !!sel,
         rangeCount: sel?.rangeCount,
         collapsed: sel?.isCollapsed,
         len: sel?.toString().length ?? 0,
       });
       if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] C.1 dropped: empty or collapsed');
+        logSel('C.1 dropped: empty or collapsed');
         setSelection(null);
         setSelectionError(null);
         return;
@@ -409,15 +422,16 @@ export function SplitWorkspace({
       const range = sel.getRangeAt(0);
       const text = range.toString();
       // [Velum/sel] diagnostic log D — range text
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] D range text', {
+      // NOTE: `sample` is stripped by the scrubber before reaching the
+      // JSONL file (security model) but is still visible in the local
+      // browser console for manual inspection.
+      logSel('D range text', {
         len: text.length,
         trimmed: text.trim().length,
         sample: text.slice(0, 30),
       });
       if (text.trim().length === 0) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] D.1 dropped: whitespace-only');
+        logSel('D.1 dropped: whitespace-only');
         setSelection(null);
         return;
       }
@@ -435,8 +449,7 @@ export function SplitWorkspace({
       const inLeft = leftContainer.contains(startNode);
       const inRight = rightContainer.contains(startNode);
       // [Velum/sel] diagnostic log E — pane containment
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] E startNode', {
+      logSel('E startNode', {
         tag: startNode.tagName,
         cls: (startNode as Element).className,
         inLeft,
@@ -444,8 +457,7 @@ export function SplitWorkspace({
       });
       if (!inLeft && !inRight) {
         // Selection is in the sidebar / legend / subheader / toolbar.
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] E.1 dropped: outside both panes');
+        logSel('E.1 dropped: outside both panes');
         setSelection(null);
         return;
       }
@@ -454,8 +466,7 @@ export function SplitWorkspace({
       // the popover flow, not the "add new entity" flow.
       if (startNode.closest('mark.velum-entity')) {
         // [Velum/sel] diagnostic log F — starts inside existing entity mark
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] F dropped: starts inside existing mark');
+        logSel('F dropped: starts inside existing mark');
         setSelection(null);
         return;
       }
@@ -500,26 +511,22 @@ export function SplitWorkspace({
       }
 
       // [Velum/sel] diagnostic log G — resolved offsets
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] G offsets', {
+      logSel('G offsets', {
         pane,
         leftOffsets,
       });
       if (!leftOffsets || leftOffsets.start === leftOffsets.end) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] G.1 dropped: null or zero-length offsets');
+        logSel('G.1 dropped: null or zero-length offsets');
         setSelection(null);
         return;
       }
 
       // [Velum/sel] diagnostic log H — committing selection to state
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] H committing', {
+      logSel('H committing', {
         pane,
         leftStart: leftOffsets.start,
         leftEnd: leftOffsets.end,
         anchor: { x: anchorX, y: anchorY },
-        text: text.slice(0, 40),
       });
 
       setSelection({
@@ -534,8 +541,7 @@ export function SplitWorkspace({
 
     const handleMouseUp = (e: MouseEvent) => {
       // [Velum/sel] diagnostic log A — mouseup received
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] A mouseup', {
+      logSel('A mouseup', {
         x: e.clientX,
         y: e.clientY,
         tag: (e.target as Element | null)?.tagName,
@@ -549,13 +555,11 @@ export function SplitWorkspace({
         target?.closest?.('.velum-selection') ||
         target?.closest?.('.velum-popover')
       ) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum/sel] A.1 dropped: click inside toolbar/popover');
+        logSel('A.1 dropped: click inside toolbar/popover');
         return;
       }
       // [Velum/sel] diagnostic log B — passed toolbar/popover guard
-      // eslint-disable-next-line no-console
-      console.info('[Velum/sel] B passed toolbar guard');
+      logSel('B passed toolbar guard');
       const { clientX, clientY } = e;
       // Let the browser finalise its selection state, then read it.
       setTimeout(() => processSelection(clientX, clientY), 0);

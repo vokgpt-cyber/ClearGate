@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "VELUM",
+    "subtitle": "Legal document anonymization"
+  },
+  "nav": {
+    "newSession": "New Session",
+    "settings": "Settings"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "checking": "Checking..."
+  },
+  "session": {
+    "create": "Create Session",
+    "close": "Close Session",
+    "entities": "Entities",
+    "noEntities": "No entities found"
+  },
+  "sidebar": {
+    "newDocument": "New document",
+    "recentSessions": "Recent sessions",
+    "noSessions": "No documents opened yet"
+  },
+  "empty": {
+    "eyebrow": "VELUM · Anonymization",
+    "title": "Open a contract to anonymize",
+    "lede": "Drag a DOCX file here or pick one manually. The document never leaves your computer.",
+    "pick": "Choose a document",
+    "working": "Opening…",
+    "hint": "Supported format: DOCX. Maximum size: 50 MB."
+  },
+  "workspace": {
+    "close": "Close document",
+    "iteration1Notice": "Iteration 1: DOCX rendering. Anonymization and interactivity land in later iterations.",
+    "segments": "segments",
+    "chars": "characters"
+  },
+  "legend": {
+    "title": "Entities",
+    "detecting": "Analyzing document",
+    "none": "Nothing detected",
+    "error": "Detection failed",
+    "total": "Total",
+    "filterHidden": "hidden",
+    "onlyUnconfirmed": "Only unreviewed",
+    "resetFilters": "Reset"
+  },
+  "popover": {
+    "accept": "Accept",
+    "reanonymize": "Anonymize",
+    "reject": "Keep as-is",
+    "unaccept": "Undo accept",
+    "changeType": "Change type",
+    "remove": "Remove entity",
+    "pickType": "Pick a type",
+    "cancel": "Cancel"
+  },
+  "selection": {
+    "addAs": "Anonymize",
+    "pickType": "Pick a type",
+    "adding": "Adding…",
+    "error": "Failed to add",
+    "crossesPlaceholder": "Selection crosses an already-anonymized span"
+  },
+  "docx": {
+    "loading": "Rendering document…",
+    "empty": "No document loaded",
+    "error": "Failed to open document"
+  },
+  "editor": {
+    "original": "Original",
+    "anonymized": "Anonymized",
+    "paste": "Paste document text...",
+    "anonymize": "Anonymize",
+    "anonymizing": "Anonymizing..."
+  },
+  "entity": {
+    "accept": "Accept",
+    "reject": "Reject",
+    "edit": "Edit",
+    "types": {
+      "PER": "Person",
+      "ORG": "Organization",
+      "LOC": "Location",
+      "ADDR": "Address",
+      "RU_INN": "INN",
+      "RU_OGRN": "OGRN",
+      "RU_SNILS": "SNILS",
+      "RU_PASSPORT": "Passport",
+      "RU_BANK_ACCOUNT": "Bank Account",
+      "RU_PHONE": "Phone",
+      "EMAIL_ADDRESS": "Email",
+      "RU_DATE": "Date",
+      "RU_CASE_NUMBER": "Case Number"
+    }
+  },
+  "llm": {
+    "provider": "Provider",
+    "model": "Model",
+    "thinking": "Thinking Level",
+    "prompt": "Prompt",
+    "send": "Send to LLM",
+    "sending": "Sending...",
+    "cancel": "Cancel",
+    "cost": "Cost",
+    "estimatedCost": "Estimated Cost",
+    "response": "LLM Response",
+    "thinkingProcess": "Thinking Process",
+    "confirmSend": "Confirm Send",
+    "confirmMessage": "Text will be sent to cloud LLM. All personal data has been replaced with placeholders."
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "locale": {
+    "ru": "Русский",
+    "en": "English"
+  }
+}

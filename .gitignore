@@ -54,6 +54,14 @@ wheels/
 *.egg
 MANIFEST
 
+# The Python `lib/` rule above would otherwise swallow the frontend's
+# source library folder (frontend/src/lib/**), which contains api.ts,
+# entity-overlay.ts, docx-anchor-map.ts, debug-log.ts, etc. Without
+# these negations ALL of those files silently drop out of git tracking
+# and every snapshot is missing them. Do not remove.
+!frontend/src/lib/
+!frontend/src/lib/**
+
 # Testing
 .pytest_cache/
 .coverage

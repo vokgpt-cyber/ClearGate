@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import anonymize, documents, health, llm_ws, sessions
+from app.routers import anonymize, debug, documents, health, llm_ws, sessions
 
 logger = structlog.get_logger(__name__)
 
@@ -49,3 +49,4 @@ app.include_router(sessions.router)
 app.include_router(documents.router)
 app.include_router(anonymize.router)
 app.include_router(llm_ws.router)
+app.include_router(debug.router)
