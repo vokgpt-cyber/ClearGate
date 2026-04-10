@@ -1,0 +1,34 @@
+# VELUM Docker Compose — MVP profile overrides (RTX 3090 + i9 + 64GB)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.mvp.yml up -d
+
+services:
+  backend:
+    environment:
+      - VELUM_PROFILE=mvp
+      - OLLAMA_MODEL=qwen2.5:32b-instruct-q4_K_M
+      - GLINER_MODEL=urchade/gliner_large-v2.1
+      - BACKEND_WORKERS=2
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama:
+    deploy:
+      resources:
+        limits:
+          memory: 24G
+        reservations:
+          memory: 16G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

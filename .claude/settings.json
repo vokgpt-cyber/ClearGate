@@ -1,0 +1,95 @@
+{
+  "$schema": "https://docs.claude.com/schemas/claude-code-settings.json",
+  "projectName": "VELUM",
+  "description": "On-premise anonymization gateway for legal AI workflows at EPAM",
+  "language": "ru",
+  "defaultModel": "claude-opus-4-6",
+
+  "context": {
+    "alwaysInclude": [
+      "CLAUDE.md",
+      "docs/ARCHITECTURE.md"
+    ],
+    "exclude": [
+      "node_modules/**",
+      ".venv/**",
+      "models/**",
+      "*.gguf",
+      "*.safetensors",
+      ".next/**",
+      "target/**",
+      "logs/**",
+      "backups/**",
+      ".git/**",
+      "__pycache__/**",
+      ".pytest_cache/**",
+      ".mypy_cache/**",
+      ".ruff_cache/**"
+    ]
+  },
+
+  "permissions": {
+    "allowedCommands": [
+      "git status",
+      "git diff",
+      "git log",
+      "git branch",
+      "git checkout *",
+      "git add *",
+      "git commit *",
+      "git bundle *",
+      "git fsck",
+      "ruff check *",
+      "ruff format *",
+      "black *",
+      "mypy *",
+      "pytest *",
+      "python *",
+      "uvicorn *",
+      "npm *",
+      "npx *",
+      "cargo *",
+      "ollama *",
+      "docker compose *",
+      "pre-commit *"
+    ],
+    "defaultMode": "bypassPermissions",
+    "deniedCommands": [
+      "rm -rf /",
+      "git push *",
+      "git remote add *",
+      "curl * | bash",
+      "wget * | bash"
+    ],
+    "requireConfirmation": [
+      "git reset --hard *",
+      "git clean -fd",
+      "rm -rf *",
+      "docker compose down -v"
+    ]
+  },
+
+  "hooks": {
+    "preCommit": "pre-commit run --all-files",
+    "postWrite": "echo 'File written. Remember to run tests and backup before committing.'"
+  },
+
+  "guidelines": {
+    "neverDo": [
+      "Log original document text",
+      "Log mapping table contents",
+      "Log encryption keys",
+      "Use unified LLM shims (LiteLLM, OpenRouter, etc.)",
+      "Hardcode Russian or English strings in JSX (use i18next)",
+      "Commit .env, secrets, mapping tables, real client data, ML models"
+    ],
+    "alwaysDo": [
+      "Read CLAUDE.md before starting any task",
+      "Read relevant ADRs from docs/adr/",
+      "Write tests for business logic",
+      "Use Conventional Commits format",
+      "Update CHANGELOG.md after significant changes",
+      "Run backup.ps1 before risky operations"
+    ]
+  }
+}

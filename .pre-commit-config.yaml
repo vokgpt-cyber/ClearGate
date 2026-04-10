@@ -1,0 +1,117 @@
+# Pre-commit hooks for VELUM
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # ----------- Generic checks -----------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.lock)$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^docker-compose.*\.yml$
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-case-conflict
+
+  # ----------- Python: ruff (linter + formatter) -----------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  # ----------- Python: mypy -----------
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^backend/app/
+        additional_dependencies:
+          - pydantic>=2.10.0
+          - types-aiofiles
+        args: [--config-file=backend/pyproject.toml]
+
+  # ----------- Secrets scanning (CRITICAL) -----------
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: ^(.*\.lock|.*\.svg|frontend/src/lib/locales/.*\.json)$
+
+  # ----------- gitleaks (additional secrets layer) -----------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # ----------- TypeScript / Frontend -----------
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: bash -c 'cd frontend && npx eslint --fix'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: true
+
+      - id: prettier
+        name: Prettier
+        entry: bash -c 'cd frontend && npx prettier --write'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|md)$
+        pass_filenames: true
+
+      - id: typecheck
+        name: TypeScript typecheck
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # ----------- VELUM-specific checks -----------
+  - repo: local
+    hooks:
+      - id: no-pii-in-logs
+        name: 'VELUM: no PII in log statements'
+        entry: bash -c '! grep -rn -E "logger\.(info|debug|warning|error)\(.*(text=|content=|mapping=)" backend/app/ || (echo "ERROR: Possible PII logging detected. Use metadata only." && exit 1)'
+        language: system
+        files: ^backend/app/.*\.py$
+        pass_filenames: false
+
+      - id: no-hardcoded-strings
+        name: 'VELUM: no hardcoded Russian/English in JSX'
+        entry: bash -c '! grep -rEn ">[А-Яа-я]{4,}" frontend/src/components/ frontend/src/app/ || (echo "ERROR: Hardcoded Russian strings in JSX. Use i18next." && exit 1)'
+        language: system
+        files: ^frontend/src/.*\.(tsx|jsx)$
+        pass_filenames: false
+
+      - id: no-unified-shim
+        name: 'VELUM: no unified LLM shim libraries'
+        entry: bash -c '! grep -rEn "(litellm|openrouter)" backend/app/ frontend/src/ || (echo "ERROR: Unified LLM shim detected. Use native SDKs only (see ADR-0006)." && exit 1)'
+        language: system
+        pass_filenames: false
+
+# ----------- Default settings -----------
+default_language_version:
+  python: python3.12
+
+default_stages: [pre-commit]
+
+ci:
+  autofix_prs: false
+  skip:
+    - typecheck  # too slow for CI
+    - mypy
