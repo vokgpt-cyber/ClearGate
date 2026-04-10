@@ -1,12 +1,22 @@
 'use client';
 
 /**
- * SelectionToolbar — floating "Add as entity" menu that appears when
- * the user selects text in the ORIGINAL pane of the workspace.
+ * SelectionToolbar — floating "Anonymize" menu that appears under the
+ * user's cursor when they select text in EITHER pane of the workspace.
  *
- * The toolbar itself is passive: SplitWorkspace tracks the selection,
- * computes the anchor rect, and hands it in via props. We only render
- * the button with a type picker and call back when the user picks.
+ * The toolbar itself is passive. SplitWorkspace:
+ *   1. Listens for mouseup anywhere in the document.
+ *   2. Inspects the current selection, figures out which pane it lives
+ *      in, and translates its offsets back to the ORIGINAL (left-pane)
+ *      coordinate system.
+ *   3. Hands us a SelectionInfo that carries the cursor position
+ *      (`anchor`) and the left-pane offsets.
+ *
+ * We only render a single-button "Анонимизировать" control which
+ * expands into a 2-column type picker when clicked. Position is
+ * computed from `selection.anchor` so the popover actually appears
+ * under the cursor the user just released — the expected Google Docs /
+ * Harvey.AI-style affordance.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -18,13 +28,15 @@ import {
 } from '@/lib/entity-types';
 
 export interface SelectionInfo {
-  /** Viewport-relative rect of the selection (from getBoundingClientRect). */
-  rect: DOMRect;
+  /** Where to anchor the toolbar (cursor position in viewport coords). */
+  anchor: { x: number; y: number };
   /** Selected text (what the user sees). */
   text: string;
-  /** Plain-text offsets inside the document (backend-aligned). */
+  /** Plain-text offsets in the ORIGINAL document (left-pane space). */
   start: number;
   end: number;
+  /** Which pane the selection was made in — useful for debugging. */
+  pane: 'left' | 'right';
 }
 
 interface SelectionToolbarProps {
@@ -47,27 +59,37 @@ export function SelectionToolbar({
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
+  // Reset the expanded state whenever we get a fresh selection.
+  useEffect(() => {
+    setOpen(false);
+  }, [selection?.start, selection?.end, selection?.pane]);
+
   useLayoutEffect(() => {
     if (!selection) {
       setPosition(null);
-      setOpen(false);
       return;
     }
     const el = ref.current;
-    const width = el?.offsetWidth ?? 180;
-    const height = el?.offsetHeight ?? 40;
-    const gap = 8;
+    const width = el?.offsetWidth ?? 200;
+    const height = el?.offsetHeight ?? 44;
+    const gap = 10;
     const margin = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // Prefer above the selection; flip below if there's no room.
-    let top = selection.rect.top - height - gap;
-    if (top < margin) {
-      top = Math.min(selection.rect.bottom + gap, vh - height - margin);
+    // Default: position the toolbar BELOW the cursor, centered on X.
+    let top = selection.anchor.y + gap;
+    let left = selection.anchor.x - width / 2;
+
+    // Flip above if there is not enough room below.
+    if (top + height > vh - margin) {
+      top = selection.anchor.y - height - gap;
     }
-    let left = selection.rect.left + selection.rect.width / 2 - width / 2;
+
+    // Clamp horizontally and vertically inside the viewport.
     left = Math.min(Math.max(left, margin), vw - width - margin);
+    top = Math.min(Math.max(top, margin), vh - height - margin);
+
     setPosition({ top, left });
   }, [selection]);
 
@@ -90,6 +112,9 @@ export function SelectionToolbar({
         top: position?.top ?? -9999,
         left: position?.left ?? -9999,
       }}
+      // Prevent selection loss / mouseup bubbling from eating clicks on
+      // the toolbar buttons themselves.
+      onMouseDown={(e) => e.preventDefault()}
     >
       {!open ? (
         <button
@@ -99,8 +124,7 @@ export function SelectionToolbar({
           disabled={busy}
         >
           <span className="velum-selection__icon" aria-hidden>+</span>
-          {busy ? t('selection.adding') : t('selection.addAs')}…
-        </button>
+          {busy ? t('selection.adding') : t('selection.addAs')}        </button>
       ) : (
         <div className="velum-selection__types">
           <div className="velum-selection__title">{t('selection.pickType')}</div>

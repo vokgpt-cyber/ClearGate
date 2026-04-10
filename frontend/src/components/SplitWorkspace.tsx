@@ -48,6 +48,7 @@ import {
 import {
   groupEntityCounts,
   rerenderPaneFromClean,
+  rightOffsetsToLeft,
   type InteractiveEntity,
   type OverlayEntity,
 } from '@/lib/entity-overlay';
@@ -101,6 +102,14 @@ export function SplitWorkspace({
       return true;
     });
   }, [entities, hiddenTypes, onlyUnconfirmed]);
+
+  // Mirror of visibleEntities in a ref so the mouseup-based selection
+  // handler can read the latest list without re-attaching its
+  // document-level event listeners on every filter/state change.
+  const visibleEntitiesRef = useRef<InteractiveEntity[]>([]);
+  useEffect(() => {
+    visibleEntitiesRef.current = visibleEntities;
+  }, [visibleEntities]);
 
   const counts = useMemo(() => groupEntityCounts(entities), [entities]);
 
@@ -356,16 +365,27 @@ export function SplitWorkspace({
 
   // ─── text selection → SelectionToolbar ───────────────────────────
   //
-  // Fires on every selection change. We debounce by waiting for
-  // `mouseup` instead of reacting to `selectionchange` directly,
-  // because selectionchange fires on every mouse-move during a drag
-  // and the transient intermediate selections made the toolbar flash.
+  // Unified handler that works for BOTH panes. For the left pane we
+  // can read offsets directly from leftMap. For the right pane we
+  // read offsets from rightMap and then translate them back to the
+  // left-pane coordinate system via rightOffsetsToLeft, so the
+  // backend always sees a single source of truth.
+  //
+  // We trigger on mouseup (the only reliable "the user finished
+  // selecting" signal) and use the mouseup's clientX/clientY as the
+  // anchor for the floating toolbar — that's what "под курсором"
+  // means to a user used to Google Docs / Harvey.AI-style tools.
+  //
+  // We deliberately do NOT listen for selectionchange any more: it
+  // fires constantly during a drag and was the source of the
+  // "toolbar never appears" bug in iteration 3.
   useEffect(() => {
-    const handleSelection = () => {
+    const processSelection = (anchorX: number, anchorY: number) => {
       const leftContainer = leftContainerRef.current;
-      if (!leftContainer) {
+      const rightContainer = rightContainerRef.current;
+      if (!leftContainer || !rightContainer) {
         // eslint-disable-next-line no-console
-        console.info('[Velum] selection: no left container');
+        console.info('[Velum] selection: containers not ready');
         return;
       }
 
@@ -375,96 +395,147 @@ export function SplitWorkspace({
         setSelectionError(null);
         return;
       }
+
       const range = sel.getRangeAt(0);
-
-      // The selection must at least START inside the left container.
-      // If it doesn't, it's a selection in the right pane / legend /
-      // elsewhere and we ignore it.
-      const startNode =
-        range.startContainer.nodeType === Node.TEXT_NODE
-          ? range.startContainer.parentElement
-          : (range.startContainer as Element);
-      if (!startNode || !leftContainer.contains(startNode)) {
-        setSelection(null);
-        return;
-      }
-
-      // If the selection starts INSIDE an existing mark, we leave it
-      // alone — clicking the mark opens the popover instead.
-      const startInMark = startNode.closest('mark.velum-entity');
-      if (startInMark) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum] selection: starts inside existing mark — skipping');
-        setSelection(null);
-        return;
-      }
-
-      const leftMap = leftMapRef.current;
-      if (!leftMap) {
-        // eslint-disable-next-line no-console
-        console.warn('[Velum] selection: no anchor map yet');
-        return;
-      }
-      const offsets = leftMap.rangeToOffsets(range);
-      if (!offsets || offsets.start === offsets.end) {
-        // eslint-disable-next-line no-console
-        console.info('[Velum] selection: offsets empty', offsets);
-        setSelection(null);
-        return;
-      }
       const text = range.toString();
       if (text.trim().length === 0) {
         setSelection(null);
         return;
       }
+
+      // Which pane does the selection start in?
+      const startNode =
+        range.startContainer.nodeType === Node.TEXT_NODE
+          ? range.startContainer.parentElement
+          : (range.startContainer as Element);
+      if (!startNode) {
+        setSelection(null);
+        return;
+      }
+
+      const inLeft = leftContainer.contains(startNode);
+      const inRight = rightContainer.contains(startNode);
+      if (!inLeft && !inRight) {
+        // Selection is in the sidebar / legend / subheader / toolbar.
+        setSelection(null);
+        return;
+      }
+
+      // Selections that start inside an existing entity mark belong to
+      // the popover flow, not the "add new entity" flow.
+      if (startNode.closest('mark.velum-entity')) {
+        // eslint-disable-next-line no-console
+        console.info('[Velum] selection: starts inside existing mark — popover flow');
+        setSelection(null);
+        return;
+      }
+
+      const pane: 'left' | 'right' = inLeft ? 'left' : 'right';
+      let leftOffsets: { start: number; end: number } | null = null;
+
+      if (inLeft) {
+        const leftMap = leftMapRef.current;
+        if (!leftMap) {
+          // eslint-disable-next-line no-console
+          console.warn('[Velum] selection: left anchor map missing');
+          return;
+        }
+        leftOffsets = leftMap.rangeToOffsets(range);
+      } else {
+        const rightMap = rightMapRef.current;
+        if (!rightMap) {
+          // eslint-disable-next-line no-console
+          console.warn('[Velum] selection: right anchor map missing');
+          return;
+        }
+        const rightOffsets = rightMap.rangeToOffsets(range);
+        if (!rightOffsets) {
+          setSelection(null);
+          return;
+        }
+        leftOffsets = rightOffsetsToLeft(
+          rightOffsets.start,
+          rightOffsets.end,
+          visibleEntitiesRef.current,
+        );
+        if (!leftOffsets) {
+          // eslint-disable-next-line no-console
+          console.info(
+            '[Velum] selection: right→left translation failed (touches placeholder)',
+          );
+          setSelection(null);
+          setSelectionError(t('selection.crossesPlaceholder'));
+          return;
+        }
+      }
+
+      if (!leftOffsets || leftOffsets.start === leftOffsets.end) {
+        setSelection(null);
+        return;
+      }
+
       // eslint-disable-next-line no-console
       console.info('[Velum] selection captured', {
+        pane,
+        leftStart: leftOffsets.start,
+        leftEnd: leftOffsets.end,
         text: text.slice(0, 40),
-        start: offsets.start,
-        end: offsets.end,
       });
+
       setSelection({
-        rect: range.getBoundingClientRect(),
+        anchor: { x: anchorX, y: anchorY },
         text,
-        start: offsets.start,
-        end: offsets.end,
+        start: leftOffsets.start,
+        end: leftOffsets.end,
+        pane,
       });
       setSelectionError(null);
     };
 
-    // mouseup is a one-shot signal that the drag is finished, so we
-    // read the final selection exactly once per user action. We also
-    // listen for keyup so keyboard selection (Shift+arrows) still
-    // works. Finally we listen for selectionchange *only* to clear
-    // the toolbar when the user clicks away.
-    const handleMouseUp = () => {
-      // Give the browser a tick to finalise the selection.
-      setTimeout(handleSelection, 0);
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.shiftKey || e.key === 'Shift') {
-        setTimeout(handleSelection, 0);
+    const handleMouseUp = (e: MouseEvent) => {
+      // Clicks inside the floating toolbar or entity popover are
+      // user interactions with those controls — do NOT re-evaluate
+      // the selection (which would clear the toolbar instantly).
+      const target = e.target as Element | null;
+      if (
+        target?.closest?.('.velum-selection') ||
+        target?.closest?.('.velum-popover')
+      ) {
+        return;
       }
+      const { clientX, clientY } = e;
+      // Let the browser finalise its selection state, then read it.
+      setTimeout(() => processSelection(clientX, clientY), 0);
     };
-    const handleSelectionChangeForClear = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setSelection(null);
+        setSelectionError(null);
+        return;
+      }
+      // Keyboard selection (Shift + arrows). Anchor the toolbar on
+      // the centre-bottom of the current selection rect since there
+      // is no cursor position to use.
+      if (e.shiftKey || e.key === 'Shift') {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        setTimeout(
+          () =>
+            processSelection(rect.left + rect.width / 2, rect.bottom),
+          0,
+        );
       }
     };
 
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('keyup', handleKeyUp);
-    document.addEventListener('selectionchange', handleSelectionChangeForClear);
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('keyup', handleKeyUp);
-      document.removeEventListener(
-        'selectionchange',
-        handleSelectionChangeForClear,
-      );
     };
-  }, []);
+  }, [t]);
 
   // ─── handlers ────────────────────────────────────────────────────
 
@@ -547,7 +618,7 @@ export function SplitWorkspace({
         };
         setEntities((prev) => [...prev, added]);
         setSelection(null);
-        // Clear the browser's text selection so the toolbar disappears.
+        // Clear the browser text selection so the toolbar disappears.
         window.getSelection()?.removeAllRanges();
       } catch (e) {
         setSelectionError(e instanceof Error ? e.message : String(e));

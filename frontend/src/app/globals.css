@@ -701,9 +701,10 @@ h1, h2, h3, h4 {
   /* Chrome/Edge (Tauri WebView2) supports `zoom` natively; it scales
      both layout *and* hit-testing, which is exactly what we want so
      entity click targets line up with their visual rects.
-     0.88 brings the Word page down ~12% for a more comfortable
-     information density without losing legibility. */
-  zoom: 0.88;
+     0.7 gives a dense, tool-like information density — in line with
+     how senior reviewers at firms like Harvey.AI want to see a
+     full page rather than a phone-sized scroll window. */
+  zoom: 0.7;
 }
 
 .velum-docx-wrapper section.velum-docx,
