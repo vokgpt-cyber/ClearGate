@@ -14,8 +14,16 @@ from pydantic import BaseModel, Field
 
 import structlog
 
-from app.models.api import ParseTextRequest, UploadResponse
+from app.models.api import (
+    DeanonymizeDocxResult,
+    ExportDeanonymizedRequest,
+    ImportResponseResult,
+    ParseTextRequest,
+    UnresolvedPlaceholder,
+    UploadResponse,
+)
 from app.services.doc_processor import DocumentProcessor
+from app.services.docx_deanonymize import deanonymize_docx, scan_placeholders
 from app.services.docx_export import EntitySubstitution, export_anonymized_docx
 from app.services.session_manager import SessionManager
 
@@ -242,11 +250,4 @@ async def export_anonymized(
         output_bytes=len(output_bytes),
     )
 
-    return Response(
-        content=output_bytes,
-        media_type=_DOCX_CONTENT_TYPE,
-        headers={
-            "Content-Disposition": disposition,
-            "Cache-Control": "no-store",
-        },
-    )
+    return R

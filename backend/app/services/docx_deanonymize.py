@@ -1,0 +1,305 @@
+"""DOCX deanonymization — reverse placeholder substitution with fuzzy matching.
+
+Mirrors ``docx_export.py`` but in the opposite direction: replaces
+placeholders like ``[ЛИЦО_1]`` with their real values from the
+EntityRegistry mapping table.
+
+Key capability beyond simple string replacement: **PlaceholderMatcher**
+handles the many ways an LLM can distort placeholder formatting:
+
+  * Missing or extra brackets: ``ЛИЦО_1``, ``[ ЛИЦО_1 ]``
+  * Spaces instead of underscores: ``[ЛИЦО 1]``
+  * Dashes instead of underscores: ``[ЛИЦО-1]``
+  * Lowercase: ``[лицо_1]``
+  * English label when registry is Russian: ``[Person_1]``
+  * Leading zeros: ``[ЛИЦО_01]``
+  * Levenshtein-close typos: ``[ЛИЦО_!]`` (distance 1 from ``[ЛИЦО_1]``)
+
+Design: we scan every paragraph for placeholder-like patterns via a
+generous regex, normalize each match, then look it up in the registry.
+Anything that matches the pattern but can't be resolved → ``unresolved``.
+"""
+
+from __future__ import annotations
+
+import io
+import re
+from dataclasses import dataclass, field
+
+import structlog
+from docx import Document
+from Levenshtein import distance as levenshtein_distance
+
+from app.models.api import UnresolvedPlaceholder
+from app.services.docx_utils import iter_paragraphs, replace_in_paragraph
+from app.services.entity_registry import EntityRegistry, _EN_LABELS, _RU_LABELS
+
+logger = structlog.get_logger(__name__)
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Label cross-language mapping
+# ═════════════════════════════════════════════════════════════════════
+
+# Build bidirectional EN↔RU label maps from the registry's own label dicts.
+# e.g. "PERSON" ↔ "ЛИЦО", "ORG" ↔ "ОРГАНИЗАЦИЯ"
+_EN_TO_RU: dict[str, str] = {}
+_RU_TO_EN: dict[str, str] = {}
+for _etype, _ru_label in _RU_LABELS.items():
+    _en_label = _EN_LABELS.get(_etype, "")
+    if _en_label:
+        _EN_TO_RU[_en_label.upper()] = _ru_label.upper()
+        _RU_TO_EN[_ru_label.upper()] = _en_label.upper()
+
+# All known labels (both languages) for the scanner regex.
+_ALL_LABELS: set[str] = set()
+for _lbl in _RU_LABELS.values():
+    _ALL_LABELS.add(_lbl.upper())
+for _lbl in _EN_LABELS.values():
+    _ALL_LABELS.add(_lbl.upper())
+
+# Sort by length descending so longer labels match first in the regex
+# (e.g. "ОРГАНИЗАЦИЯ" before "ОРГ" if both existed).
+_LABELS_PATTERN = "|".join(
+    re.escape(lbl) for lbl in sorted(_ALL_LABELS, key=len, reverse=True)
+)
+
+# Generous regex for placeholder-like patterns in text.
+# Matches with or without brackets, with _, space, or dash as separator.
+# Group 1 = label, Group 2 = number.
+_PLACEHOLDER_RE = re.compile(
+    r"\[?\s*("
+    + _LABELS_PATTERN
+    + r")\s*[-_\s]\s*0*(\d+)\s*\]?",
+    re.IGNORECASE,
+)
+
+
+# ═════════════════════════════════════════════════════════════════════
+# PlaceholderMatcher
+# ═════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class MatchResult:
+    """Result of matching a single placeholder occurrence."""
+
+    raw_text: str  # exact text matched by regex in the document
+    normalized: str  # canonical form e.g. "[ЛИЦО_1]"
+    real_value: str | None = None  # resolved value, or None if unresolved
+    paragraph_index: int = 0
+
+
+@dataclass
+class DeanonymizeResult:
+    """Aggregate result from deanonymizing a DOCX."""
+
+    docx_bytes: bytes = b""
+    replacements: list[MatchResult] = field(default_factory=list)
+    unresolved: list[MatchResult] = field(default_factory=list)
+
+
+class PlaceholderMatcher:
+    """Resolves placeholder-like strings against an EntityRegistry.
+
+    The matcher tries multiple normalization strategies to handle
+    LLM-induced distortions of placeholder format.
+    """
+
+    def __init__(self, registry: EntityRegistry) -> None:
+        self._registry = registry
+        self._reverse = registry._reverse  # placeholder → MappingEntry
+        self._locale = registry.locale
+
+    def match(self, raw_text: str) -> tuple[str, str | None]:
+        """Attempt to resolve a raw placeholder-like string.
+
+        Returns:
+            (normalized_placeholder, real_value_or_None)
+        """
+        normalized = self._normalize(raw_text)
+
+        # 1. Exact match
+        if normalized in self._reverse:
+            return normalized, self._reverse[normalized].canonical_value
+
+        # 2. Cross-language: if registry is RU but LLM wrote EN label (or vice versa)
+        cross = self._cross_language(normalized)
+        if cross and cross in self._reverse:
+            return cross, self._reverse[cross].canonical_value
+
+        # 3. Fuzzy match against all known placeholders (Levenshtein ≤ 2)
+        fuzzy = self._fuzzy_match(normalized)
+        if fuzzy:
+            return fuzzy, self._reverse[fuzzy].canonical_value
+
+        # 4. Fuzzy on cross-language variant
+        if cross:
+            fuzzy_cross = self._fuzzy_match(cross)
+            if fuzzy_cross:
+                return fuzzy_cross, self._reverse[fuzzy_cross].canonical_value
+
+        return normalized, None
+
+    def _normalize(self, raw: str) -> str:
+        """Normalize a raw placeholder string to canonical form ``[LABEL_N]``."""
+        m = _PLACEHOLDER_RE.search(raw)
+        if not m:
+            # Can't parse — return stripped/uppercased as-is
+            stripped = raw.strip().strip("[]").strip()
+            return f"[{stripped.upper()}]"
+
+        label = m.group(1).upper()
+        number = m.group(2).lstrip("0") or "1"  # "01" → "1"; bare "0" → "1"
+        return f"[{label}_{number}]"
+
+    def _cross_language(self, normalized: str) -> str | None:
+        """Translate label between EN↔RU."""
+        # Extract label from "[LABEL_N]"
+        inner = normalized.strip("[]")
+        parts = inner.rsplit("_", 1)
+        if len(parts) != 2:
+            return None
+        label, number = parts[0], parts[1]
+
+        if self._locale == "ru":
+            # Registry is RU; LLM might have written EN label
+            ru_label = _EN_TO_RU.get(label)
+            if ru_label:
+                return f"[{ru_label}_{number}]"
+        else:
+            # Registry is EN; LLM might have written RU label
+            en_label = _RU_TO_EN.get(label)
+            if en_label:
+                return f"[{en_label}_{number}]"
+        return None
+
+    def _fuzzy_match(self, normalized: str, max_dist: int = 2) -> str | None:
+        """Find closest placeholder in registry by Levenshtein distance.
+
+        Number-aware: only fuzzy-matches when the *label* part is close
+        AND the numeric suffix is identical. Changing ``[ЛИЦО_1]`` to
+        ``[ЛИЦО_5]`` is a different entity, not a typo — Levenshtein
+        distance 1 between them must NOT produce a match.
+        """
+        # Parse the label and number from the normalized form
+        norm_label, norm_num = self._split_placeholder(normalized)
+        if norm_label is None:
+            return None
+
+        best: str | None = None
+        best_dist = max_dist + 1
+        for known in self._reverse:
+            known_label, known_num = self._split_placeholder(known)
+            if known_label is None:
+                continue
+            # Numbers must match exactly — different numbers = different entities
+            if norm_num != known_num:
+                continue
+            d = levenshtein_distance(norm_label, known_label)
+            if d < best_dist:
+                best_dist = d
+                best = known
+        return best if best_dist <= max_dist else None
+
+    @staticmethod
+    def _split_placeholder(placeholder: str) -> tuple[str | None, str | None]:
+        """Split ``[LABEL_N]`` into (label, number) or (None, None)."""
+        inner = placeholder.strip("[]")
+        parts = inner.rsplit("_", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            return parts[0], parts[1]
+        return None, None
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Scanning and replacement
+# ═════════════════════════════════════════════════════════════════════
+
+
+def scan_placeholders(text: str) -> list[re.Match[str]]:
+    """Find all placeholder-like patterns in plain text."""
+    return list(_PLACEHOLDER_RE.finditer(text))
+
+
+def deanonymize_docx(
+    docx_bytes: bytes,
+    registry: EntityRegistry,
+    manual_resolutions: dict[str, str] | None = None,
+) -> DeanonymizeResult:
+    """Deanonymize a DOCX file by replacing placeholders with real values.
+
+    Args:
+        docx_bytes: Raw bytes of the DOCX containing placeholders.
+        registry: The session's EntityRegistry with the mapping table.
+        manual_resolutions: Optional dict of ``normalized_placeholder → value``
+            for unresolved placeholders the user filled in manually.
+
+    Returns:
+        ``DeanonymizeResult`` with the output DOCX bytes, list of successful
+        replacements, and list of unresolved placeholders.
+    """
+    manual = manual_resolutions or {}
+    matcher = PlaceholderMatcher(registry)
+    document = Document(io.BytesIO(docx_bytes))
+
+    # Phase 1: scan all paragraphs, collect (raw_text → real_value) pairs
+    # and unresolved items.
+    substitution_map: dict[str, str] = {}  # raw_text → real_value
+    replacements: list[MatchResult] = []
+    unresolved: list[MatchResult] = []
+    seen_raw: set[str] = set()  # deduplicate logging, not substitution
+
+    for para_idx, paragraph in enumerate(iter_paragraphs(document)):
+        full_text = paragraph.text
+        if not full_text:
+            continue
+
+        for m in _PLACEHOLDER_RE.finditer(full_text):
+            raw = m.group(0)
+            normalized, real_value = matcher.match(raw)
+
+            # Check manual resolutions if registry didn't have it
+            if real_value is None and normalized in manual:
+                real_value = manual[normalized]
+
+            result = MatchResult(
+                raw_text=raw,
+                normalized=normalized,
+                real_value=real_value,
+                paragraph_index=para_idx,
+            )
+
+            if real_value is not None:
+                substitution_map[raw] = real_value
+                if raw not in seen_raw:
+                    replacements.append(result)
+                    seen_raw.add(raw)
+            else:
+                unresolved.append(result)
+
+    # Phase 2: apply substitutions to the DOCX paragraphs.
+    # Process longest raw text first to avoid partial replacements.
+    ordered = sorted(substitution_map.items(), key=lambda kv: len(kv[0]), reverse=True)
+
+    total_applied = 0
+    for raw, value in ordered:
+        for paragraph in iter_paragraphs(document):
+            total_applied += replace_in_paragraph(paragraph, raw, value)
+
+    # Save modified DOCX.
+    buffer = io.BytesIO()
+    document.save(buffer)
+
+    logger.info(
+        "docx_deanonymize.completed",
+        total_replacements=total_applied,
+        unique_placeholders=len(substitution_map),
+        unresolved_count=len(unresolved),
+    )
+
+    return DeanonymizeResult(
+        docx_bytes=buffer.getvalue(),
+        replacements=replacements,
+        unresolved=unresolved,
+    )

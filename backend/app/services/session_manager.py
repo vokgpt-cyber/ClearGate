@@ -53,6 +53,12 @@ class Session:
         self.docx_bytes: bytes | None = None
         self.docx_filename: str | None = None
 
+        # Response DOCX from LLM — stored when the user imports the
+        # anonymized response they received back from an external LLM.
+        # Used by the deanonymization pipeline (Phase 1 round-trip).
+        self.response_docx_bytes: bytes | None = None
+        self.response_docx_filename: str | None = None
+
 
 class SessionManager:
     """Thread-safe in-memory session store.
@@ -131,10 +137,4 @@ class SessionManager:
                 # because bytes are immutable; dropping the reference is
                 # the strongest guarantee we have in CPython.
                 session.docx_bytes = None
-                session.docx_filename = None
-            logger.info("session.closed", session_id=session_id)
-
-    def _is_expired(self, session: Session) -> bool:
-        """Check if session has exceeded its TTL."""
-        ttl = timedelta(minutes=self._ttl_minutes)
-        return datetime.now(UTC) - session.created_at > ttl
+        

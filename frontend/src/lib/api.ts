@@ -189,19 +189,22 @@ export async function exportAnonymizedDocx(
   return { blob, filename };
 }
 
-/**
- * Trigger a browser download for a Blob. Works in both the regular
- * browser and Tauri's WebView2 — no filesystem access needed, the
- * webview handles the save dialog.
- */
-export function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // Defer revoke slightly so the click handler has finished.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+// ── Phase 1 round-trip: import response → deanonymize → export ──
+
+/** Unresolved placeholder returned by the deanonymize-docx endpoint. */
+export interface UnresolvedPlaceholder {
+  raw_text: string;
+  normalized: string;
+  paragraph_index: number;
 }
+
+/** Result from the deanonymize-docx endpoint. */
+export interface DeanonymizeDocxResult {
+  unresolved: UnresolvedPlaceholder[];
+  total_replacements: number;
+  total_unresolved: number;
+}
+
+/** Result from importing a response .docx. */
+export interface ImportResponseResult {
+ 

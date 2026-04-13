@@ -53,8 +53,12 @@ import {
 import {
   addCustomEntity,
   anonymizeText,
+  deanonymizeDocx,
   downloadBlob,
   exportAnonymizedDocx,
+  exportDeanonymizedDocx,
+  importResponseDocx,
+  type DeanonymizeDocxResult,
 } from '@/lib/api';
 import { useLocale } from '@/hooks/useLocale';
 import type { EntityTypeCode } from '@/lib/entity-types';
@@ -109,6 +113,19 @@ export function SplitWorkspace({
   const [exportBusy, setExportBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const detectionStartedRef = useRef(false);
+
+  // Phase 1 round-trip: import response -> deanonymize -> export
+  const responseFileRef = useRef<HTMLInputElement | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [responseImported, setResponseImported] = useState(false);
+  const [deanonymizeBusy, setDeanonymizeBusy] = useState(false);
+  const [deanonymizeError, setDeanonymizeError] = useState<string | null>(null);
+  const [deanonymizeResult, setDeanonymizeResult] =
+    useState<DeanonymizeDocxResult | null>(null);
+  const [exportDeanonymizedBusy, setExportDeanonymizedBusy] = useState(false);
+  const [exportDeanonymizedError, setExportDeanonymizedError] =
+    useState<string | null>(null);
 
   // Synchronized document zoom (both panes scale together).
   // Implemented via the CSS `zoom` property on the docx-preview
@@ -717,6 +734,71 @@ export function SplitWorkspace({
     }
   }, [documentId, entities, exportBusy]);
 
+  // --- import LLM response .docx ---
+  const handleImportResponse = useCallback(
+    async (file: File) => {
+      if (importBusy) return;
+      setImportBusy(true);
+      setImportError(null);
+      try {
+        const result = await importResponseDocx(documentId, file);
+        // eslint-disable-next-line no-console
+        console.info('[Velum] response imported', {
+          chars: result.char_count,
+          placeholders: result.placeholder_count,
+        });
+        setResponseImported(true);
+
+        // Auto-trigger deanonymization
+        setDeanonymizeBusy(true);
+        setDeanonymizeError(null);
+        try {
+          const dResult = await deanonymizeDocx(documentId);
+          setDeanonymizeResult(dResult);
+          // eslint-disable-next-line no-console
+          console.info('[Velum] deanonymize complete', {
+            replacements: dResult.total_replacements,
+            unresolved: dResult.total_unresolved,
+          });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[Velum] deanonymize failed', e);
+          setDeanonymizeError(
+            e instanceof Error ? e.message : String(e),
+          );
+        } finally {
+          setDeanonymizeBusy(false);
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('[Velum] import response failed', e);
+        setImportError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setImportBusy(false);
+      }
+    },
+    [documentId, importBusy],
+  );
+
+  // --- export deanonymized .docx ---
+  const handleExportDeanonymized = useCallback(async () => {
+    if (exportDeanonymizedBusy) return;
+    setExportDeanonymizedBusy(true);
+    setExportDeanonymizedError(null);
+    try {
+      const { blob, filename } = await exportDeanonymizedDocx(documentId);
+      downloadBlob(blob, filename);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[Velum] export deanonymized failed', e);
+      setExportDeanonymizedError(
+        e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      setExportDeanonymizedBusy(false);
+    }
+  }, [documentId, exportDeanonymizedBusy]);
+
   return (
     <div className="velum-workspace">
       <div className="velum-workspace__subheader">
@@ -754,6 +836,59 @@ export function SplitWorkspace({
               ? t('workspace.exportDocxBusy')
               : t('workspace.exportDocx')}
           </button>
+          {/* Phase 1 round-trip: import response */}
+          <button
+            type="button"
+            className="velum-workspace__import-response"
+            onClick={() => responseFileRef.current?.click()}
+            disabled={importBusy || deanonymizeBusy || !bothReady || entities.length === 0}
+            title={
+              importError ??
+              (importBusy
+                ? t('workspace.importResponseBusy')
+                : deanonymizeBusy
+                  ? t('workspace.deanonymizeBusy')
+                  : t('workspace.importResponse'))
+            }
+          >
+            {importBusy
+              ? t('workspace.importResponseBusy')
+              : deanonymizeBusy
+                ? t('workspace.deanonymizeBusy')
+                : t('workspace.importResponse')}
+          </button>
+          <input
+            ref={responseFileRef}
+            type="file"
+            accept=".docx"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportResponse(file);
+              e.target.value = '';
+            }}
+          />
+
+          {/* Phase 1 round-trip: export deanonymized */}
+          {responseImported && (
+            <button
+              type="button"
+              className="velum-workspace__export-deanonymized"
+              onClick={handleExportDeanonymized}
+              disabled={exportDeanonymizedBusy || deanonymizeBusy}
+              title={
+                exportDeanonymizedError ??
+                (exportDeanonymizedBusy
+                  ? t('workspace.exportDeanonymizedBusy')
+                  : t('workspace.exportDeanonymized'))
+              }
+            >
+              {exportDeanonymizedBusy
+                ? t('workspace.exportDeanonymizedBusy')
+                : t('workspace.exportDeanonymized')}
+            </button>
+          )}
+
           <button
             type="button"
             className="velum-workspace__close"
@@ -793,6 +928,37 @@ export function SplitWorkspace({
         onToggleOnlyUnconfirmed={toggleOnlyUnconfirmed}
         onResetFilters={resetFilters}
       />
+
+      {/* Unresolved placeholders panel */}
+      {deanonymizeResult && deanonymizeResult.total_unresolved > 0 && (
+        <div className="velum-workspace__unresolved">
+          <div className="velum-workspace__unresolved-header">
+            {t('workspace.unresolvedTitle')} ({deanonymizeResult.total_unresolved})
+          </div>
+          <p className="velum-workspace__unresolved-hint">
+            {t('workspace.unresolvedHint')}
+          </p>
+          <ul className="velum-workspace__unresolved-list">
+            {deanonymizeResult.unresolved.map((u, i) => (
+              <li key={`${u.normalized}-${i}`} className="velum-workspace__unresolved-item">
+                <code>{u.raw_text}</code>
+                <span>{' \u2192 '}</span>
+                <em>{u.normalized}</em>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Deanonymize stats */}
+      {deanonymizeResult && (
+        <div className="velum-workspace__deanonymize-stats">
+          <span>{t('workspace.replacementsDone')}: {deanonymizeResult.total_replacements}</span>
+          {deanonymizeResult.total_unresolved > 0 && (
+            <span> | {t('workspace.unresolvedCount')}: {deanonymizeResult.total_unresolved}</span>
+          )}
+        </div>
+      )}
 
       <EntityPopover
         anchor={popover}
