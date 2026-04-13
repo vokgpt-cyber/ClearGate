@@ -44,7 +44,6 @@ export function Sidebar({
         <div className="velum-sidebar__brand-bar" aria-hidden />
         <div className="velum-sidebar__brand-text">
           <span className="velum-sidebar__brand-name">VELUM</span>
-          <span className="velum-sidebar__brand-tag">{t('app.subtitle')}</span>
         </div>
       </div>
 

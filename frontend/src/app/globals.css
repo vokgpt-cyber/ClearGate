@@ -100,7 +100,7 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 700;
 }
 
@@ -264,11 +264,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-sidebar__brand-tag {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  margin-top: 2px;
+  display: none;
 }
 
 .velum-sidebar__new-btn {
@@ -320,7 +316,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-sidebar__empty {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -414,7 +410,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-empty__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.625rem;
   font-weight: 700;
   line-height: 1.15;
@@ -424,7 +420,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-empty__lede {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-style: italic;
   line-height: 1.55;
@@ -512,7 +508,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-workspace__doc-icon {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   color: var(--color-brand);
   font-size: 1rem;
   line-height: 1;
@@ -520,7 +516,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-workspace__doc-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 700;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -619,7 +615,7 @@ h1, h2, h3, h4 {
   padding: 6px 20px;
   font-size: 0.6875rem;
   font-style: italic;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   color: var(--text-muted);
   background-color: var(--bg-secondary);
   border-top: 1px solid var(--border);
@@ -658,7 +654,7 @@ h1, h2, h3, h4 {
 }
 
 .velum-docx-viewer__spinner {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
   font-size: 0.6875rem;
   text-transform: none;
@@ -691,7 +687,7 @@ h1, h2, h3, h4 {
   justify-content: center;
   gap: 8px;
   padding: 20px;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -1406,27 +1402,22 @@ h1, h2, h3, h4 {
 /* -- Scale / zoom indicator badge -- */
 
 .velum-workspace__scale-indicator {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 80;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: transparent;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 400ms ease;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 200ms ease, border-color 200ms ease;
 }
 
-.velum-workspace__scale-indicator--visible {
-  opacity: 1;
-  pointer-events: auto;
+.velum-workspace__scale-indicator:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
 /* -- Theme toggle & locale switcher -- */
@@ -1539,10 +1530,12 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-size: 0.6rem;
   color: var(--text-muted);
-  opacity: 0.55;
+  opacity: 0.75;
   transition: opacity 200ms ease;
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .velum-version-badge:hover {

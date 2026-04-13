@@ -247,7 +247,7 @@ export function SplitWorkspace({
     };
     apply(leftContainerRef.current);
     apply(rightContainerRef.current);
-  }, [docScale, bothReady]);
+  }, [docScale, bothReady, rightPaneUrl]);
 
   // Ctrl + mouse wheel inside either pane changes the document zoom
   // without zooming the surrounding app chrome. preventDefault() is
