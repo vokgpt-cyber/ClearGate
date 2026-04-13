@@ -25,7 +25,7 @@
   },
   "empty": {
     "eyebrow": "VELUM · Anonymization",
-    "title": "Open a contract to anonymize",
+    "title": "Open a document to anonymize",
     "lede": "Drag a DOCX file here or pick one manually. The document never leaves your computer.",
     "pick": "Choose a document",
     "working": "Opening…",
@@ -85,7 +85,9 @@
     "pickType": "Pick a type",
     "adding": "Adding…",
     "error": "Failed to add",
-    "crossesPlaceholder": "Selection crosses an already-anonymized span"
+    "crossesPlaceholder": "Selection crosses an already-anonymized span",
+    "customType": "Custom type…",
+    "customPlaceholder": "Category name, e.g. CLIENT"
   },
   "docx": {
     "loading": "Rendering document…",

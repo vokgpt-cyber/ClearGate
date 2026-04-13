@@ -48,22 +48,19 @@ class Session:
         )
         # Raw DOCX bytes kept in-memory so the frontend can render the
         # original document with Word-like fidelity via docx-preview.
-        # Only DOCX is stored; other formats are not kept after parsing.
-        # Cleared on session close together with registry contents.
         self.docx_bytes: bytes | None = None
         self.docx_filename: str | None = None
 
-        # Response DOCX from LLM — stored when the user imports the
-        # anonymized response they received back from an external LLM.
-        # Used by the deanonymization pipeline (Phase 1 round-trip).
+        # Response DOCX from LLM (Phase 1 round-trip).
         self.response_docx_bytes: bytes | None = None
         self.response_docx_filename: str | None = None
+        self.deanonymized_docx_bytes: bytes | None = None
 
 
 class SessionManager:
     """Thread-safe in-memory session store.
 
-    Implements singleton pattern — use SessionManager.instance().
+    Implements singleton pattern -- use SessionManager.instance().
     """
 
     _instance: SessionManager | None = None
@@ -130,11 +127,17 @@ class SessionManager:
         session = self._sessions.pop(session_id, None)
         if session:
             session.registry.clear()
-            # Wipe raw DOCX bytes from memory — privacy-by-design.
             if session.docx_bytes is not None:
-                # Overwrite reference; Python GC will release memory.
-                # We intentionally do not touch the bytes object in-place
-                # because bytes are immutable; dropping the reference is
-                # the strongest guarantee we have in CPython.
                 session.docx_bytes = None
-        
+                session.docx_filename = None
+            if session.response_docx_bytes is not None:
+                session.response_docx_bytes = None
+                session.response_docx_filename = None
+            if session.deanonymized_docx_bytes is not None:
+                session.deanonymized_docx_bytes = None
+            logger.info("session.closed", session_id=session_id)
+
+    def _is_expired(self, session: Session) -> bool:
+        """Check if session has exceeded its TTL."""
+        ttl = timedelta(minutes=self._ttl_minutes)
+        return datetime.now(UTC) - session.created_at > ttl

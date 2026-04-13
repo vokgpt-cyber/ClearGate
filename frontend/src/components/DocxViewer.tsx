@@ -27,13 +27,15 @@ interface DocxViewerProps {
   className?: string;
   /** Optional label shown at the top (e.g. 'Оригинал' / 'Анонимизированный'). */
   label?: string;
+  /** When set, fetch DOCX bytes from this URL instead of the default. */
+  urlOverride?: string | null;
 }
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-export function DocxViewer({ documentId, onReady, className, label }: DocxViewerProps) {
+export function DocxViewer({ documentId, onReady, className, label, urlOverride }: DocxViewerProps) {
   const { t } = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>('idle');
@@ -54,7 +56,8 @@ export function DocxViewer({ documentId, onReady, className, label }: DocxViewer
 
     (async () => {
       try {
-        const response = await fetch(`${API_URL}/api/documents/${documentId}/raw`);
+        const fetchUrl = urlOverride ?? `${API_URL}/api/documents/${documentId}/raw`;
+        const response = await fetch(fetchUrl);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
@@ -100,7 +103,7 @@ export function DocxViewer({ documentId, onReady, className, label }: DocxViewer
     return () => {
       cancelled = true;
     };
-  }, [documentId, onReady]);
+  }, [documentId, onReady, urlOverride]);
 
   return (
     <div className={`velum-docx-viewer ${className ?? ''}`}>

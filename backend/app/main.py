@@ -42,6 +42,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Expose Content-Disposition so the frontend can read the filename
+    # from export responses (CORS hides it by default).
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(health.router)

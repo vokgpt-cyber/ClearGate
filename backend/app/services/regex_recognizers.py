@@ -60,12 +60,16 @@ class InnRecognizer(PatternRecognizer):
         )
 
     def validate_result(self, pattern_text: str) -> bool | None:
-        """Validate INN checksum."""
+        """Validate INN checksum.
+
+        Returns True for valid checksums (boosts score), None for invalid
+        (keeps base score so context words can still promote the match).
+        """
         digits = re.sub(r"\D", "", pattern_text)
         if len(digits) == 10:
-            return validate_inn_10(digits)
+            return True if validate_inn_10(digits) else None
         if len(digits) == 12:
-            return validate_inn_12(digits)
+            return True if validate_inn_12(digits) else None
         return False
 
 
@@ -98,12 +102,16 @@ class OgrnRecognizer(PatternRecognizer):
         )
 
     def validate_result(self, pattern_text: str) -> bool | None:
-        """Validate OGRN/OGRNIP checksum."""
+        """Validate OGRN/OGRNIP checksum.
+
+        Same strategy as INN: return None (not False) for invalid checksums
+        so that context-boosted matches survive.
+        """
         digits = re.sub(r"\D", "", pattern_text)
         if len(digits) == 13:
-            return validate_ogrn(digits)
+            return True if validate_ogrn(digits) else None
         if len(digits) == 15:
-            return validate_ogrnip(digits)
+            return True if validate_ogrnip(digits) else None
         return False
 
 
@@ -140,11 +148,15 @@ class SnilsRecognizer(PatternRecognizer):
         )
 
     def validate_result(self, pattern_text: str) -> bool | None:
-        """Validate SNILS checksum."""
+        """Validate SNILS checksum.
+
+        Same strategy as INN/OGRN: return None for invalid checksums
+        so context-boosted matches survive.
+        """
         digits = re.sub(r"\D", "", pattern_text)
         if len(digits) != 11:
             return False
-        return validate_snils(digits)
+        return True if validate_snils(digits) else None
 
 
 class PassportRfRecognizer(PatternRecognizer):
@@ -244,6 +256,45 @@ class BankAccountRecognizer(PatternRecognizer):
         # Valid first 3 digits: balance account categories (301-423, 454-479, etc.)
         first3 = int(digits[:3])
         return 100 <= first3 <= 999
+
+
+
+
+class BikRecognizer(PatternRecognizer):
+    """Recognizes Russian BIK (Bank Identification Code).
+
+    BIK is a 9-digit code starting with '04' assigned to Russian banks
+    by the Central Bank of Russia.
+
+    Examples:
+        - "БИК 044525225" -> RU_BIK, score >= 0.85
+        - "044525225" (without context) -> RU_BIK, score = 0.5
+    """
+
+    PATTERNS = [
+        Pattern(name="bik_9", regex=r"\b04\d{7}\b", score=0.5),
+    ]
+    CONTEXT = ["бик", "БИК", "банковский идентификационный"]
+
+    def __init__(
+        self,
+        patterns: list[Pattern] | None = None,
+        context: list[str] | None = None,
+        supported_language: str = "ru",
+    ) -> None:
+        super().__init__(
+            supported_entity="RU_BIK",
+            patterns=patterns or self.PATTERNS,
+            context=context or self.CONTEXT,
+            supported_language=supported_language,
+        )
+
+    def validate_result(self, pattern_text: str) -> bool | None:
+        """Basic validation: BIK must be exactly 9 digits starting with 04."""
+        digits = re.sub(r"\D", "", pattern_text)
+        if len(digits) != 9 or not digits.startswith("04"):
+            return False
+        return True
 
 
 class PhoneRuRecognizer(PatternRecognizer):
@@ -460,6 +511,7 @@ def build_all_recognizers() -> list[PatternRecognizer]:
         SnilsRecognizer(),
         PassportRfRecognizer(),
         BankAccountRecognizer(),
+        BikRecognizer(),
         PhoneRuRecognizer(),
         EmailRuRecognizer(),
         DateRuRecognizer(),

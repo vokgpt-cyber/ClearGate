@@ -46,17 +46,12 @@ async def upload_document(
         default=None,
         description=(
             "Optional session to attach the document to. Required for DOCX "
-            "rendering — the raw bytes are stored inside the session so the "
+            "rendering -- the raw bytes are stored inside the session so the "
             "frontend can render the document with Word-like fidelity."
         ),
     ),
 ) -> UploadResponse:
-    """Parse uploaded document (DOCX/PDF/TXT) and return plain text.
-
-    For DOCX, if `session_id` is provided, the raw bytes are also stored
-    in the session and can later be retrieved via
-    `GET /api/documents/{session_id}/raw` for client-side rendering.
-    """
+    """Parse uploaded document (DOCX/PDF/TXT) and return plain text."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -75,7 +70,6 @@ async def upload_document(
     processor = DocumentProcessor()
     result = processor.parse(content, format=suffix)
 
-    # For DOCX, attach raw bytes to the session for later client-side render.
     document_id: str | None = None
     if suffix == "docx" and session_id is not None:
         manager = SessionManager.instance()
@@ -114,12 +108,7 @@ async def upload_document(
 
 @router.get("/{session_id}/raw")
 async def get_raw_document(session_id: str) -> Response:
-    """Return the raw DOCX bytes stored for this session.
-
-    Used by the frontend DocxViewer (docx-preview) to render the document
-    with Word-like fidelity. Bytes are only served from memory — they are
-    never written to disk and are wiped when the session is closed.
-    """
+    """Return the raw DOCX bytes stored for this session."""
     manager = SessionManager.instance()
     session = manager.get_session(session_id)
     if session is None:
@@ -134,12 +123,6 @@ async def get_raw_document(session_id: str) -> Response:
         )
 
     filename = session.docx_filename or "document.docx"
-    # HTTP header values are latin-1 in Starlette, so any non-ASCII
-    # filename must be percent-encoded per RFC 5987. We also include a
-    # sanitized ASCII `filename=` fallback for older clients. Without
-    # encoding, Cyrillic filenames (e.g. "Тренировочный_Договор...docx")
-    # trigger a UnicodeEncodeError when Starlette serializes headers and
-    # surface on the client as a bare "Failed to fetch".
     ascii_fallback = filename.encode("ascii", errors="ignore").decode("ascii") or "document.docx"
     encoded = quote(filename, safe="")
     disposition = f'inline; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded}'
@@ -163,16 +146,8 @@ async def parse_text(request: ParseTextRequest) -> UploadResponse:
     )
 
 
-
 class _ExportEntity(BaseModel):
-    """One entity from the frontend's in-memory workspace state.
-
-    We only need `text`, `metadata.placeholder`, and `state` from the
-    full ``InteractiveEntity`` on the client. Everything else (offsets,
-    source_layer, score) is irrelevant for export because the naive
-    per-run replacement doesn't care about offsets — it matches on the
-    original text string.
-    """
+    """One entity from the frontend workspace state."""
 
     text: str
     placeholder: str = ""
@@ -190,13 +165,7 @@ async def export_anonymized(
     session_id: str,
     payload: ExportAnonymizedRequest = Body(...),
 ) -> Response:
-    """Return the uploaded DOCX with every non-rejected entity replaced.
-
-    The session must have a DOCX previously attached via
-    ``POST /api/documents/upload?session_id=...``. Rejected entities
-    are skipped so the exported file matches exactly what the user sees
-    in the right-hand pane.
-    """
+    """Return the uploaded DOCX with every non-rejected entity replaced."""
     manager = SessionManager.instance()
     session = manager.get_session(session_id)
     if session is None:
@@ -218,19 +187,17 @@ async def export_anonymized(
 
     try:
         output_bytes = export_anonymized_docx(session.docx_bytes, subs)
-    except Exception as exc:  # pragma: no cover - defensive
+    except Exception as exc:
         logger.error("document.export_failed", session_id=session_id, error=str(exc))
         raise HTTPException(
             status_code=500,
             detail="Failed to export anonymized DOCX",
         ) from exc
 
-    # Derive a sensible download filename from the original.
     original = session.docx_filename or "document.docx"
     stem = original[:-5] if original.lower().endswith(".docx") else original
-    download_name = f"{stem}_anonymized.docx"
+    download_name = f"ANON_{stem}.docx"
 
-    # RFC 5987 header for Cyrillic filenames — mirrors the /raw route.
     from urllib.parse import quote as _quote
 
     ascii_fallback = (
@@ -250,4 +217,245 @@ async def export_anonymized(
         output_bytes=len(output_bytes),
     )
 
-    return R
+    return Response(
+        content=output_bytes,
+        media_type=_DOCX_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": disposition,
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+# -- Phase 1 round-trip: import response, deanonymize, export -----------
+
+
+
+@router.get("/{session_id}/response-raw")
+async def get_response_raw(session_id: str) -> Response:
+    """Return the deanonymized DOCX bytes for client-side preview.
+
+    After deanonymization, the result bytes are stored in the session.
+    This endpoint serves them so the frontend DocxViewer can render
+    the deanonymized document in the right pane.
+    """
+    manager = SessionManager.instance()
+    session = manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+
+    docx_bytes = getattr(session, "deanonymized_docx_bytes", None)
+    if docx_bytes is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No deanonymized document available for this session",
+        )
+
+    filename = session.docx_filename or "document.docx"
+    stem = filename[:-5] if filename.lower().endswith(".docx") else filename
+    download_name = f"DEAN_{stem}.docx"
+
+    ascii_fallback = (
+        download_name.encode("ascii", errors="ignore").decode("ascii")
+        or "document_deanonymized.docx"
+    )
+    encoded = quote(download_name, safe="")
+    disposition = f'inline; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded}'
+
+    return Response(
+        content=docx_bytes,
+        media_type=_DOCX_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": disposition,
+            "Cache-Control": "no-store",
+        },
+    )
+
+@router.post("/{session_id}/import-response", response_model=ImportResponseResult)
+async def import_response(
+    session_id: str,
+    file: UploadFile,
+) -> ImportResponseResult:
+    """Import an LLM-response DOCX for deanonymization."""
+    manager = SessionManager.instance()
+    session = manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+
+    content = await file.read()
+    if len(content) > _MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
+
+    processor = DocumentProcessor()
+    result = processor.parse(content, format="docx")
+
+    session.response_docx_bytes = content
+
+    placeholders = scan_placeholders(result.text)
+
+    logger.info(
+        "document.response_imported",
+        session_id=session_id,
+        char_count=len(result.text),
+        placeholder_count=len(placeholders),
+    )
+
+    return ImportResponseResult(
+        text=result.text,
+        char_count=len(result.text),
+        placeholder_count=len(placeholders),
+    )
+
+
+class DeanonymizeRequest(BaseModel):
+    """Optional body for the deanonymize endpoint."""
+
+    manual_resolutions: list[dict] = Field(
+        default_factory=list,
+        description="List of {placeholder, value} pairs for unresolved placeholders",
+    )
+
+
+@router.post("/{session_id}/deanonymize-docx", response_model=DeanonymizeDocxResult)
+async def deanonymize_docx_endpoint(
+    session_id: str,
+    payload: DeanonymizeRequest = Body(default=DeanonymizeRequest()),
+) -> DeanonymizeDocxResult:
+    """Deanonymize the previously imported response DOCX.
+
+    Accepts optional manual_resolutions for unresolved placeholders.
+    Stores the resulting DOCX bytes so /response-raw can serve them.
+    """
+    manager = SessionManager.instance()
+    session = manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+
+    response_bytes = getattr(session, "response_docx_bytes", None)
+    if response_bytes is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No response DOCX imported for this session",
+        )
+
+    if session.registry is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Session has no entity registry -- anonymize first",
+        )
+
+    manual: dict[str, str] = {}
+    for res in payload.manual_resolutions:
+        ph = res.get("placeholder", "")
+        val = res.get("value", "")
+        if ph and val:
+            manual[ph] = val
+
+    try:
+        result = deanonymize_docx(response_bytes, session.registry, manual or None)
+    except Exception as exc:
+        logger.error("document.deanonymize_failed", session_id=session_id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Deanonymization failed") from exc
+
+    session.deanonymized_docx_bytes = result.docx_bytes
+
+    unresolved = [
+        UnresolvedPlaceholder(
+            raw_text=m.raw_text,
+            normalized=m.normalized,
+            paragraph_index=m.paragraph_index,
+        )
+        for m in result.unresolved
+    ]
+
+    logger.info(
+        "document.deanonymized",
+        session_id=session_id,
+        replacements=len(result.replacements),
+        unresolved=len(unresolved),
+    )
+
+    return DeanonymizeDocxResult(
+        unresolved=unresolved,
+        total_replacements=len(result.replacements),
+        total_unresolved=len(unresolved),
+    )
+
+
+@router.post("/{session_id}/export-deanonymized")
+async def export_deanonymized(
+    session_id: str,
+    payload: ExportDeanonymizedRequest = Body(default=ExportDeanonymizedRequest()),
+) -> Response:
+    """Export the deanonymized DOCX, optionally applying manual resolutions."""
+    manager = SessionManager.instance()
+    session = manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+
+    response_bytes = getattr(session, "response_docx_bytes", None)
+    if response_bytes is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No response DOCX imported for this session",
+        )
+
+    if session.registry is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Session has no entity registry -- anonymize first",
+        )
+
+    manual: dict[str, str] = {}
+    for res in payload.manual_resolutions:
+        manual[res.placeholder] = res.value
+
+    try:
+        result = deanonymize_docx(response_bytes, session.registry, manual)
+    except Exception as exc:
+        logger.error("document.deanonymize_export_failed", session_id=session_id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Deanonymization export failed") from exc
+
+    session.deanonymized_docx_bytes = result.docx_bytes
+
+    original = session.docx_filename or "document.docx"
+    stem = original[:-5] if original.lower().endswith(".docx") else original
+    download_name = f"DEAN_{stem}.docx"
+
+    ascii_fallback = (
+        download_name.encode("ascii", errors="ignore").decode("ascii")
+        or "document_deanonymized.docx"
+    )
+    encoded = quote(download_name, safe="")
+    disposition = (
+        f'attachment; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded}'
+    )
+
+    logger.info(
+        "document.deanonymized_exported",
+        session_id=session_id,
+        replacements=len(result.replacements),
+        unresolved=len(result.unresolved),
+        manual_resolutions=len(manual),
+    )
+
+    return Response(
+        content=result.docx_bytes,
+        media_type=_DOCX_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": disposition,
+            "Cache-Control": "no-store",
+        },
+    )

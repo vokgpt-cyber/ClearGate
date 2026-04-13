@@ -194,7 +194,7 @@ h1, h2, h3, h4 {
   letter-spacing: 0.1em;
   padding: 2px 6px;
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   font-size: 0.625rem;
   color: var(--text-secondary);
 }
@@ -475,7 +475,7 @@ h1, h2, h3, h4 {
   color: var(--error);
   padding: 8px 12px;
   border: 1px solid var(--error);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background-color: rgba(198, 40, 40, 0.05);
 }
 
@@ -535,31 +535,8 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   padding: 3px 8px;
   background-color: var(--bg-secondary);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
-}
-
-/* Document zoom badge in the workspace subheader. Click resets to 100%.
-   Compact pill matching the visual weight of header__pill. */
-.velum-workspace__scale-indicator {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  padding: 2px 7px;
-  border: 1px solid var(--border);
-  background-color: transparent;
-  border-radius: 2px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 120ms ease, color 120ms ease;
-  font-variant-numeric: tabular-nums;
-}
-
-.velum-workspace__scale-indicator:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand);
 }
 
 .velum-workspace__close {
@@ -1239,4 +1216,352 @@ h1, h2, h3, h4 {
 .velum-selection__type {
   width: 100%;
   display: flex;
-  al
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.velum-selection__type:hover {
+  background: var(--bg-secondary);
+}
+.velum-selection__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
+  flex-shrink: 0;
+}
+
+.velum-selection__error {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: hsl(0 70% 50% / 0.08);
+  color: var(--error);
+  font-size: 0.75rem;
+}
+
+/* -- Import response & export deanonymized buttons -- */
+
+.velum-workspace__import-response,
+.velum-workspace__export-deanonymized {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.velum-workspace__import-response:hover,
+.velum-workspace__export-deanonymized:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+/* -- Unresolved placeholders panel -- */
+
+.velum-workspace__unresolved {
+  margin: 12px 16px;
+  padding: 12px;
+  border-radius: 6px;
+  background: hsl(45 80% 55% / 0.08);
+  border: 1px solid hsl(45 60% 50% / 0.2);
+}
+.velum-workspace__unresolved-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.velum-workspace__unresolved-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.velum-workspace__unresolved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.velum-workspace__unresolved-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+.velum-workspace__unresolved-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.velum-workspace__unresolved-input input {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+}
+.velum-workspace__unresolved-apply {
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 0;
+  background: var(--color-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-top: 8px;
+  align-self: flex-end;
+}
+
+/* -- Deanonymize stats -- */
+
+.velum-workspace__deanonymize-stats {
+  margin: 8px 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: hsl(120 40% 50% / 0.08);
+  border: 1px solid hsl(120 30% 50% / 0.15);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* -- Custom entity type -- */
+
+.velum-selection__custom-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  margin-top: 2px;
+  border-radius: 5px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+.velum-selection__custom-toggle:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.velum-selection__custom-input {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+.velum-selection__custom-field {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+.velum-selection__custom-field:focus {
+  border-color: var(--color-brand);
+}
+.velum-selection__custom-confirm {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 0;
+  background: var(--color-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 100ms ease;
+}
+.velum-selection__custom-confirm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* -- Scale / zoom indicator badge -- */
+
+.velum-workspace__scale-indicator {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 80;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.velum-workspace__scale-indicator--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* -- Theme toggle & locale switcher -- */
+
+.velum-header__theme-btn,
+.velum-header__locale-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.velum-header__theme-btn:hover,
+.velum-header__locale-btn:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+/* -- LLM panel -- */
+
+.velum-llm-panel {
+  width: var(--entity-panel-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  padding: 12px;
+  gap: 10px;
+  overflow-y: auto;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+}
+
+.velum-llm-panel__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.velum-llm-panel__select,
+.velum-llm-panel__textarea {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  transition: border-color 120ms ease;
+}
+
+.velum-llm-panel__select:focus,
+.velum-llm-panel__textarea:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.velum-llm-panel__textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.velum-llm-panel__send {
+  padding: 8px 14px;
+  border: 1px solid var(--color-brand);
+  background-color: var(--color-brand);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.velum-llm-panel__send:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.velum-llm-panel__send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* -- Floating version badge -- */
+
+.velum-version-badge {
+  position: fixed;
+  bottom: 10px;
+  right: 14px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  opacity: 0.55;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+.velum-version-badge:hover {
+  opacity: 1;
+}
+
+.velum-version-badge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--error);
+  flex-shrink: 0;
+}
+
+.velum-version-badge__dot[data-ok="true"] {
+  background-color: var(--success);
+}
+
+.velum-version-badge__text {
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}

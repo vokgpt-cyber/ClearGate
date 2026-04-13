@@ -7,7 +7,7 @@ post-processing step after all NER layers, before adding to EntityRegistry.
 
 from __future__ import annotations
 
-# Legal roles and party names — never PER, ORG, or LOC
+# Legal roles and party names -- never PER, ORG, or LOC
 LEGAL_ROLE_STOPWORDS: set[str] = {
     # Contract parties (all declension forms)
     "исполнитель", "исполнителя", "исполнителю", "исполнителем",
@@ -35,7 +35,7 @@ LEGAL_ROLE_STOPWORDS: set[str] = {
     "заказчиком", "исполнителя",
 }
 
-# Position titles — not sensitive PII
+# Position titles -- not sensitive PII
 POSITION_STOPWORDS: set[str] = {
     "генеральный директор", "директор", "исполнительный директор",
     "президент", "вице-президент", "председатель",
@@ -55,7 +55,7 @@ ORG_STOPWORDS: set[str] = {
     "р/с", "к/с", "л/с",
     "пао", "ооо", "ао", "зао", "оао", "нко", "ип",
     "российская федерация", "рф",
-    "мо", "рт", "ро",  # region abbreviations are not ORGs
+    "мо", "рт", "ро",
     "арбитражный суд", "арбитражном суде",
     "приложение", "приложении", "приложения",
     "приложение 1", "приложение 2", "приложение 3",
@@ -90,8 +90,14 @@ def is_stopword(text: str, entity_type: str) -> bool:
     if normalized in POSITION_STOPWORDS:
         return True
 
-    # Stem matching for multi-word position titles (handles declensions)
+    # Multi-word: if every word is a legal-role stopword, the phrase is too.
+    # Catches combos like "Заявки Заказчика" where each word is a stop-word.
     words = normalized.split()
+    if len(words) >= 2:
+        if all(w in LEGAL_ROLE_STOPWORDS for w in words):
+            return True
+
+    # Stem matching for multi-word position titles (handles declensions)
     if len(words) >= 2:
         entity_stems = {w[:4] for w in words if len(w) >= 4}
         for phrase in POSITION_STOPWORDS:
