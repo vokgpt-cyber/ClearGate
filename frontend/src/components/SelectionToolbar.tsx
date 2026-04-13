@@ -43,7 +43,7 @@ interface SelectionToolbarProps {
   selection: SelectionInfo | null;
   busy?: boolean;
   error?: string | null;
-  onAddEntity: (info: SelectionInfo, entityType: EntityTypeCode) => void;
+  onAddEntity: (info: SelectionInfo, entityType: EntityTypeCode | string) => void;
   onDismiss: () => void;
 }
 
@@ -56,13 +56,23 @@ export function SelectionToolbar({
 }: SelectionToolbarProps) {
   const { locale, t } = useLocale();
   const ref = useRef<HTMLDivElement | null>(null);
+  const customInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [customMode, setCustomMode] = useState(false);
+  const [customValue, setCustomValue] = useState('');
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Reset the expanded state whenever we get a fresh selection.
   useEffect(() => {
     setOpen(false);
+    setCustomMode(false);
+    setCustomValue('');
   }, [selection?.start, selection?.end, selection?.pane]);
+
+  // Auto-focus the custom input when entering custom mode.
+  useEffect(() => {
+    if (customMode) customInputRef.current?.focus();
+  }, [customMode]);
 
   useLayoutEffect(() => {
     if (!selection) {
@@ -91,7 +101,8 @@ export function SelectionToolbar({
     top = Math.min(Math.max(top, margin), vh - height - margin);
 
     setPosition({ top, left });
-  }, [selection]);
+    // Recalculate when open/customMode change — height changes significantly.
+  }, [selection, open, customMode]);
 
   useEffect(() => {
     if (!selection) return;
@@ -114,7 +125,9 @@ export function SelectionToolbar({
       }}
       // Prevent selection loss / mouseup bubbling from eating clicks on
       // the toolbar buttons themselves.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+        if ((e.target as Element)?.tagName !== 'INPUT') e.preventDefault();
+      }}
     >
       {!open ? (
         <button
@@ -128,28 +141,74 @@ export function SelectionToolbar({
       ) : (
         <div className="velum-selection__types">
           <div className="velum-selection__title">{t('selection.pickType')}</div>
-          <ul>
-            {LEGEND_ORDER.map((code) => {
-              const info = ENTITY_TYPES[code as EntityTypeCode];
-              const label = locale === 'ru' ? info.labelRu : info.labelEn;
-              return (
-                <li key={code}>
-                  <button
-                    type="button"
-                    className="velum-selection__type"
-                    onClick={() => onAddEntity(selection, code)}
-                    disabled={busy}
-                  >
-                    <span
-                      className={`velum-selection__swatch velum-entity--${info.cssKey}`}
-                      aria-hidden
-                    />
-                    {label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {!customMode ? (
+            <>
+              <ul>
+                {LEGEND_ORDER.map((code) => {
+                  const info = ENTITY_TYPES[code as EntityTypeCode];
+                  const label = locale === 'ru' ? info.labelRu : info.labelEn;
+                  return (
+                    <li key={code}>
+                      <button
+                        type="button"
+                        className="velum-selection__type"
+                        onClick={() => onAddEntity(selection, code)}
+                        disabled={busy}
+                      >
+                        <span
+                          className={`velum-selection__swatch velum-entity--${info.cssKey}`}
+                          aria-hidden
+                        />
+                        {label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <button
+                type="button"
+                className="velum-selection__custom-toggle"
+                onClick={() => setCustomMode(true)}
+                disabled={busy}
+              >
+                {t('selection.customType')}
+              </button>
+            </>
+          ) : (
+            <div className="velum-selection__custom-input">
+              <input
+                ref={customInputRef}
+                type="text"
+                className="velum-selection__custom-field"
+                placeholder={t('selection.customPlaceholder')}
+                value={customValue}
+                onChange={(e) => setCustomValue(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter' && customValue.trim()) {
+                    onAddEntity(selection, customValue.trim().toUpperCase());
+                  } else if (e.key === 'Escape') {
+                    setCustomMode(false);
+                    setCustomValue('');
+                  }
+                }}
+                onKeyUp={(e) => e.stopPropagation()}
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="velum-selection__custom-confirm"
+                onClick={() => {
+                  if (customValue.trim()) {
+                    onAddEntity(selection, customValue.trim().toUpperCase());
+                  }
+                }}
+                disabled={busy || !customValue.trim()}
+              >
+                {t('selection.addAs')}
+              </button>
+            </div>
+          )}
           {error && <div className="velum-selection__error">{error}</div>}
         </div>
       )}

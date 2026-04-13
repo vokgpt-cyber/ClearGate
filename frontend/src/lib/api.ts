@@ -189,13 +189,32 @@ export async function exportAnonymizedDocx(
   return { blob, filename };
 }
 
+/**
+ * Trigger a browser download for a Blob. Works in both the regular
+ * browser and Tauri's WebView2 — no filesystem access needed, the
+ * webview handles the save dialog.
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Defer revoke slightly so the click handler has finished.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+
 // ── Phase 1 round-trip: import response → deanonymize → export ──
 
-/** Unresolved placeholder returned by the deanonymize-docx endpoint. */
+/** A placeholder the LLM used that we couldn't resolve automatically. */
 export interface UnresolvedPlaceholder {
-  raw_text: string;
+  placeholder: string;
+  label: string;
+  number: number;
   normalized: string;
-  paragraph_index: number;
 }
 
 /** Result from the deanonymize-docx endpoint. */
@@ -207,4 +226,99 @@ export interface DeanonymizeDocxResult {
 
 /** Result from importing a response .docx. */
 export interface ImportResponseResult {
- 
+  message: string;
+  session_id: string;
+  char_count: number;
+  placeholder_count: number;
+}
+
+/**
+ * Import a response DOCX (the LLM's anonymized reply) into a session.
+ */
+export async function importResponseDocx(
+  sessionId: string,
+  file: File,
+): Promise<ImportResponseResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/import-response`,
+    { method: 'POST', body: formData },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Import failed (${response.status}): ${errorText}`);
+  }
+  return response.json();
+}
+
+
+/**
+ * Trigger server-side deanonymization of the imported response DOCX.
+ * Returns stats about replacements and any unresolved placeholders.
+ */
+export async function deanonymizeDocx(
+  sessionId: string,
+  manualResolutions: Array<{ placeholder: string; value: string }> = [],
+): Promise<DeanonymizeDocxResult> {
+  const payload = manualResolutions.length > 0
+    ? { manual_resolutions: manualResolutions }
+    : {};
+
+  const response = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/deanonymize-docx`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Deanonymize failed (${response.status}): ${errorText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Export the deanonymized DOCX, optionally supplying manual resolutions
+ * for placeholders the automatic matcher couldn't resolve.
+ */
+export async function exportDeanonymizedDocx(
+  sessionId: string,
+  manualResolutions: Array<{ placeholder: string; value: string }> = [],
+): Promise<{ blob: Blob; filename: string }> {
+  const payload = { manual_resolutions: manualResolutions };
+
+  const response = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/export-deanonymized`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Export failed (${response.status}): ${errorText}`);
+  }
+
+  const blob = await response.blob();
+
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const starMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  const plainMatch = /filename="([^"]+)"/i.exec(disposition);
+  let filename = 'DEAN_document.docx';
+  if (starMatch) {
+    try {
+      filename = decodeURIComponent(starMatch[1]);
+    } catch {
+      filename = starMatch[1];
+    }
+  } else if (plainMatch) {
+    filename = plainMatch[1];
+  }
+
+  return { blob, filename };
+}

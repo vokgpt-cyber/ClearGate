@@ -21,6 +21,7 @@ export type EntityTypeCode =
   | 'RU_SNILS'
   | 'RU_PASSPORT'
   | 'RU_BANK_ACCOUNT'
+  | 'RU_BIK'
   | 'RU_PHONE'
   | 'RU_DATE'
   | 'EMAIL_ADDRESS'
@@ -131,6 +132,13 @@ export const ENTITY_TYPES: Record<EntityTypeCode, EntityTypeInfo> = {
     cssKey: 'bank',
     group: 'id',
   },
+  RU_BIK: {
+    code: 'RU_BIK',
+    labelRu: 'БИК',
+    labelEn: 'BIK',
+    cssKey: 'bank',
+    group: 'id',
+  },
   RU_PHONE: {
     code: 'RU_PHONE',
     labelRu: 'Телефон',
@@ -217,6 +225,7 @@ export const LEGEND_ORDER: EntityTypeCode[] = [
   'RU_SNILS',
   'RU_PASSPORT',
   'RU_BANK_ACCOUNT',
+  'RU_BIK',
   'RU_CASE_NUMBER',
   'RU_CONTRACT_NUMBER',
   'RU_PHONE',

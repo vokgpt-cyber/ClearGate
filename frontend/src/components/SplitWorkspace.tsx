@@ -53,6 +53,7 @@ import {
 import {
   addCustomEntity,
   anonymizeText,
+  API_URL,
   deanonymizeDocx,
   downloadBlob,
   exportAnonymizedDocx,
@@ -126,6 +127,8 @@ export function SplitWorkspace({
   const [exportDeanonymizedBusy, setExportDeanonymizedBusy] = useState(false);
   const [exportDeanonymizedError, setExportDeanonymizedError] =
     useState<string | null>(null);
+  // URL override for right pane: after deanonymize, show the deanonymized doc
+  const [rightPaneUrl, setRightPaneUrl] = useState<string | null>(null);
 
   // Synchronized document zoom (both panes scale together).
   // Implemented via the CSS `zoom` property on the docx-preview
@@ -501,10 +504,27 @@ export function SplitWorkspace({
         return;
       }
 
-      // Selections that start inside an existing entity mark belong to
-      // the popover flow, not the "add new entity" flow.
+      // If the selection starts inside an existing entity mark, that is
+      // a click/tap on the entity itself — belongs to the popover flow.
       if (startNode.closest('mark.velum-entity')) {
         setSelection(null);
+        return;
+      }
+
+      // If the selection *partially* overlaps an entity (start or end
+      // is inside a mark, but the selection doesn't fully enclose it),
+      // block it.  However, if the selection fully *contains* every
+      // intersected mark, we allow it — the user wants to extend the
+      // anonymization to a wider span (e.g. "г. Москва" → full address).
+      const endNode =
+        range.endContainer.nodeType === Node.TEXT_NODE
+          ? range.endContainer.parentElement
+          : (range.endContainer as Element);
+      const endsInMark = endNode?.closest('mark.velum-entity');
+      if (endsInMark) {
+        // Selection ends mid-entity — partial overlap.
+        setSelection(null);
+        setSelectionError(t('selection.crossesPlaceholder'));
         return;
       }
 
@@ -582,6 +602,9 @@ export function SplitWorkspace({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // Ignore keyboard events originating inside the toolbar
+      // (e.g. typing in the custom-type input field).
+      if ((e.target as Element)?.closest?.('.velum-selection')) return;
       if (e.key === 'Escape') {
         setSelection(null);
         setSelectionError(null);
@@ -665,7 +688,7 @@ export function SplitWorkspace({
   }, []);
 
   const addFromSelection = useCallback(
-    async (info: SelectionInfo, entityType: EntityTypeCode) => {
+    async (info: SelectionInfo, entityType: EntityTypeCode | string) => {
       setSelectionBusy(true);
       setSelectionError(null);
       try {
@@ -689,7 +712,15 @@ export function SplitWorkspace({
           id: result.id,
           state: 'custom',
         };
-        setEntities((prev) => [...prev, added]);
+        // Remove any existing entities fully covered by the new selection
+        // to prevent overlapping marks (e.g. "Москва" inside full address).
+        setEntities((prev) => [
+          ...prev.filter(
+            (e) =>
+              !(e.start >= added.start && e.end <= added.end && e.id !== added.id),
+          ),
+          added,
+        ]);
         setSelection(null);
         // Clear the browser text selection so the toolbar disappears.
         window.getSelection()?.removeAllRanges();
@@ -755,6 +786,10 @@ export function SplitWorkspace({
         try {
           const dResult = await deanonymizeDocx(documentId);
           setDeanonymizeResult(dResult);
+          // Switch right pane to show deanonymized document
+          setRightPaneUrl(
+            `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
+          );
           // eslint-disable-next-line no-console
           console.info('[Velum] deanonymize complete', {
             replacements: dResult.total_replacements,
@@ -910,26 +945,29 @@ export function SplitWorkspace({
         <div className="velum-workspace__divider" aria-hidden />
         <DocxViewer
           documentId={documentId}
-          label={t('editor.anonymized')}
+          label={rightPaneUrl ? t('workspace.deanonymizedPreview') : t('editor.anonymized')}
           onReady={handleAnonymizedReady}
           className="velum-workspace__pane"
+          urlOverride={rightPaneUrl}
         />
       </div>
 
-      <EntityLegend
-        counts={counts}
-        totalEntities={entities.length}
-        visibleEntities={visibleEntities.length}
-        hiddenTypes={hiddenTypes}
-        onlyUnconfirmed={onlyUnconfirmed}
-        status={status}
-        error={error}
-        onToggleType={toggleType}
-        onToggleOnlyUnconfirmed={toggleOnlyUnconfirmed}
-        onResetFilters={resetFilters}
-      />
+      {!responseImported && (
+        <EntityLegend
+          counts={counts}
+          totalEntities={entities.length}
+          visibleEntities={visibleEntities.length}
+          hiddenTypes={hiddenTypes}
+          onlyUnconfirmed={onlyUnconfirmed}
+          status={status}
+          error={error}
+          onToggleType={toggleType}
+          onToggleOnlyUnconfirmed={toggleOnlyUnconfirmed}
+          onResetFilters={resetFilters}
+        />
+      )}
 
-      {/* Unresolved placeholders panel */}
+      {/* Unresolved placeholders panel with manual input */}
       {deanonymizeResult && deanonymizeResult.total_unresolved > 0 && (
         <div className="velum-workspace__unresolved">
           <div className="velum-workspace__unresolved-header">
@@ -941,12 +979,53 @@ export function SplitWorkspace({
           <ul className="velum-workspace__unresolved-list">
             {deanonymizeResult.unresolved.map((u, i) => (
               <li key={`${u.normalized}-${i}`} className="velum-workspace__unresolved-item">
-                <code>{u.raw_text}</code>
+                <code>{u.normalized}</code>
                 <span>{' \u2192 '}</span>
-                <em>{u.normalized}</em>
+                <input
+                  type="text"
+                  className="velum-workspace__unresolved-input"
+                  placeholder={t('workspace.unresolvedValue')}
+                  data-placeholder={u.normalized}
+                  defaultValue=""
+                />
               </li>
             ))}
           </ul>
+          <button
+            type="button"
+            className="velum-workspace__unresolved-apply"
+            onClick={() => {
+              const inputs = document.querySelectorAll<HTMLInputElement>(
+                '.velum-workspace__unresolved-input',
+              );
+              const resolutions: Array<{ placeholder: string; value: string }> = [];
+              inputs.forEach((input) => {
+                const val = input.value.trim();
+                const ph = input.dataset.placeholder;
+                if (val && ph) resolutions.push({ placeholder: ph, value: val });
+              });
+              if (resolutions.length === 0) return;
+              setDeanonymizeBusy(true);
+              setDeanonymizeError(null);
+              deanonymizeDocx(documentId, resolutions)
+                .then((dResult) => {
+                  setDeanonymizeResult(dResult);
+                  // Refresh right pane preview with cache-busting timestamp
+                  setRightPaneUrl(
+                    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
+                  );
+                })
+                .catch((e) => {
+                  console.error('[Velum] apply resolutions failed', e);
+                  setDeanonymizeError(
+                    e instanceof Error ? e.message : String(e),
+                  );
+                })
+                .finally(() => setDeanonymizeBusy(false));
+            }}
+          >
+            {t('workspace.unresolvedApply')}
+          </button>
         </div>
       )}
 
