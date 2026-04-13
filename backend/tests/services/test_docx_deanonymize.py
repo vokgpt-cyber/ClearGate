@@ -64,7 +64,9 @@ class TestPlaceholderMatcherExact:
         matcher = PlaceholderMatcher(reg)
         norm, val = matcher.match("[ЛИЦО_1]")
         assert norm == "[ЛИЦО_1]"
-        assert val == reg._reverse["[ЛИЦО_1]"].canonical_value
+        # BUG-7 fix: match() returns original_forms[0], not canonical_value
+        entry = reg._reverse["[ЛИЦО_1]"]
+        assert val == (entry.original_forms[0] if entry.original_forms else entry.canonical_value)
 
     def test_exact_org(self):
         reg = _make_registry(entities=[("ООО Ромашка", "ORG")])
@@ -194,11 +196,13 @@ class TestDeanonymizeDocx:
         # Verify the output DOCX contains the real values
         doc = Document(io.BytesIO(result.docx_bytes))
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        # Registry normalizes, so check for canonical form
+        # BUG-7 fix: deanonymize returns original_forms[0], not canonical
         per_entry = reg._reverse["[ЛИЦО_1]"]
         org_entry = reg._reverse["[ОРГАНИЗАЦИЯ_1]"]
-        assert per_entry.canonical_value in full_text
-        assert org_entry.canonical_value in full_text
+        per_val = per_entry.original_forms[0] if per_entry.original_forms else per_entry.canonical_value
+        org_val = org_entry.original_forms[0] if org_entry.original_forms else org_entry.canonical_value
+        assert per_val in full_text
+        assert org_val in full_text
         assert "[ЛИЦО_1]" not in full_text
         assert "[ОРГАНИЗАЦИЯ_1]" not in full_text
 
@@ -240,7 +244,8 @@ class TestDeanonymizeDocx:
         doc = Document(io.BytesIO(result.docx_bytes))
         text = doc.paragraphs[0].text
         per_entry = reg._reverse["[ЛИЦО_1]"]
-        assert per_entry.canonical_value in text
+        per_val = per_entry.original_forms[0] if per_entry.original_forms else per_entry.canonical_value
+        assert per_val in text
         assert len(result.unresolved) == 0
 
     def test_empty_document(self):

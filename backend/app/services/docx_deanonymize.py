@@ -14,6 +14,8 @@ handles the many ways an LLM can distort placeholder formatting:
   * English label when registry is Russian: ``[Person_1]``
   * Leading zeros: ``[ЛИЦО_01]``
   * Levenshtein-close typos: ``[ЛИЦО_!]`` (distance 1 from ``[ЛИЦО_1]``)
+  * **Custom types**: ``[РАССТОЯНИЕ_1]``, ``[ЧАСЫ_1]`` — any label the
+    user defined via the UI.
 
 Design: we scan every paragraph for placeholder-like patterns via a
 generous regex, normalize each match, then look it up in the registry.
@@ -51,28 +53,51 @@ for _etype, _ru_label in _RU_LABELS.items():
         _EN_TO_RU[_en_label.upper()] = _ru_label.upper()
         _RU_TO_EN[_ru_label.upper()] = _en_label.upper()
 
-# All known labels (both languages) for the scanner regex.
+# All known labels (both languages) for the static scanner regex.
 _ALL_LABELS: set[str] = set()
 for _lbl in _RU_LABELS.values():
     _ALL_LABELS.add(_lbl.upper())
 for _lbl in _EN_LABELS.values():
     _ALL_LABELS.add(_lbl.upper())
 
-# Sort by length descending so longer labels match first in the regex
-# (e.g. "ОРГАНИЗАЦИЯ" before "ОРГ" if both existed).
-_LABELS_PATTERN = "|".join(
-    re.escape(lbl) for lbl in sorted(_ALL_LABELS, key=len, reverse=True)
-)
 
-# Generous regex for placeholder-like patterns in text.
-# Matches with or without brackets, with _, space, or dash as separator.
-# Group 1 = label, Group 2 = number.
-_PLACEHOLDER_RE = re.compile(
-    r"\[?\s*("
-    + _LABELS_PATTERN
-    + r")\s*[-_\s]\s*0*(\d+)\s*\]?",
-    re.IGNORECASE,
-)
+def _build_placeholder_re(extra_labels: set[str] | None = None) -> re.Pattern[str]:
+    """Build a placeholder scanner regex from known + extra labels.
+
+    If ``extra_labels`` is given, they're merged with the static
+    ``_ALL_LABELS`` set so custom entity types are recognized too.
+
+    When no labels are available at all, falls back to a generic
+    pattern that requires brackets: ``[WORD_N]``.
+    """
+    labels = set(_ALL_LABELS)
+    if extra_labels:
+        labels |= extra_labels
+
+    if not labels:
+        # Fallback: any bracketed WORD_N
+        return re.compile(
+            r"\[\s*([A-ZА-ЯЁa-zа-яё][A-ZА-ЯЁa-zа-яё]*)\s*[-_\s]\s*0*(\d+)\s*\]",
+            re.IGNORECASE,
+        )
+
+    # Sort by length descending so longer labels match first in the regex
+    pattern = "|".join(
+        re.escape(lbl) for lbl in sorted(labels, key=len, reverse=True)
+    )
+
+    # Two alternatives:
+    # 1) Known/extra labels — brackets optional (handles LLM distortions)
+    # 2) Any CYR/LAT word as label — brackets REQUIRED (catches unknown custom types)
+    return re.compile(
+        r"\[?\s*(?:" + pattern + r")\s*[-_\s]\s*0*(\d+)\s*\]?"
+        + r"|\[\s*([A-ZА-ЯЁa-zа-яё][A-ZА-ЯЁa-zа-яё]*)\s*[-_\s]\s*0*(\d+)\s*\]",
+        re.IGNORECASE,
+    )
+
+
+# Module-level regex for static usage (scan_placeholders).
+_PLACEHOLDER_RE = _build_placeholder_re()
 
 
 # ═════════════════════════════════════════════════════════════════════
@@ -104,12 +129,43 @@ class PlaceholderMatcher:
 
     The matcher tries multiple normalization strategies to handle
     LLM-induced distortions of placeholder format.
+
+    On init, builds a **dynamic** regex from all labels present in the
+    registry — including custom user-defined types (РАССТОЯНИЕ, ЧАСЫ,
+    КЛИЕНТ, etc.) that aren't in the static ``_ALL_LABELS`` set.
     """
 
     def __init__(self, registry: EntityRegistry) -> None:
         self._registry = registry
         self._reverse = registry._reverse  # placeholder → MappingEntry
         self._locale = registry.locale
+
+        # BUG-1 fix: extract label set from actual registry placeholders
+        # so custom types like [РАССТОЯНИЕ_1] are included in the scanner.
+        extra = self._extract_registry_labels()
+        self._re = _build_placeholder_re(extra)
+
+    def _extract_registry_labels(self) -> set[str]:
+        """Pull label stems from every placeholder in the registry."""
+        labels: set[str] = set()
+        for placeholder in self._reverse:
+            inner = placeholder.strip("[]")
+            parts = inner.rsplit("_", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                labels.add(parts[0].upper())
+        return labels
+
+    @staticmethod
+    def _get_real_value(entry) -> str:
+        """Return the best real-world form of an entity.
+
+        BUG-7 fix: prefer ``original_forms[0]`` (the first form seen in
+        the source document, preserving case and inflection) over
+        ``canonical_value`` (lowercase lemma from pymorphy3).
+        """
+        if entry.original_forms:
+            return entry.original_forms[0]
+        return entry.canonical_value
 
     def match(self, raw_text: str) -> tuple[str, str | None]:
         """Attempt to resolve a raw placeholder-like string.
@@ -121,36 +177,51 @@ class PlaceholderMatcher:
 
         # 1. Exact match
         if normalized in self._reverse:
-            return normalized, self._reverse[normalized].canonical_value
+            return normalized, self._get_real_value(self._reverse[normalized])
 
         # 2. Cross-language: if registry is RU but LLM wrote EN label (or vice versa)
         cross = self._cross_language(normalized)
         if cross and cross in self._reverse:
-            return cross, self._reverse[cross].canonical_value
+            return cross, self._get_real_value(self._reverse[cross])
 
         # 3. Fuzzy match against all known placeholders (Levenshtein ≤ 2)
         fuzzy = self._fuzzy_match(normalized)
         if fuzzy:
-            return fuzzy, self._reverse[fuzzy].canonical_value
+            return fuzzy, self._get_real_value(self._reverse[fuzzy])
 
         # 4. Fuzzy on cross-language variant
         if cross:
             fuzzy_cross = self._fuzzy_match(cross)
             if fuzzy_cross:
-                return fuzzy_cross, self._reverse[fuzzy_cross].canonical_value
+                return fuzzy_cross, self._get_real_value(self._reverse[fuzzy_cross])
 
         return normalized, None
 
     def _normalize(self, raw: str) -> str:
         """Normalize a raw placeholder string to canonical form ``[LABEL_N]``."""
-        m = _PLACEHOLDER_RE.search(raw)
+        m = self._re.search(raw)
         if not m:
             # Can't parse — return stripped/uppercased as-is
             stripped = raw.strip().strip("[]").strip()
             return f"[{stripped.upper()}]"
 
-        label = m.group(1).upper()
-        number = m.group(2).lstrip("0") or "1"  # "01" → "1"; bare "0" → "1"
+        # The regex has two alternatives with different group layouts:
+        # Alt 1 (known labels): group(1) = number
+        # Alt 2 (generic bracketed): group(2) = label, group(3) = number
+        if m.group(2) is not None:
+            # Generic bracketed match
+            label = m.group(2).upper()
+            number = m.group(3).lstrip("0") or "1"
+        else:
+            # Known/extra label match — extract label from the matched text
+            number = m.group(1).lstrip("0") or "1"
+            # The label is everything in the match before the separator+number
+            full = m.group(0)
+            label_part = full.strip().strip("[]").strip()
+            # Remove trailing separator + number
+            label_part = re.sub(r'\s*[-_\s]\s*0*\d+\s*$', '', label_part)
+            label = label_part.upper()
+
         return f"[{label}_{number}]"
 
     def _cross_language(self, normalized: str) -> str | None:
@@ -255,7 +326,8 @@ def deanonymize_docx(
         if not full_text:
             continue
 
-        for m in _PLACEHOLDER_RE.finditer(full_text):
+        # Use the matcher's dynamic regex (includes custom types).
+        for m in matcher._re.finditer(full_text):
             raw = m.group(0)
             normalized, real_value = matcher.match(raw)
 
