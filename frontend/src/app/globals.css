@@ -9,34 +9,68 @@
 :root {
   --color-brand: #8B1A2B;
   --color-brand-light: #A83245;
+  --color-brand-soft: rgba(139, 26, 43, 0.08);
 
   --bg-primary: #FFFFFF;
   --bg-secondary: #F7F5F2;
   --bg-elevated: #FFFFFF;
   --bg-input: #FFFFFF;
+  --bg-hover: rgba(15, 15, 17, 0.04);
+  --bg-active: rgba(15, 15, 17, 0.06);
 
   --text-primary: #1A1A1A;
   --text-secondary: #6B6B6B;
   --text-muted: #9A9A9A;
 
-  --border: #E8E8E8;
-  --border-strong: #D0D0D0;
+  --border: #ECE9E4;
+  --border-strong: #D8D3CC;
 
   --accent: #8B1A2B;
   --accent-hover: #6B1420;
+  --accent-soft: rgba(139, 26, 43, 0.10);
   --success: #2D7A3A;
   --error: #C62828;
   --warning: #E6A817;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  /* Softer, single-layer shadows — tuned for BizLink-style depth cues. */
+  --shadow-sm: 0 1px 2px rgba(15, 15, 17, 0.04);
+  --shadow-md: 0 6px 20px rgba(15, 15, 17, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 15, 17, 0.12);
 
   --font-serif: 'PT Serif', Georgia, serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --header-height: 44px;
-  --sidebar-width: 200px;
-  --entity-panel-width: 228px;
+  /* 4/8px spacing grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Corner radius scale — consolidates scattered 2/3/4/5/6px values */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Icon sizing scale */
+  --icon-xs: 12px;
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+
+  /* Focus ring — accent-tinted halo, 3px, offset 2px */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+
+  --transition-quick: 120ms ease;
+  --transition-smooth: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  --header-height: 48px;
+  --sidebar-width: 216px;
+  --entity-panel-width: 232px;
 
   /* DOCX page tokens — the document "paper" itself always stays light
      so the rendered text remains readable regardless of app theme. */
@@ -49,27 +83,34 @@
 [data-theme="dark"] {
   --color-brand: #B83D4F;
   --color-brand-light: #D4576A;
+  --color-brand-soft: rgba(184, 61, 79, 0.14);
 
   --bg-primary: #0F0F11;
-  --bg-secondary: #1A1A1E;
-  --bg-elevated: #222226;
-  --bg-input: #1A1A1E;
+  --bg-secondary: #17171B;
+  --bg-elevated: #1E1E22;
+  --bg-input: #17171B;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-active: rgba(255, 255, 255, 0.06);
 
   --text-primary: #F0EDE8;
   --text-secondary: #A8A4A0;
   --text-muted: #6B6866;
 
-  --border: #2A2A2E;
-  --border-strong: #3A3A3E;
+  --border: #24242A;
+  --border-strong: #35353C;
 
   --accent: #B83D4F;
   --accent-hover: #D4576A;
+  --accent-soft: rgba(184, 61, 79, 0.18);
   --success: #4CAF50;
   --error: #EF5350;
   --warning: #FFB74D;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
+
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
 
   /* In dark mode we keep the document "paper" slightly off-white with
      a warm tint so it reads like a backlit legal document. Text stays
@@ -111,7 +152,11 @@ h1, h2, h3, h4 {
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  transition: background var(--transition-quick);
+}
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ============================================================
@@ -192,15 +237,15 @@ h1, h2, h3, h4 {
 .velum-header__profile {
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   font-size: 0.625rem;
   color: var(--text-secondary);
 }
 
 .velum-header__pill {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   background-color: transparent;
   color: var(--text-secondary);
@@ -208,14 +253,20 @@ h1, h2, h3, h4 {
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  border-radius: 2px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
+  transition: border-color var(--transition-quick), color var(--transition-quick), background-color var(--transition-quick);
+}
+
+.velum-header__pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .velum-header__pill:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
+  background-color: var(--accent-soft);
 }
 
 /* ============================================================
@@ -229,7 +280,7 @@ h1, h2, h3, h4 {
   flex-direction: column;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border);
-  padding: 18px 16px 16px;
+  padding: var(--space-5) var(--space-4) var(--space-4);
 }
 
 .velum-sidebar__brand {
@@ -245,7 +296,7 @@ h1, h2, h3, h4 {
   width: 3px;
   height: 30px;
   background-color: var(--color-brand);
-  border-radius: 1px;
+  border-radius: var(--radius-sm);
 }
 
 .velum-sidebar__brand-text {
@@ -272,17 +323,27 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--accent);
   background-color: var(--accent);
   color: #fff;
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  border-radius: 3px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-quick), border-color var(--transition-quick), box-shadow var(--transition-quick), transform 80ms ease;
+}
+
+.velum-sidebar__new-btn:active {
+  transform: translateY(1px);
+}
+
+.velum-sidebar__new-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--shadow-sm);
 }
 
 .velum-sidebar__new-btn:hover {
@@ -336,19 +397,29 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
   text-align: left;
   cursor: pointer;
-  border-radius: 3px;
-  transition: background-color 120ms ease, color 120ms ease;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-quick), color var(--transition-quick);
 }
 
 .velum-sidebar__item:hover {
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
+.velum-sidebar__item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .velum-sidebar__item.is-active {
-  background-color: var(--bg-elevated);
-  color: var(--text-primary);
-  box-shadow: inset 2px 0 0 var(--color-brand);
+  background-color: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.velum-sidebar__item.is-active .velum-sidebar__item-meta {
+  color: var(--accent);
+  opacity: 0.72;
 }
 
 .velum-sidebar__item-title {
@@ -387,16 +458,17 @@ h1, h2, h3, h4 {
   max-width: 560px;
   width: 100%;
   text-align: center;
-  padding: 44px 40px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 4px;
+  padding: 48px 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background-color: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .velum-empty.is-drag .velum-empty__card {
   border-color: var(--color-brand);
-  background-color: var(--bg-secondary);
+  background-color: var(--accent-soft);
+  box-shadow: var(--shadow-lg);
 }
 
 .velum-empty__eyebrow {
@@ -440,9 +512,15 @@ h1, h2, h3, h4 {
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  border-radius: 3px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-quick), border-color var(--transition-quick), box-shadow var(--transition-quick), transform 80ms ease;
+}
+
+.velum-empty__cta:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--shadow-sm);
 }
 
 .velum-empty__cta:hover {
@@ -543,7 +621,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
   flex-shrink: 0;
@@ -569,7 +647,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 600;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease;
   flex-shrink: 0;
@@ -740,7 +818,7 @@ h1, h2, h3, h4 {
   background: var(--docx-page-bg) !important;
   box-shadow: var(--docx-page-shadow);
   border: 1px solid var(--docx-page-border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: #1A1A1A;
   margin: 0 auto;
   position: relative;
@@ -771,7 +849,7 @@ h1, h2, h3, h4 {
   --entity-sat: 60%;
   background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.16);
   border-bottom: 1.5px solid hsl(var(--entity-hue) var(--entity-sat) 45% / 0.55);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 0 1px;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
@@ -835,7 +913,7 @@ h1, h2, h3, h4 {
 .velum-placeholder {
   display: inline-block;
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 0.95em;
   background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 55% / 0.18);
@@ -914,7 +992,7 @@ h1, h2, h3, h4 {
 .velum-legend__swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
   display: inline-block;
   flex-shrink: 0;
@@ -933,7 +1011,7 @@ h1, h2, h3, h4 {
 .velum-legend__reset {
   margin-left: auto;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-secondary);
   color: var(--text-secondary);
@@ -976,9 +1054,9 @@ h1, h2, h3, h4 {
   max-width: 280px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
-  padding: 8px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
   font-family: var(--font-sans);
   font-size: 0.75rem;
   color: var(--text-primary);
@@ -1002,7 +1080,7 @@ h1, h2, h3, h4 {
 .velum-popover__swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
   flex-shrink: 0;
 }
@@ -1037,7 +1115,7 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: var(--text-primary);
@@ -1105,7 +1183,7 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: var(--text-primary);
@@ -1128,7 +1206,7 @@ h1, h2, h3, h4 {
 .velum-popover__back {
   align-self: flex-start;
   padding: 4px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: var(--text-secondary);
@@ -1153,7 +1231,7 @@ h1, h2, h3, h4 {
   max-width: 260px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-md), 0 12px 32px rgba(0, 0, 0, 0.12);
   padding: 8px;
   font-family: var(--font-sans);
@@ -1168,7 +1246,7 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: var(--text-primary);
@@ -1215,7 +1293,7 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: var(--text-primary);
@@ -1231,7 +1309,7 @@ h1, h2, h3, h4 {
 .velum-selection__swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 60%) 55% / 0.9);
   flex-shrink: 0;
 }
@@ -1239,7 +1317,7 @@ h1, h2, h3, h4 {
 .velum-selection__error {
   margin-top: 6px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: hsl(0 70% 50% / 0.08);
   color: var(--error);
   font-size: 0.75rem;
@@ -1266,12 +1344,62 @@ h1, h2, h3, h4 {
   color: var(--color-brand);
 }
 
+/* -- Compare-with-original toggle (Word-style Track Changes) -- */
+
+.velum-workspace__compare {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+.velum-workspace__compare:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+.velum-workspace__compare[aria-pressed="true"] {
+  background-color: var(--color-brand);
+  color: #fff;
+  border-color: var(--color-brand);
+}
+
+/* Inline diff markers inside the right pane when Compare mode is on. */
+.velum-compare {
+  color: var(--text-primary);
+}
+.velum-compare ins.velum-diff-ins {
+  background-color: hsl(140 60% 45% / 0.22);
+  color: hsl(140 70% 25%);
+  text-decoration: none;
+  padding: 0 2px;
+  border-radius: var(--radius-sm);
+}
+.velum-compare del.velum-diff-del {
+  background-color: hsl(0 70% 55% / 0.18);
+  color: hsl(0 70% 35%);
+  text-decoration: line-through;
+  padding: 0 2px;
+  border-radius: var(--radius-sm);
+}
+:root[data-theme="dark"] .velum-compare ins.velum-diff-ins {
+  color: hsl(140 70% 75%);
+}
+:root[data-theme="dark"] .velum-compare del.velum-diff-del {
+  color: hsl(0 70% 75%);
+}
+
 /* -- Unresolved placeholders panel -- */
 
 .velum-workspace__unresolved {
   margin: 12px 16px;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: hsl(45 80% 55% / 0.08);
   border: 1px solid hsl(45 60% 50% / 0.2);
 }
@@ -1307,7 +1435,7 @@ h1, h2, h3, h4 {
   flex: 1;
   padding: 3px 6px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg-primary);
   color: var(--text-primary);
   font: inherit;
@@ -1315,7 +1443,7 @@ h1, h2, h3, h4 {
 }
 .velum-workspace__unresolved-apply {
   padding: 5px 14px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: var(--color-brand);
   color: #fff;
@@ -1331,7 +1459,7 @@ h1, h2, h3, h4 {
 .velum-workspace__deanonymize-stats {
   margin: 8px 16px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: hsl(120 40% 50% / 0.08);
   border: 1px solid hsl(120 30% 50% / 0.15);
   font-size: 0.75rem;
@@ -1348,7 +1476,7 @@ h1, h2, h3, h4 {
   gap: 4px;
   padding: 6px 8px;
   margin-top: 2px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px dashed var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -1371,7 +1499,7 @@ h1, h2, h3, h4 {
   flex: 1;
   min-width: 0;
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -1384,7 +1512,7 @@ h1, h2, h3, h4 {
 }
 .velum-selection__custom-confirm {
   padding: 5px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 0;
   background: var(--color-brand);
   color: #fff;
