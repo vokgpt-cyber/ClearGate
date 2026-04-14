@@ -137,6 +137,57 @@ class TestPlaceholderMatcherFuzzy:
         assert val is not None
 
 
+class TestPlaceholderMatcherLabelCollision:
+    """BUG-P2-1 regression: custom 4-letter Cyrillic labels must stay
+    distinct from near-neighbour built-in labels.
+
+    Before the length-proportional threshold, ``АФТА`` (Levenshtein 2
+    from ``ДАТА``) silently resolved to a ДАТА entry with the same
+    number, corrupting the round-trip with a date string.
+    """
+
+    def test_custom_afta_does_not_collapse_to_data(self):
+        # Registry has DATE in slot 2; the response doc uses a *different*
+        # custom label АФТА that the user introduced, also in slot 2.
+        reg = _make_registry(
+            entities=[
+                ("10.01.2026", "ДАТА"),
+                ("2026-01-10", "ДАТА"),  # now [ДАТА_2]
+                ("какое-то значение", "АФТА"),  # now [АФТА_1]
+                ("второе значение АФТА", "АФТА"),  # now [АФТА_2]
+            ],
+        )
+        matcher = PlaceholderMatcher(reg)
+        norm, val = matcher.match("[АФТА_2]")
+        assert norm == "[АФТА_2]"
+        assert val == "второе значение АФТА"
+
+    def test_unknown_4letter_label_stays_unresolved(self):
+        # Registry only has ДАТА, doc contains a 4-letter placeholder
+        # that is Levenshtein-2 away. Must NOT match — must be unresolved.
+        reg = _make_registry(entities=[("01.01.2026", "ДАТА")])
+        matcher = PlaceholderMatcher(reg)
+        _, val = matcher.match("[АФТА_1]")
+        assert val is None
+
+    def test_ocr_style_single_char_typo_still_matches(self):
+        # Guard that the new threshold does not over-block: a single
+        # character typo in a 4+ letter label should still resolve.
+        reg = _make_registry(entities=[("Москва", "МЕСТО")])
+        matcher = PlaceholderMatcher(reg)
+        # МЕСТО vs МЕСТ0: 1-char substitution in a 5-char label → accept.
+        _, val = matcher.match("[МЕСТ0_1]")
+        assert val is not None
+
+    def test_3letter_labels_require_exact_match(self):
+        # Below 4 chars the threshold drops to 0: any single edit is a
+        # 25%+ deformation and too risky.
+        reg = _make_registry(entities=[("Иванов", "ЛИЦ")])
+        matcher = PlaceholderMatcher(reg)
+        _, val = matcher.match("[ЛИС_1]")
+        assert val is None
+
+
 class TestPlaceholderMatcherUnresolved:
     """Unresolved — placeholder not in registry."""
 

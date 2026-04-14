@@ -33,7 +33,11 @@ from docx import Document
 from Levenshtein import distance as levenshtein_distance
 
 from app.models.api import UnresolvedPlaceholder
-from app.services.docx_utils import iter_paragraphs, replace_in_paragraph
+from app.services.docx_utils import (
+    iter_paragraphs,
+    replace_in_paragraph,
+    replace_in_paragraph_highlighted,
+)
 from app.services.entity_registry import EntityRegistry, _EN_LABELS, _RU_LABELS
 
 logger = structlog.get_logger(__name__)
@@ -252,6 +256,14 @@ class PlaceholderMatcher:
         AND the numeric suffix is identical. Changing ``[ЛИЦО_1]`` to
         ``[ЛИЦО_5]`` is a different entity, not a typo — Levenshtein
         distance 1 between them must NOT produce a match.
+
+        Length-proportional threshold (BUG-P2-1 fix):
+        - 4-letter labels allow ≤ 1 edit (so ``АФТА`` stays distinct
+          from ``ДАТА`` — they differ by 2 substitutions)
+        - 8-letter labels allow ≤ 2 edits
+        - longer labels cap at ``max_dist``
+        Before this fix a flat ``max_dist=2`` silently collapsed any
+        pair of 4-char Cyrillic labels that shared two characters.
         """
         # Parse the label and number from the normalized form
         norm_label, norm_num = self._split_placeholder(normalized)
@@ -259,7 +271,7 @@ class PlaceholderMatcher:
             return None
 
         best: str | None = None
-        best_dist = max_dist + 1
+        best_dist_weighted: float = float("inf")
         for known in self._reverse:
             known_label, known_num = self._split_placeholder(known)
             if known_label is None:
@@ -267,11 +279,21 @@ class PlaceholderMatcher:
             # Numbers must match exactly — different numbers = different entities
             if norm_num != known_num:
                 continue
+            # Budget scales with the SHORTER label so distance isn't
+            # spent on padding from a much longer registry entry.
+            budget = min(max_dist, min(len(norm_label), len(known_label)) // 4)
+            if budget <= 0:
+                # Below 4 chars we require exact label match, otherwise
+                # any single edit is a 25%+ deformation and far too
+                # likely to be a distinct concept (АФТА vs ДАТА).
+                if norm_label == known_label:
+                    return known
+                continue
             d = levenshtein_distance(norm_label, known_label)
-            if d < best_dist:
-                best_dist = d
+            if d <= budget and d < best_dist_weighted:
+                best_dist_weighted = d
                 best = known
-        return best if best_dist <= max_dist else None
+        return best
 
     @staticmethod
     def _split_placeholder(placeholder: str) -> tuple[str | None, str | None]:
@@ -297,6 +319,7 @@ def deanonymize_docx(
     docx_bytes: bytes,
     registry: EntityRegistry,
     manual_resolutions: dict[str, str] | None = None,
+    highlight: bool = False,
 ) -> DeanonymizeResult:
     """Deanonymize a DOCX file by replacing placeholders with real values.
 
@@ -355,9 +378,12 @@ def deanonymize_docx(
     ordered = sorted(substitution_map.items(), key=lambda kv: len(kv[0]), reverse=True)
 
     total_applied = 0
+    replace_fn = (
+        replace_in_paragraph_highlighted if highlight else replace_in_paragraph
+    )
     for raw, value in ordered:
         for paragraph in iter_paragraphs(document):
-            total_applied += replace_in_paragraph(paragraph, raw, value)
+            total_applied += replace_fn(paragraph, raw, value)
 
     # Save modified DOCX.
     buffer = io.BytesIO()
