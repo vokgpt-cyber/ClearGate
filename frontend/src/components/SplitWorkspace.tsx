@@ -127,6 +127,11 @@ export function SplitWorkspace({
   const [exportDeanonymizedBusy, setExportDeanonymizedBusy] = useState(false);
   const [exportDeanonymizedError, setExportDeanonymizedError] =
     useState<string | null>(null);
+  // Manual resolutions the user entered for unresolved placeholders.
+  // Persisted in state so the export handler can re-send them.
+  const [manualResolutions, setManualResolutions] = useState<
+    Array<{ placeholder: string; value: string }>
+  >([]);
   // URL override for right pane: after deanonymize, show the deanonymized doc
   const [rightPaneUrl, setRightPaneUrl] = useState<string | null>(null);
 
@@ -229,6 +234,7 @@ export function SplitWorkspace({
     leftPaneRef.current = null;
     rightPaneRef.current = null;
     setDocScale(1);
+    setManualResolutions([]);
   }, [documentId]);
 
   // ─── document zoom: apply, wheel, keyboard ───────────────────────
@@ -821,7 +827,7 @@ export function SplitWorkspace({
     setExportDeanonymizedBusy(true);
     setExportDeanonymizedError(null);
     try {
-      const { blob, filename } = await exportDeanonymizedDocx(documentId);
+      const { blob, filename } = await exportDeanonymizedDocx(documentId, manualResolutions);
       downloadBlob(blob, filename);
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -832,7 +838,7 @@ export function SplitWorkspace({
     } finally {
       setExportDeanonymizedBusy(false);
     }
-  }, [documentId, exportDeanonymizedBusy]);
+  }, [documentId, exportDeanonymizedBusy, manualResolutions]);
 
   return (
     <div className="velum-workspace">
@@ -1005,6 +1011,7 @@ export function SplitWorkspace({
                 if (val && ph) resolutions.push({ placeholder: ph, value: val });
               });
               if (resolutions.length === 0) return;
+              setManualResolutions(resolutions);
               setDeanonymizeBusy(true);
               setDeanonymizeError(null);
               deanonymizeDocx(documentId, resolutions)
