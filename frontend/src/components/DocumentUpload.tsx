@@ -102,7 +102,7 @@ export function DocumentUpload({ onTextLoaded }: DocumentUploadProps) {
         <>
           <span style={{
             fontSize: '0.875rem', color: 'var(--text-secondary)',
-            fontFamily: 'var(--font-serif)', fontStyle: 'italic',
+            fontFamily: 'var(--font-sans)', fontStyle: 'italic',
           }}>
             {isDragging ? 'Drop file here' : 'Drag & drop DOCX, PDF, or TXT'}
           </span>
