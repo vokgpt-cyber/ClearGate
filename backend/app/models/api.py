@@ -155,4 +155,20 @@ class Restoration(BaseModel):
 class DeanonymizeDocxResult(BaseModel):
     """Response from DOCX deanonymization."""
 
-   
+    unresolved: list[UnresolvedPlaceholder] = Field(default_factory=list)
+    restorations: list[Restoration] = Field(default_factory=list)
+    total_replacements: int = 0
+    total_unresolved: int = 0
+
+
+class ManualResolution(BaseModel):
+    """A user-supplied value for an unresolved placeholder."""
+
+    placeholder: str = Field(description="The normalized placeholder, e.g. [ЛИЦО_5]")
+    value: str = Field(description="The real value to substitute")
+
+
+class ExportDeanonymizedRequest(BaseModel):
+    """Body for the deanonymized-DOCX export endpoint."""
+
+    manual_resolutions: list[ManualResolution] = Field(default_factory=list)

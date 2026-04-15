@@ -256,4 +256,47 @@ def replace_in_paragraph_highlighted(
             parent = original_r.getparent()
             insert_at = list(parent).index(original_r) + 1
 
-            # Turn the current run into the "before" slic
+            # Turn the current run into the "before" slice
+            run.text = before
+
+            # Build highlighted run for the replacement value
+            hl_r = _make_run_like(original_r, new, highlight_color=highlight_color)
+            # Build plain run for the tail
+            tail_r = _make_run_like(original_r, after, highlight_color=None)
+
+            parent.insert(insert_at, hl_r)
+            parent.insert(insert_at + 1, tail_r)
+
+            total += 1
+            hit = True
+            break
+        if hit:
+            continue
+
+        # Cross-run fallback: concatenate, splice once, rebuild paragraph body.
+        full = "".join(r.text for r in paragraph.runs)
+        if not paragraph.runs or old not in full:
+            break
+        probe = _safe_replace(full, old, "\x00")
+        if "\x00" not in probe:
+            break
+        idx = probe.find("\x00")
+        before = full[:idx]
+        after = full[idx + len(old):]
+
+        first_r = paragraph.runs[0]._r
+        parent = first_r.getparent()
+        insert_at = list(parent).index(first_r) + 1
+
+        paragraph.runs[0].text = before
+        for r in paragraph.runs[1:]:
+            r.text = ""
+
+        hl_r = _make_run_like(first_r, new, highlight_color=highlight_color)
+        tail_r = _make_run_like(first_r, after, highlight_color=None)
+        parent.insert(insert_at, hl_r)
+        parent.insert(insert_at + 1, tail_r)
+        total += 1
+        break
+
+    return total

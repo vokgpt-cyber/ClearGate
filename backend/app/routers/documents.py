@@ -454,4 +454,30 @@ async def export_deanonymized(
 
     original = session.docx_filename or "document.docx"
     stem = original[:-5] if original.lower().endswith(".docx") else original
-    dow
+    download_name = f"DEAN_{stem}.docx"
+
+    ascii_fallback = (
+        download_name.encode("ascii", errors="ignore").decode("ascii")
+        or "document_deanonymized.docx"
+    )
+    encoded = quote(download_name, safe="")
+    disposition = (
+        f'attachment; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded}'
+    )
+
+    logger.info(
+        "document.deanonymized_exported",
+        session_id=session_id,
+        replacements=len(result.replacements),
+        unresolved=len(result.unresolved),
+        manual_resolutions=len(manual),
+    )
+
+    return Response(
+        content=result.docx_bytes,
+        media_type=_DOCX_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": disposition,
+            "Cache-Control": "no-store",
+        },
+    )
