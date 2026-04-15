@@ -217,8 +217,16 @@ class EntityRegistry:
     # Internal methods
 
     def _fuzzy_lookup(self, canonical: str, entity_type: str) -> MappingEntry | None:
-        """Find similar existing entry using Levenshtein distance."""
-        max_dist = 2 if len(canonical) < 20 else 4
+        """Find similar existing entry using Levenshtein distance.
+
+        The threshold scales with string length so short values (numbers,
+        abbreviations) are not incorrectly merged.  Rule of thumb: allow
+        1 edit per 4 characters, capped at 4.
+        """
+        length = len(canonical)
+        max_dist = min(length // 4, 4)  # 0 for ≤3 chars, 1 for 4-7, 2 for 8-11, …
+        if max_dist == 0:
+            return None  # too short for meaningful fuzzy matching
         candidates = [e for e in self._mapping.values() if e.entity_type == entity_type]
         for entry in candidates:
             if levenshtein_distance(canonical, entry.canonical_value) <= max_dist:

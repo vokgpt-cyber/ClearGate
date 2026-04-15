@@ -25,6 +25,8 @@ real_documents/
 mapping_tables/
 *.mapping
 *.session
+backend/data/
+*.db
 
 # ----------- Python -----------
 __pycache__/

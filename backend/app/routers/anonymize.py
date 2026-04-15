@@ -85,6 +85,9 @@ async def anonymize(
         stats=stats,
     )
 
+    # Persist session state after registry mutation
+    sm.save_session(session_id)
+
     return AnonymizeResponse(
         anonymized_text=anonymized,
         entities=entities,
@@ -207,6 +210,9 @@ async def add_entity(
         entity_type=entity.entity_type,
         placeholder=placeholder,
     )
+
+    # Persist after manual entity addition
+    sm.save_session(session_id)
 
     return AddEntityResponse(id=entity_id, placeholder=placeholder, entity=entity)
 

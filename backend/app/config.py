@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from pydantic import computed_field, field_validator
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Root .env is one level above backend/
@@ -30,13 +29,17 @@ class Settings(BaseSettings):
     backend_host: str = "0.0.0.0"  # noqa: S104
     backend_port: int = 8000
 
-    # CORS — stored as comma-separated string to avoid pydantic-settings JSON parsing
+    # CORS
     backend_cors_origins: str = _DEFAULT_CORS
 
     # Logging
     log_level: str = "INFO"
 
-    # Version (not from env — hardcoded to match pyproject.toml)
+    # Session persistence
+    session_store_dir: str = "data"  # relative to backend/, or absolute path
+    session_ttl_minutes: int = 1440  # 24 hours
+
+    # Version (not from env -- hardcoded to match pyproject.toml)
     version: str = "0.1.0-alpha"
 
     @computed_field  # type: ignore[prop-decorator]

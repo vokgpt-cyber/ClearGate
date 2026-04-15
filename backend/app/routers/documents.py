@@ -19,12 +19,14 @@ from app.models.api import (
     ExportDeanonymizedRequest,
     ImportResponseResult,
     ParseTextRequest,
+    Restoration,
     UnresolvedPlaceholder,
     UploadResponse,
 )
 from app.services.doc_processor import DocumentProcessor
 from app.services.docx_deanonymize import deanonymize_docx, scan_placeholders
 from app.services.docx_export import EntitySubstitution, export_anonymized_docx
+from app.services.docx_utils import copy_page_setup
 from app.services.session_manager import SessionManager
 
 logger = structlog.get_logger(__name__)
@@ -82,6 +84,7 @@ async def upload_document(
         session.docx_bytes = content
         session.docx_filename = file.filename
         document_id = session_id
+        manager.save_session(session_id)
         logger.info(
             "document.attached_to_session",
             session_id=session_id,
@@ -230,15 +233,9 @@ async def export_anonymized(
 # -- Phase 1 round-trip: import response, deanonymize, export -----------
 
 
-
 @router.get("/{session_id}/response-raw")
 async def get_response_raw(session_id: str) -> Response:
-    """Return the deanonymized DOCX bytes for client-side preview.
-
-    After deanonymization, the result bytes are stored in the session.
-    This endpoint serves them so the frontend DocxViewer can render
-    the deanonymized document in the right pane.
-    """
+    """Return the deanonymized DOCX bytes for client-side preview."""
     manager = SessionManager.instance()
     session = manager.get_session(session_id)
     if session is None:
@@ -274,6 +271,7 @@ async def get_response_raw(session_id: str) -> Response:
         },
     )
 
+
 @router.post("/{session_id}/import-response", response_model=ImportResponseResult)
 async def import_response(
     session_id: str,
@@ -295,7 +293,14 @@ async def import_response(
     processor = DocumentProcessor()
     result = processor.parse(content, format="docx")
 
+    # Transplant page geometry from the original DOCX so the deanonymized
+    # preview renders with the same margins/page size as the left pane.
+    original = getattr(session, "docx_bytes", None)
+    if original:
+        content = copy_page_setup(original, content)
+
     session.response_docx_bytes = content
+    manager.save_session(session_id)
 
     placeholders = scan_placeholders(result.text)
 
@@ -327,11 +332,7 @@ async def deanonymize_docx_endpoint(
     session_id: str,
     payload: DeanonymizeRequest = Body(default=DeanonymizeRequest()),
 ) -> DeanonymizeDocxResult:
-    """Deanonymize the previously imported response DOCX.
-
-    Accepts optional manual_resolutions for unresolved placeholders.
-    Stores the resulting DOCX bytes so /response-raw can serve them.
-    """
+    """Deanonymize the previously imported response DOCX."""
     manager = SessionManager.instance()
     session = manager.get_session(session_id)
     if session is None:
@@ -367,6 +368,7 @@ async def deanonymize_docx_endpoint(
         raise HTTPException(status_code=500, detail="Deanonymization failed") from exc
 
     session.deanonymized_docx_bytes = result.docx_bytes
+    manager.save_session(session_id)
 
     unresolved = [
         UnresolvedPlaceholder(
@@ -377,6 +379,24 @@ async def deanonymize_docx_endpoint(
         for m in result.unresolved
     ]
 
+    # Build restoration list with entity_type resolved from the registry so
+    # the frontend can apply the matching overlay color/style per type.
+    restorations: list[Restoration] = []
+    reverse = session.registry._reverse  # placeholder → MappingEntry
+    for m in result.replacements:
+        if m.real_value is None:
+            continue
+        entry = reverse.get(m.normalized)
+        entity_type = entry.entity_type if entry is not None else "CUSTOM"
+        restorations.append(
+            Restoration(
+                placeholder=m.normalized,
+                real_value=m.real_value,
+                entity_type=entity_type,
+                paragraph_index=m.paragraph_index,
+            )
+        )
+
     logger.info(
         "document.deanonymized",
         session_id=session_id,
@@ -386,6 +406,7 @@ async def deanonymize_docx_endpoint(
 
     return DeanonymizeDocxResult(
         unresolved=unresolved,
+        restorations=restorations,
         total_replacements=len(result.replacements),
         total_unresolved=len(unresolved),
     )
@@ -429,33 +450,8 @@ async def export_deanonymized(
         raise HTTPException(status_code=500, detail="Deanonymization export failed") from exc
 
     session.deanonymized_docx_bytes = result.docx_bytes
+    manager.save_session(session_id)
 
     original = session.docx_filename or "document.docx"
     stem = original[:-5] if original.lower().endswith(".docx") else original
-    download_name = f"DEAN_{stem}.docx"
-
-    ascii_fallback = (
-        download_name.encode("ascii", errors="ignore").decode("ascii")
-        or "document_deanonymized.docx"
-    )
-    encoded = quote(download_name, safe="")
-    disposition = (
-        f'attachment; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded}'
-    )
-
-    logger.info(
-        "document.deanonymized_exported",
-        session_id=session_id,
-        replacements=len(result.replacements),
-        unresolved=len(result.unresolved),
-        manual_resolutions=len(manual),
-    )
-
-    return Response(
-        content=result.docx_bytes,
-        media_type=_DOCX_CONTENT_TYPE,
-        headers={
-            "Content-Disposition": disposition,
-            "Cache-Control": "no-store",
-        },
-    )
+    dow

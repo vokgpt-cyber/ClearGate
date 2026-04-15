@@ -125,6 +125,24 @@ export async function healthCheck(): Promise<{
   return request('/health');
 }
 
+/** Metadata returned by GET /api/sessions for each persisted session. */
+export interface SessionMeta {
+  session_id: string;
+  locale: string;
+  created_at: string;
+  entity_count: number;
+  has_document: boolean;
+  docx_filename: string | null;
+}
+
+/**
+ * List all persisted sessions (metadata only).
+ * Used on startup to restore the sidebar from the SQLite store.
+ */
+export async function listSessions(): Promise<SessionMeta[]> {
+  return request('/api/sessions');
+}
+
 
 /**
  * Export the anonymized version of the original uploaded DOCX.
@@ -217,9 +235,18 @@ export interface UnresolvedPlaceholder {
   normalized: string;
 }
 
+/** A single placeholder that was successfully substituted with its real value. */
+export interface Restoration {
+  placeholder: string;
+  real_value: string;
+  entity_type: string;
+  paragraph_index: number;
+}
+
 /** Result from the deanonymize-docx endpoint. */
 export interface DeanonymizeDocxResult {
   unresolved: UnresolvedPlaceholder[];
+  restorations: Restoration[];
   total_replacements: number;
   total_unresolved: number;
 }

@@ -10,7 +10,11 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
+from copy import deepcopy
+
 from docx.document import Document as _DocxDocument
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from docx.table import _Cell
 from docx.text.paragraph import Paragraph
 
@@ -109,3 +113,147 @@ def replace_in_paragraph(paragraph: Paragraph, old: str, new: str) -> int:
         break
 
     return total
+
+
+def copy_page_setup(source_bytes: bytes, target_bytes: bytes) -> bytes:
+    """Make ``target_bytes`` visually match ``source_bytes`` in page geometry
+    and default text styling.
+
+    The LLM's response DOCX typically has its own section properties
+    (page size / margins / columns / doc grid) and its own stylesheet
+    defaults (font, size, paragraph spacing).  To make the deanonymized
+    preview pane look the same as the original on the left, we:
+
+    1. Replace the target's ``w:sectPr`` (body-level section properties)
+       wholesale with a deep copy of the source's.  This brings over
+       ``pgSz``, ``pgMar``, ``cols``, ``docGrid``, ``type``, etc.
+    2. Replace ``word/styles.xml`` with the source's so default paragraph
+       / run properties (font, size, line spacing) match.
+
+    Fails soft on any error — returns ``target_bytes`` unchanged.  Does
+    NOT touch numbering, themes, or the actual content.
+    """
+    import io as _io
+    import zipfile as _zip
+
+    from docx import Document as _Document
+
+    # --- Step 1: sectPr transplant via python-docx -----------------------
+    try:
+        src = _Document(_io.BytesIO(source_bytes))
+        tgt = _Document(_io.BytesIO(target_bytes))
+
+        src_sectPr = src.element.body.find(qn("w:sectPr"))
+        tgt_sectPr = tgt.element.body.find(qn("w:sectPr"))
+        if src_sectPr is not None and tgt_sectPr is not None:
+            parent = tgt_sectPr.getparent()
+            idx = list(parent).index(tgt_sectPr)
+            parent.remove(tgt_sectPr)
+            parent.insert(idx, deepcopy(src_sectPr))
+
+        buf = _io.BytesIO()
+        tgt.save(buf)
+        target_bytes = buf.getvalue()
+    except Exception:  # pragma: no cover — fail soft
+        return target_bytes
+
+    # --- Step 2: styles.xml transplant via zipfile -----------------------
+    # python-docx does not expose a clean API for replacing the whole
+    # stylesheet, so we rebuild the .docx zip with the source's
+    # word/styles.xml in place of the target's.
+    try:
+        with _zip.ZipFile(_io.BytesIO(source_bytes)) as src_zip:
+            if "word/styles.xml" not in src_zip.namelist():
+                return target_bytes
+            src_styles = src_zip.read("word/styles.xml")
+
+        out = _io.BytesIO()
+        with _zip.ZipFile(_io.BytesIO(target_bytes)) as tgt_zip, _zip.ZipFile(
+            out, "w", _zip.ZIP_DEFLATED
+        ) as new_zip:
+            for item in tgt_zip.infolist():
+                if item.filename == "word/styles.xml":
+                    new_zip.writestr(item, src_styles)
+                else:
+                    new_zip.writestr(item, tgt_zip.read(item.filename))
+        return out.getvalue()
+    except Exception:  # pragma: no cover — fail soft
+        return target_bytes
+
+
+def _make_run_like(template_r, text: str, highlight_color: str | None = None):
+    """Clone a <w:r> element, replace its text, optionally add a highlight.
+
+    Preserves rPr (bold/italic/font/size/color) from the template run so
+    highlighted replacements keep the visual style of the surrounding text.
+    """
+    new_r = deepcopy(template_r)
+    # Strip all existing <w:t> children; keep <w:rPr>
+    for child in list(new_r):
+        if child.tag != qn("w:rPr"):
+            new_r.remove(child)
+
+    if highlight_color:
+        rPr = new_r.find(qn("w:rPr"))
+        if rPr is None:
+            rPr = OxmlElement("w:rPr")
+            new_r.insert(0, rPr)
+        # Remove any prior highlight
+        for h in rPr.findall(qn("w:highlight")):
+            rPr.remove(h)
+        highlight = OxmlElement("w:highlight")
+        highlight.set(qn("w:val"), highlight_color)
+        rPr.append(highlight)
+
+    t = OxmlElement("w:t")
+    t.set(qn("xml:space"), "preserve")
+    t.text = text
+    new_r.append(t)
+    return new_r
+
+
+def replace_in_paragraph_highlighted(
+    paragraph: Paragraph,
+    old: str,
+    new: str,
+    highlight_color: str = "yellow",
+) -> int:
+    """Replace ``old`` with ``new`` and wrap the replacement in a highlighted run.
+
+    The replacement text gets a ``w:highlight`` element (yellow by default)
+    so the reader can visually distinguish restored values in the
+    deanonymized document.  Surrounding run formatting (bold, font, etc.)
+    is preserved by cloning the source run's ``w:rPr``.
+
+    Cross-run matches fall back to a collapse-and-highlight strategy that
+    may drop per-character formatting for the paragraph (same trade-off
+    as :func:`replace_in_paragraph`).
+
+    Returns the number of substitutions made.
+    """
+    if not old:
+        return 0
+
+    total = 0
+
+    # Single-run path — walk runs by list index so we can insert siblings.
+    while True:
+        hit = False
+        # Re-fetch runs each iteration since we may have added runs.
+        runs = list(paragraph.runs)
+        for run in runs:
+            if not run.text or old not in run.text:
+                continue
+            # Use _safe_replace semantics to find a valid match position
+            probe = _safe_replace(run.text, old, "\x00")
+            if "\x00" not in probe:
+                continue
+            idx = probe.find("\x00")
+            before = run.text[:idx]
+            after = run.text[idx + len(old):]
+
+            original_r = run._r
+            parent = original_r.getparent()
+            insert_at = list(parent).index(original_r) + 1
+
+            # Turn the current run into the "before" slic

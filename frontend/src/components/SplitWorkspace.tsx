@@ -50,6 +50,7 @@ import {
   type InteractiveEntity,
   type OverlayEntity,
 } from '@/lib/entity-overlay';
+import { diffWordsHtml } from '@/lib/word-diff';
 import {
   addCustomEntity,
   anonymizeText,
@@ -60,6 +61,7 @@ import {
   exportDeanonymizedDocx,
   importResponseDocx,
   type DeanonymizeDocxResult,
+  type Restoration,
 } from '@/lib/api';
 import { useLocale } from '@/hooks/useLocale';
 import type { EntityTypeCode } from '@/lib/entity-types';
@@ -97,6 +99,10 @@ export function SplitWorkspace({
   const rightContainerRef = useRef<HTMLElement | null>(null);
   const leftPaneRef = useRef<DocxPane | null>(null);
   const rightPaneRef = useRef<DocxPane | null>(null);
+  // Holds the latest restoration list so handleAnonymizedReady (which
+  // re-fires when the right pane reloads the deanonymized DOCX) can
+  // apply overlays without relying on stale closure state.
+  const restorationsRef = useRef<Restoration[]>([]);
 
   const [status, setStatus] = useState<LegendStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +140,12 @@ export function SplitWorkspace({
   >([]);
   // URL override for right pane: after deanonymize, show the deanonymized doc
   const [rightPaneUrl, setRightPaneUrl] = useState<string | null>(null);
+
+  // Compare-with-original mode (Word-style Track Changes).
+  // When ON, the right pane's DOM is replaced in-place with a word-level
+  // diff overlay. Toggling OFF restores the docx-preview render via
+  // `pane.rerender(overlays, 'highlight')` using the stashed restorations.
+  const [compareMode, setCompareMode] = useState(false);
 
   // Synchronized document zoom (both panes scale together).
   // Implemented via the CSS `zoom` property on the docx-preview
@@ -203,15 +215,77 @@ export function SplitWorkspace({
     [markBothReadyIfPossible],
   );
 
+  // Apply restoration-value overlays to the right pane by text-searching
+  // its plain text for each real_value and building InteractiveEntity
+  // ranges. Shared between the initial deanonymized-preview render and
+  // the "exit compare mode" restore path.
+  const applyRestorationOverlays = useCallback((pane: DocxPane) => {
+    const restorations = restorationsRef.current;
+    if (restorations.length === 0) return;
+    const plain = pane.getPlainText();
+    const overlays: InteractiveEntity[] = [];
+    let idCounter = 0;
+    // Sort by length DESC so longer strings match before substrings
+    // (e.g. "Петров А. Н." before "Петров").
+    const sorted = [...restorations].sort(
+      (a, b) => b.real_value.length - a.real_value.length,
+    );
+    const claimed: Array<[number, number]> = [];
+    const overlaps = (s: number, e: number) =>
+      claimed.some(([cs, ce]) => s < ce && e > cs);
+    for (const r of sorted) {
+      if (!r.real_value) continue;
+      let from = 0;
+      while (from <= plain.length) {
+        const idx = plain.indexOf(r.real_value, from);
+        if (idx === -1) break;
+        const end = idx + r.real_value.length;
+        if (!overlaps(idx, end)) {
+          overlays.push({
+            id: `restoration-${idCounter++}`,
+            text: r.real_value,
+            entity_type: r.entity_type,
+            start: idx,
+            end,
+            score: 1,
+            state: 'accepted',
+            metadata: { placeholder: r.placeholder },
+          });
+          claimed.push([idx, end]);
+        }
+        from = end;
+      }
+    }
+    if (overlays.length > 0) {
+      try {
+        pane.rerender(overlays, { mode: 'highlight' });
+        // eslint-disable-next-line no-console
+        console.info('[Velum] restoration overlays applied', {
+          count: overlays.length,
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[Velum] restoration overlay render failed', e);
+      }
+    }
+  }, []);
+
   const handleAnonymizedReady = useCallback(
     (container: HTMLElement) => {
       rightContainerRef.current = container;
-      rightPaneRef.current = new DocxPane(container);
+      const pane = new DocxPane(container);
+      rightPaneRef.current = pane;
       // eslint-disable-next-line no-console
       console.info('[Velum] anonymized pane ready');
+
+      // If we just switched to the deanonymized preview, overlay the
+      // restored values using the same interactive entity system as the
+      // left pane.
+      applyRestorationOverlays(pane);
+
       markBothReadyIfPossible();
     },
-    [markBothReadyIfPossible],
+    [markBothReadyIfPossible, applyRestorationOverlays],
   );
 
   // Reset everything when the document changes.
@@ -233,8 +307,10 @@ export function SplitWorkspace({
     rightContainerRef.current = null;
     leftPaneRef.current = null;
     rightPaneRef.current = null;
+    restorationsRef.current = [];
     setDocScale(1);
     setManualResolutions([]);
+    setCompareMode(false);
   }, [documentId]);
 
   // ─── document zoom: apply, wheel, keyboard ───────────────────────
@@ -792,6 +868,9 @@ export function SplitWorkspace({
         try {
           const dResult = await deanonymizeDocx(documentId);
           setDeanonymizeResult(dResult);
+          // Stash restorations for handleAnonymizedReady to overlay once
+          // the right pane finishes rendering the deanonymized DOCX.
+          restorationsRef.current = dResult.restorations ?? [];
           // Switch right pane to show deanonymized document
           setRightPaneUrl(
             `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
@@ -820,6 +899,47 @@ export function SplitWorkspace({
     },
     [documentId, importBusy],
   );
+
+  // --- toggle Compare-with-original mode on the right pane ---
+  //
+  // ON: compute a word-level LCS diff between the left pane's plain
+  // text (original) and the right pane's plain text (deanonymized
+  // response), and replace the right pane's DOM with an inline diff
+  // overlay. We deliberately do NOT mutate DocxPane's cleanHtml, so
+  // toggling OFF just calls applyRestorationOverlays again, which
+  // restores from the immutable snapshot taken at render time.
+  const toggleCompareMode = useCallback(() => {
+    const leftPane = leftPaneRef.current;
+    const rightPane = rightPaneRef.current;
+    if (!leftPane || !rightPane) return;
+    const container = rightPane.getContainer();
+
+    if (!compareMode) {
+      // Entering compare mode: build diff HTML and swap in-place.
+      const oldText = leftPane.getPlainText();
+      const newText = rightPane.getPlainText();
+      const diffInner = diffWordsHtml(oldText, newText);
+      container.innerHTML =
+        `<div class="velum-compare" style="white-space: pre-wrap; ` +
+        `font-family: inherit; padding: 1rem; line-height: 1.5;">` +
+        diffInner +
+        `</div>`;
+      setCompareMode(true);
+      // eslint-disable-next-line no-console
+      console.info('[Velum] compare mode ON', {
+        oldChars: oldText.length,
+        newChars: newText.length,
+      });
+    } else {
+      // Leaving compare mode: restore the deanonymized preview by
+      // replaying the highlight overlays on top of the clean snapshot.
+      rightPane.rerender([], { mode: 'highlight' });
+      applyRestorationOverlays(rightPane);
+      setCompareMode(false);
+      // eslint-disable-next-line no-console
+      console.info('[Velum] compare mode OFF');
+    }
+  }, [compareMode, applyRestorationOverlays]);
 
   // --- export deanonymized .docx ---
   const handleExportDeanonymized = useCallback(async () => {
@@ -909,6 +1029,26 @@ export function SplitWorkspace({
               e.target.value = '';
             }}
           />
+
+          {/* Compare-with-original toggle (Word-style Track Changes) */}
+          {responseImported && (
+            <button
+              type="button"
+              className="velum-workspace__compare"
+              onClick={toggleCompareMode}
+              disabled={deanonymizeBusy}
+              aria-pressed={compareMode}
+              title={
+                compareMode
+                  ? t('workspace.compareToggleOff')
+                  : t('workspace.compareToggleOn')
+              }
+            >
+              {compareMode
+                ? t('workspace.compareToggleOff')
+                : t('workspace.compareToggleOn')}
+            </button>
+          )}
 
           {/* Phase 1 round-trip: export deanonymized */}
           {responseImported && (
@@ -1017,6 +1157,7 @@ export function SplitWorkspace({
               deanonymizeDocx(documentId, resolutions)
                 .then((dResult) => {
                   setDeanonymizeResult(dResult);
+                  restorationsRef.current = dResult.restorations ?? [];
                   // Refresh right pane preview with cache-busting timestamp
                   setRightPaneUrl(
                     `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,

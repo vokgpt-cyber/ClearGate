@@ -17,12 +17,12 @@
  * into another.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
-import { createSession, uploadDocx } from '@/lib/api';
+import { createSession, listSessions, uploadDocx } from '@/lib/api';
 
 interface LoadedDoc {
   sessionId: string;
@@ -36,6 +36,30 @@ export default function Home() {
   const [isPicking, setIsPicking] = useState(false);
   const [isWorking, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore persisted sessions from the backend on mount
+  useEffect(() => {
+    let cancelled = false;
+    listSessions()
+      .then((metas) => {
+        if (cancelled || metas.length === 0) return;
+        const restored: LoadedDoc[] = metas
+          .filter((m) => m.has_document)
+          .map((m) => ({
+            sessionId: m.session_id,
+            name: m.docx_filename ?? 'Untitled',
+            openedAt: new Date(m.created_at).getTime(),
+          }));
+        if (restored.length > 0) {
+          setSessions(restored);
+          setActiveId(restored[0].sessionId);
+        }
+      })
+      .catch(() => {
+        // Backend may not be ready yet — silently ignore
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleFile = useCallback(async (file: File) => {
     setWorking(true);

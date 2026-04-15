@@ -138,22 +138,21 @@ class UnresolvedPlaceholder(BaseModel):
     )
 
 
+class Restoration(BaseModel):
+    """A single placeholder that was successfully substituted with its real value.
+
+    Returned so the frontend can render interactive overlays on top of the
+    deanonymized preview, reusing the same entity-overlay UI as the
+    anonymization pane.
+    """
+
+    placeholder: str = Field(description="Normalized placeholder, e.g. [ЛИЦО_1]")
+    real_value: str = Field(description="Text that was substituted in")
+    entity_type: str = Field(description="Entity type, e.g. PER, ORG, RU_INN")
+    paragraph_index: int = Field(default=0)
+
+
 class DeanonymizeDocxResult(BaseModel):
     """Response from DOCX deanonymization."""
 
-    unresolved: list[UnresolvedPlaceholder] = Field(default_factory=list)
-    total_replacements: int = 0
-    total_unresolved: int = 0
-
-
-class ManualResolution(BaseModel):
-    """A user-supplied value for an unresolved placeholder."""
-
-    placeholder: str = Field(description="The normalized placeholder, e.g. [ЛИЦО_5]")
-    value: str = Field(description="The real value to substitute")
-
-
-class ExportDeanonymizedRequest(BaseModel):
-    """Body for the deanonymized-DOCX export endpoint."""
-
-    manual_resolutions: list[ManualResolution] = Field(default_factory=list)
+   

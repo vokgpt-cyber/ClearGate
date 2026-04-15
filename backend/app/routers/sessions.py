@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.models.api import CreateSessionRequest, CreateSessionResponse, SessionInfoResponse
 from app.services.session_manager import SessionManager
+
+UTC = timezone.utc
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -15,6 +17,14 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 def get_session_manager() -> SessionManager:
     """Dependency: get the singleton SessionManager."""
     return SessionManager.instance()
+
+
+@router.get("")
+async def list_sessions(
+    sm: SessionManager = Depends(get_session_manager),
+) -> list:
+    """List all persisted sessions (metadata only)."""
+    return sm.list_sessions()
 
 
 @router.post("", response_model=CreateSessionResponse, status_code=status.HTTP_201_CREATED)
