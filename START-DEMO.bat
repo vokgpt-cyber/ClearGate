@@ -1,20 +1,20 @@
 @echo off
-title VELUM v0.7.3 - DEMO
+title VELUM v0.9 - DEMO
 
 echo.
 echo  ============================================
-echo   VELUM v0.7.3 - DEMO MODE
+echo   VELUM v0.9 - DEMO MODE (Phase 1 complete)
 echo  ============================================
 echo.
 
 set ROOT=%~dp0
 
-echo [1/5] Switching to master (demo-v0.7.3)...
+echo [1/5] Switching to tag v0.9...
 if exist "%ROOT%.git\index.lock" del /f "%ROOT%.git\index.lock"
 pushd "%ROOT%"
-git checkout master
+git checkout tags/v0.9
 if errorlevel 1 (
-    echo   ERROR: could not switch to master
+    echo   ERROR: could not switch to tag v0.9
     popd
     pause
     exit /b 1
@@ -57,7 +57,7 @@ echo   VELUM DEMO is running!
 echo.
 echo   Frontend:  http://localhost:3000
 echo   Backend:   http://localhost:8000
-echo   Branch:    master (demo-v0.7.3)
+echo   Tag:       v0.9 (detached HEAD)
 echo.
 echo   Close Backend/Frontend windows to stop.
 echo  ============================================
