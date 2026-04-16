@@ -65,6 +65,37 @@ def _safe_replace(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
+def replace_first_in_paragraph(paragraph: Paragraph, old: str, new: str) -> int:
+    """Replace only the **first** occurrence of ``old`` with ``new``.
+
+    Used by occurrence-aware deanonymization (BUG-P2-2 Layer 2) where
+    each placeholder instance must map to a different surface form.
+
+    Returns 1 if a replacement was made, 0 otherwise.
+    """
+    if not old:
+        return 0
+
+    # Single-run path — find the first run containing ``old`` and replace
+    # only the first occurrence within it.
+    for run in paragraph.runs:
+        if old in run.text:
+            run.text = run.text.replace(old, new, 1)
+            return 1
+
+    # Cross-run fallback: concatenate, replace first, collapse.
+    full = "".join(r.text for r in paragraph.runs)
+    if old not in full:
+        return 0
+    new_full = full.replace(old, new, 1)
+    if new_full != full and paragraph.runs:
+        paragraph.runs[0].text = new_full
+        for r in paragraph.runs[1:]:
+            r.text = ""
+        return 1
+    return 0
+
+
 def replace_in_paragraph(paragraph: Paragraph, old: str, new: str) -> int:
     """Replace all occurrences of ``old`` with ``new`` inside a paragraph.
 

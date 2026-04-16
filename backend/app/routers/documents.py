@@ -188,6 +188,15 @@ async def export_anonymized(
         if e.state != "rejected" and e.text and e.placeholder
     ]
 
+    # BUG-P2-2 Layer 2: record per-occurrence surface forms in document
+    # order so deanonymize_docx can restore the correct inflection for
+    # each placeholder occurrence.  The frontend sends entities roughly
+    # in document order (sorted by detection start offset).
+    session.registry.record_surface_forms(
+        [(s.text, s.placeholder) for s in subs]
+    )
+    manager.save_session(session_id)
+
     try:
         output_bytes = export_anonymized_docx(session.docx_bytes, subs)
     except Exception as exc:

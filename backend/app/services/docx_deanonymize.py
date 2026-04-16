@@ -35,6 +35,7 @@ from Levenshtein import distance as levenshtein_distance
 from app.models.api import UnresolvedPlaceholder
 from app.services.docx_utils import (
     iter_paragraphs,
+    replace_first_in_paragraph,
     replace_in_paragraph,
     replace_in_paragraph_highlighted,
 )
@@ -160,19 +161,36 @@ class PlaceholderMatcher:
         return labels
 
     @staticmethod
-    def _get_real_value(entry) -> str:
-        """Return the best real-world form of an entity.
+    def _get_real_value(entry, occurrence_index: int = 0) -> str:
+        """Return the best real-world form of an entity for a given occurrence.
 
-        BUG-7 fix: prefer ``original_forms[0]`` (the first form seen in
-        the source document, preserving case and inflection) over
-        ``canonical_value`` (lowercase lemma from pymorphy3).
+        Resolution order (BUG-P2-2, Layer 2):
+
+        1. ``surface_forms[occurrence_index]`` — the exact inflected form
+           from the *Nth* occurrence in the original document (built at
+           export time by :meth:`EntityRegistry.record_surface_forms`).
+        2. ``original_forms[0]`` — first unique form seen during detection
+           (BUG-7 fix; preserves case and inflection for single-form entities).
+        3. ``canonical_value`` — normalized lemma (last resort).
         """
+        if entry.surface_forms and occurrence_index < len(entry.surface_forms):
+            return entry.surface_forms[occurrence_index]
         if entry.original_forms:
             return entry.original_forms[0]
         return entry.canonical_value
 
-    def match(self, raw_text: str) -> tuple[str, str | None]:
+    def match(
+        self,
+        raw_text: str,
+        occurrence_index: int = 0,
+    ) -> tuple[str, str | None]:
         """Attempt to resolve a raw placeholder-like string.
+
+        Args:
+            raw_text: The text matched by the scanner regex.
+            occurrence_index: How many times this *normalized* placeholder
+                has already been seen in the current deanonymization pass.
+                Used to pick the correct ``surface_forms`` entry.
 
         Returns:
             (normalized_placeholder, real_value_or_None)
@@ -181,23 +199,23 @@ class PlaceholderMatcher:
 
         # 1. Exact match
         if normalized in self._reverse:
-            return normalized, self._get_real_value(self._reverse[normalized])
+            return normalized, self._get_real_value(self._reverse[normalized], occurrence_index)
 
         # 2. Cross-language: if registry is RU but LLM wrote EN label (or vice versa)
         cross = self._cross_language(normalized)
         if cross and cross in self._reverse:
-            return cross, self._get_real_value(self._reverse[cross])
+            return cross, self._get_real_value(self._reverse[cross], occurrence_index)
 
         # 3. Fuzzy match against all known placeholders (Levenshtein ≤ 2)
         fuzzy = self._fuzzy_match(normalized)
         if fuzzy:
-            return fuzzy, self._get_real_value(self._reverse[fuzzy])
+            return fuzzy, self._get_real_value(self._reverse[fuzzy], occurrence_index)
 
         # 4. Fuzzy on cross-language variant
         if cross:
             fuzzy_cross = self._fuzzy_match(cross)
             if fuzzy_cross:
-                return fuzzy_cross, self._get_real_value(self._reverse[fuzzy_cross])
+                return fuzzy_cross, self._get_real_value(self._reverse[fuzzy_cross], occurrence_index)
 
         return normalized, None
 
@@ -337,12 +355,16 @@ def deanonymize_docx(
     matcher = PlaceholderMatcher(registry)
     document = Document(io.BytesIO(docx_bytes))
 
-    # Phase 1: scan all paragraphs, collect (raw_text → real_value) pairs
-    # and unresolved items.
-    substitution_map: dict[str, str] = {}  # raw_text → real_value
+    # Phase 1: scan all paragraphs in document order, collecting an
+    # *ordered* list of (raw_text, real_value) pairs.  BUG-P2-2 Layer 2:
+    # we track a per-placeholder occurrence counter so each [МЕСТО_1]
+    # gets the surface form from the matching original occurrence
+    # (e.g. "Москве" for the 1st, "Москва" for the 2nd).
+    ordered_subs: list[tuple[str, str]] = []  # (raw_text, real_value), document order
     replacements: list[MatchResult] = []
     unresolved: list[MatchResult] = []
     seen_raw: set[str] = set()  # deduplicate logging, not substitution
+    occurrence_counters: dict[str, int] = {}  # normalized → next index
 
     for para_idx, paragraph in enumerate(iter_paragraphs(document)):
         full_text = paragraph.text
@@ -352,7 +374,12 @@ def deanonymize_docx(
         # Use the matcher's dynamic regex (includes custom types).
         for m in matcher._re.finditer(full_text):
             raw = m.group(0)
-            normalized, real_value = matcher.match(raw)
+            # Peek at the normalized form to get the occurrence index
+            normalized_peek = matcher._normalize(raw)
+            occ_idx = occurrence_counters.get(normalized_peek, 0)
+            occurrence_counters[normalized_peek] = occ_idx + 1
+
+            normalized, real_value = matcher.match(raw, occurrence_index=occ_idx)
 
             # Check manual resolutions if registry didn't have it
             if real_value is None and normalized in manual:
@@ -366,7 +393,7 @@ def deanonymize_docx(
             )
 
             if real_value is not None:
-                substitution_map[raw] = real_value
+                ordered_subs.append((raw, real_value))
                 if raw not in seen_raw:
                     replacements.append(result)
                     seen_raw.add(raw)
@@ -374,16 +401,62 @@ def deanonymize_docx(
                 unresolved.append(result)
 
     # Phase 2: apply substitutions to the DOCX paragraphs.
-    # Process longest raw text first to avoid partial replacements.
-    ordered = sorted(substitution_map.items(), key=lambda kv: len(kv[0]), reverse=True)
+    #
+    # BUG-P2-2 Layer 2 — occurrence-aware replacement.
+    # Build a value queue for each raw text.  If all queued values for a
+    # raw text are identical we can use the fast bulk-replace path; when
+    # they differ we pop values one-at-a-time via replace_first so each
+    # placeholder instance gets its own surface form.
+    from collections import deque
+
+    value_queues: dict[str, deque[str]] = {}
+    for raw, value in ordered_subs:
+        value_queues.setdefault(raw, deque()).append(value)
+
+    # Partition: uniform (all same value) vs mixed (different values).
+    uniform: dict[str, str] = {}
+    mixed: set[str] = set()
+    for raw, q in value_queues.items():
+        unique_vals = set(q)
+        if len(unique_vals) == 1:
+            uniform[raw] = q[0]
+        else:
+            mixed.add(raw)
 
     total_applied = 0
     replace_fn = (
         replace_in_paragraph_highlighted if highlight else replace_in_paragraph
     )
-    for raw, value in ordered:
+
+    # Fast path: uniform raw texts → bulk replace (preserves old behavior).
+    uniform_ordered = sorted(uniform.items(), key=lambda kv: len(kv[0]), reverse=True)
+    for raw, value in uniform_ordered:
         for paragraph in iter_paragraphs(document):
             total_applied += replace_fn(paragraph, raw, value)
+
+    # Slow path: mixed raw texts → per-occurrence replacement.
+    # Process paragraphs in document order, consuming from the queue.
+    if mixed:
+        for paragraph in iter_paragraphs(document):
+            # Each replacement changes the paragraph text, so re-scan
+            # until no more matches from the mixed set are found.
+            changed = True
+            while changed:
+                changed = False
+                full_text = paragraph.text
+                if not full_text:
+                    break
+                for m in matcher._re.finditer(full_text):
+                    raw = m.group(0)
+                    if raw not in mixed:
+                        continue
+                    q = value_queues.get(raw)
+                    if not q:
+                        continue
+                    value = q.popleft()
+                    total_applied += replace_first_in_paragraph(paragraph, raw, value)
+                    changed = True
+                    break  # re-scan paragraph after text mutation
 
     # Save modified DOCX.
     buffer = io.BytesIO()
@@ -392,7 +465,7 @@ def deanonymize_docx(
     logger.info(
         "docx_deanonymize.completed",
         total_replacements=total_applied,
-        unique_placeholders=len(substitution_map),
+        unique_placeholders=len(value_queues),
         unresolved_count=len(unresolved),
     )
 

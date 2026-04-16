@@ -23,11 +23,22 @@ logger = structlog.get_logger(__name__)
 
 
 class MappingEntry(BaseModel):
-    """A single entry in the entity mapping table."""
+    """A single entry in the entity mapping table.
+
+    ``original_forms`` stores *unique* surface forms seen during detection
+    (deduplicated).
+
+    ``surface_forms`` stores one entry **per occurrence** in document order
+    — built at export time by :meth:`EntityRegistry.record_surface_forms`
+    so it reflects only accepted (non-rejected) entities.  Used by
+    :class:`PlaceholderMatcher` for occurrence-aware deanonymization
+    (BUG-P2-2, Layer 2).
+    """
 
     placeholder: str
     canonical_value: str
     original_forms: list[str] = Field(default_factory=list)
+    surface_forms: list[str] = Field(default_factory=list)
     entity_type: str
 
 
@@ -156,23 +167,77 @@ class EntityRegistry:
         return result
 
     def deanonymize_text(self, text: str) -> str:
-        """Replace all placeholders in text with original (canonical) values."""
+        """Replace all placeholders in text with original values.
+
+        Prefers the first observed surface form (``original_forms[0]``)
+        over the normalized lemma (``canonical_value``) so that inflected
+        forms like "Москве" survive the round-trip instead of collapsing
+        to the nominative "Москва".  (BUG-P2-2, Layer 1.)
+        """
         result = text
         # Sort by placeholder length descending to avoid partial replacements
         for placeholder in sorted(self._reverse, key=len, reverse=True):
             entry = self._reverse[placeholder]
-            result = result.replace(placeholder, entry.canonical_value)
+            value = entry.original_forms[0] if entry.original_forms else entry.canonical_value
+            result = result.replace(placeholder, value)
         return result
 
     def update_entity(self, placeholder: str, new_canonical: str) -> None:
-        """User-driven correction during review."""
+        """User-driven correction during review.
+
+        Updates canonical_value **and** original_forms so that
+        :meth:`deanonymize_text` (which prefers ``original_forms[0]``)
+        reflects the user's correction.  ``surface_forms`` are cleared
+        because they will be rebuilt at the next export.
+        """
         if placeholder not in self._reverse:
             raise KeyError(f"Placeholder {placeholder} not in registry")
         entry = self._reverse[placeholder]
         old_canonical = entry.canonical_value
         entry.canonical_value = new_canonical
+        entry.original_forms = [new_canonical]
+        entry.surface_forms.clear()
         del self._mapping[old_canonical]
         self._mapping[new_canonical] = entry
+
+    def record_surface_forms(
+        self,
+        substitutions: list[tuple[str, str]],
+    ) -> None:
+        """Rebuild per-occurrence ``surface_forms`` from an ordered substitution list.
+
+        Called at **export time** (after user review) so the list reflects
+        only accepted entities, in document order.
+
+        Args:
+            substitutions: Ordered pairs of ``(original_text, placeholder)``
+                matching the entities actually written into the exported DOCX.
+                Must be in document order (first occurrence first).
+
+        Example::
+
+            registry.record_surface_forms([
+                ("Москве", "[МЕСТО_1]"),
+                ("Москва", "[МЕСТО_1]"),
+                ("Москвы", "[МЕСТО_1]"),
+            ])
+            # entry.surface_forms == ["Москве", "Москва", "Москвы"]
+        """
+        # Clear existing surface_forms for all entries
+        for entry in self._reverse.values():
+            entry.surface_forms.clear()
+
+        # Rebuild in document order
+        for text, placeholder in substitutions:
+            entry = self._reverse.get(placeholder)
+            if entry is not None:
+                entry.surface_forms.append(text)
+
+        logger.info(
+            "entity_registry.surface_forms_recorded",
+            total_occurrences=len(substitutions),
+            unique_placeholders=len({p for _, p in substitutions}),
+        )
 
     def export_encrypted(self) -> bytes:
         """Serialize and encrypt mapping table with AES-256-GCM."""
