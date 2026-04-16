@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Этот каталог содержит **Architecture Decision Records (ADR)** для проекта VELUM. Каждый ADR — это короткий документ, фиксирующий важное архитектурное решение, его контекст и последствия.
+Этот каталог содержит **Architecture Decision Records (ADR)** для проекта CLEARGATE. Каждый ADR — это короткий документ, фиксирующий важное архитектурное решение, его контекст и последствия.
 
 Формат основан на шаблоне Майкла Найгарда (Michael Nygard, [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)).
 

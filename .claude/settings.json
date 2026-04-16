@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.claude.com/schemas/claude-code-settings.json",
-  "projectName": "VELUM",
+  "projectName": "CLEARGATE",
   "description": "On-premise anonymization gateway for legal AI workflows at EPAM",
   "language": "ru",
   "defaultModel": "claude-opus-4-6",

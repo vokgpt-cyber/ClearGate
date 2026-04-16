@@ -1,4 +1,4 @@
-"""SQLite-backed session persistence for VELUM.
+"""SQLite-backed session persistence for CLEARGATE.
 
 Stores session metadata, encrypted EntityRegistry blobs, and DOCX bytes
 so that sessions survive backend restarts.  Uses the same AES-256-GCM

@@ -1,4 +1,4 @@
-# VELUM Docker Compose — Alpha profile (RTX 4060)
+# CLEARGATE Docker Compose — Alpha profile (RTX 4060)
 #
 # Usage:
 #   docker compose up -d              # Start all services
@@ -14,12 +14,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: velum-backend
+    container_name: cleargate-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - VELUM_PROFILE=alpha
+      - CLEARGATE_PROFILE=alpha
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
@@ -35,7 +35,7 @@ services:
       - ./models:/app/models:ro
       - ./logs:/app/logs
     networks:
-      - velum-net
+      - cleargate-net
     depends_on:
       ollama:
         condition: service_healthy
@@ -58,14 +58,14 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: velum-ollama
+    container_name: cleargate-ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
     networks:
-      - velum-net
+      - cleargate-net
     environment:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
@@ -90,7 +90,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.web
-    container_name: velum-frontend
+    container_name: cleargate-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -98,14 +98,14 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_WS_URL=ws://localhost:8000
     networks:
-      - velum-net
+      - cleargate-net
     depends_on:
       - backend
     profiles:
       - web  # only start with: docker compose --profile web up
 
 networks:
-  velum-net:
+  cleargate-net:
     driver: bridge
 
 volumes:

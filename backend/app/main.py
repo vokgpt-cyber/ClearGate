@@ -1,4 +1,4 @@
-"""VELUM Backend — FastAPI application entry point."""
+"""CLEARGATE Backend — FastAPI application entry point."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info(
         "app.startup",
-        profile=settings.velum_profile,
+        profile=settings.cleargate_profile,
         version=settings.version,
         host=settings.backend_host,
         port=settings.backend_port,
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="VELUM Backend",
+    title="CLEARGATE Backend",
     description="On-premise anonymization gateway for legal AI workflows",
     version=settings.version,
     lifespan=lifespan,

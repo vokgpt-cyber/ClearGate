@@ -12,7 +12,7 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
-        <title>VELUM</title>
+        <title>CLEARGATE</title>
         <meta name="description" content="Legal document anonymization gateway" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

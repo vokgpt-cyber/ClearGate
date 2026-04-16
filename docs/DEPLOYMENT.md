@@ -1,6 +1,6 @@
-# Deployment Guide — VELUM
+# Deployment Guide — CLEARGATE
 
-Полная инструкция по развёртыванию VELUM в трёх конфигурациях: Alpha (ноутбук разработчика), MVP (рабочая станция), Final (кластер ЕПАМ).
+Полная инструкция по развёртыванию CLEARGATE в трёх конфигурациях: Alpha (ноутбук разработчика), MVP (рабочая станция), Final (кластер ЕПАМ).
 
 ## Архитектура развёртывания
 
@@ -45,7 +45,7 @@
 ```powershell
 # 1. Клонировать / распаковать
 cd D:\Projects
-git init velum && cd velum
+git init cleargate && cd cleargate
 # (или распаковать архив)
 
 # 2. Setup
@@ -56,7 +56,7 @@ git init velum && cd velum
 
 # 4. Заполнить .env
 notepad .env
-# Минимум: ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, VELUM_MASTER_KEY
+# Минимум: ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, CLEARGATE_MASTER_KEY
 
 # 5. Запустить
 docker compose up -d
@@ -131,7 +131,7 @@ docker compose -f docker-compose.yml -f docker-compose.mvp.yml up -d
 services:
   backend:
     environment:
-      - VELUM_PROFILE=mvp
+      - CLEARGATE_PROFILE=mvp
       - OLLAMA_MODEL=qwen2.5:32b-instruct-q4_K_M
       - GLINER_MODEL=urchade/gliner_large-v2.1
       - BACKEND_WORKERS=2
@@ -215,22 +215,22 @@ services:
 
 ```bash
 # 1. Подготовить namespace
-kubectl create namespace velum
+kubectl create namespace cleargate
 
 # 2. Создать secrets
-kubectl create secret generic velum-api-keys \
+kubectl create secret generic cleargate-api-keys \
     --from-literal=anthropic-api-key=sk-ant-... \
     --from-literal=openai-api-key=sk-... \
     --from-literal=google-api-key=AIza... \
-    --from-literal=velum-master-key=... \
-    -n velum
+    --from-literal=cleargate-master-key=... \
+    -n cleargate
 
 # 3. Применить конфигурацию
 kubectl apply -f k8s/
 
 # 4. Проверить статус
-kubectl get pods -n velum
-kubectl logs -f deployment/velum-backend -n velum
+kubectl get pods -n cleargate
+kubectl logs -f deployment/cleargate-backend -n cleargate
 ```
 
 ### Структура k8s/
@@ -239,9 +239,9 @@ kubectl logs -f deployment/velum-backend -n velum
 k8s/
 ├── namespace.yaml
 ├── configmaps/
-│   └── velum-config.yaml
+│   └── cleargate-config.yaml
 ├── secrets/
-│   └── velum-secrets.yaml.example
+│   └── cleargate-secrets.yaml.example
 ├── deployments/
 │   ├── backend.yaml
 │   ├── frontend.yaml
@@ -252,7 +252,7 @@ k8s/
 │   ├── frontend-svc.yaml
 │   └── ollama-svc.yaml
 ├── ingress/
-│   └── velum-ingress.yaml
+│   └── cleargate-ingress.yaml
 ├── hpa/
 │   └── backend-hpa.yaml
 ├── pdb/
@@ -297,8 +297,8 @@ docker compose up -d --force-recreate
 
 ### Final
 ```bash
-kubectl rollout undo deployment/velum-backend -n velum
-kubectl rollout status deployment/velum-backend -n velum
+kubectl rollout undo deployment/cleargate-backend -n cleargate
+kubectl rollout status deployment/cleargate-backend -n cleargate
 ```
 
 ## Disaster recovery

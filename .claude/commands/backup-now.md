@@ -1,6 +1,6 @@
 # /backup-now
 
-Quickly create a backup of the current VELUM project state.
+Quickly create a backup of the current CLEARGATE project state.
 
 ## What this does
 
@@ -19,7 +19,7 @@ In Claude Code, type:
 Or with options:
 ```
 /backup-now --encrypt
-/backup-now --destination "E:\Backups\VELUM"
+/backup-now --destination "E:\Backups\CLEARGATE"
 ```
 
 ## Implementation
@@ -30,8 +30,8 @@ git status --porcelain
 git fsck --no-progress
 
 # Run backup script
-pwsh -File ./scripts/backup.ps1 -Destination "D:\Backups\VELUM"
+pwsh -File ./scripts/backup.ps1 -Destination "D:\Backups\CLEARGATE"
 
 # Show result
-ls -la "D:/Backups/VELUM/daily/" | tail -5
+ls -la "D:/Backups/CLEARGATE/daily/" | tail -5
 ```

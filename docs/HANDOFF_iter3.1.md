@@ -1,15 +1,15 @@
-# VELUM — передача из чата в чат (iter3.1 → iter3.2)
+# CLEARGATE — передача из чата в чат (iter3.1 → iter3.2)
 
 > Скопируй всё, что ниже, в первое сообщение нового чата внутри того же
-> Cowork-проекта «Velum». Новый Claude получит свежий контекст без
+> Cowork-проекта «Cleargate». Новый Claude получит свежий контекст без
 > ошибок и двусмысленностей предыдущего диалога.
 
 ---
 
 ## Контекст проекта (1 минута чтения)
 
-Я — руководитель Адвокатского бюро ЕПАМ, веду vibe-кодинг проекта **VELUM**.
-VELUM — четвёртое приложение в экосистеме ЕПАМ (после VERITAS, EPAMOS,
+Я — руководитель Адвокатского бюро ЕПАМ, веду vibe-кодинг проекта **CLEARGATE**.
+CLEARGATE — четвёртое приложение в экосистеме ЕПАМ (после VERITAS, EPAMOS,
 CONCLAVE). Это **on-premise desktop-анонимизатор** на Tauri 2 + Next.js 15
 + React 19 + FastAPI/Python, который прогоняет юридические документы
 через трёхслойный pipeline (Regex → spaCy/GLiNER → Qwen 2.5) и
@@ -111,10 +111,10 @@ Google Docs / Notion / Harvey.AI — мгновенным, без задерже
 ### Баг №2 — zoom применили не к тому элементу
 
 В iter3.1 я просил «уменьшить масштаб интерфейса до ~80% от текущего».
-Поставили `zoom: 0.7` на `.velum-docx-wrapper` в
+Поставили `zoom: 0.7` на `.cleargate-docx-wrapper` в
 `frontend/src/app/globals.css` (строка ~707). Это оказался **документ
 внутри панели**, а не shell приложения — в результате мельче стал
-**только текст договора**, а сайдбар VELUM, шапка, строка подключения,
+**только текст договора**, а сайдбар CLEARGATE, шапка, строка подключения,
 нижняя панель сущностей остались крупными.
 
 **Я хотел ровно обратного:** интерфейс (chrome приложения — сайдбар,
@@ -123,16 +123,16 @@ Google Docs / Notion / Harvey.AI — мгновенным, без задерже
 комфортном для чтения размере.
 
 **Направление фикса:**
-- Найти корневой shell-элемент (вероятно `.velum-shell` или React-root)
+- Найти корневой shell-элемент (вероятно `.cleargate-shell` или React-root)
   и посмотреть, что из интерфейсных компонентов наследует размеры от
   него.
 - Либо уменьшить `font-size` / `padding` сайдбара, шапки и бара
   сущностей напрямую через CSS (чище для hit-testing), либо применить
   `zoom` к chrome-контейнеру и компенсировать его на документе.
 - Вариант с прямой регулировкой через CSS-переменные темы **обычно
-  чище**, чем `zoom`. Тема VELUM уже на CSS custom properties — см.
+  чище**, чем `zoom`. Тема CLEARGATE уже на CSS custom properties — см.
   `frontend/src/app/globals.css`.
-- Удалить `zoom: 0.7` с `.velum-docx-wrapper`.
+- Удалить `zoom: 0.7` с `.cleargate-docx-wrapper`.
 
 Эту правку можно делать **после** диагностики бага №1, но снимай
 отдельный snapshot для каждой — не смешивай в одном коммите.
@@ -165,7 +165,7 @@ Google Docs / Notion / Harvey.AI — мгновенным, без задерже
 - `feedback_ux_style.md`
 - `feedback_git_conventions.md`
 - `feedback_diagnose_before_patch.md` ← **важно для бага №1**
-- `project_velum_overview.md`
+- `project_cleargate_overview.md`
 - `project_iter31_status.md` ← **текущий статус**
 - `reference_project_docs.md`
 - `reference_snapshot_workflow.md`

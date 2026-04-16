@@ -81,21 +81,21 @@ export function EntityLegend({
   const anyFilter = hiddenTypes.size > 0 || onlyUnconfirmed;
 
   return (
-    <div className="velum-legend" role="status" aria-live="polite">
-      <span className="velum-legend__title">{t('legend.title')}</span>
+    <div className="cleargate-legend" role="status" aria-live="polite">
+      <span className="cleargate-legend__title">{t('legend.title')}</span>
 
       {status === 'detecting' && totalEntities === 0 && (
-        <span className="velum-legend__status velum-legend__status--working">
+        <span className="cleargate-legend__status cleargate-legend__status--working">
           {t('legend.detecting')}
         </span>
       )}
 
       {status === 'detected' && totalEntities === 0 && (
-        <span className="velum-legend__status">{t('legend.none')}</span>
+        <span className="cleargate-legend__status">{t('legend.none')}</span>
       )}
 
       {status === 'error' && (
-        <span className="velum-legend__error">
+        <span className="cleargate-legend__error">
           {t('legend.error')}: {error ?? 'unknown'}
         </span>
       )}
@@ -109,19 +109,19 @@ export function EntityLegend({
           <button
             key={code}
             type="button"
-            className={`velum-legend__item ${
-              hidden ? 'velum-legend__item--hidden' : ''
+            className={`cleargate-legend__item ${
+              hidden ? 'cleargate-legend__item--hidden' : ''
             }`}
             onClick={() => onToggleType(code)}
             title={labelFor(code)}
             aria-pressed={!hidden}
           >
             <span
-              className={`velum-legend__swatch velum-entity--${cssKey}`}
+              className={`cleargate-legend__swatch cleargate-entity--${cssKey}`}
               aria-hidden
             />
-            <span className="velum-legend__label">{labelFor(code)}</span>
-            <span className="velum-legend__count">{count}</span>
+            <span className="cleargate-legend__label">{labelFor(code)}</span>
+            <span className="cleargate-legend__count">{count}</span>
           </button>
         );
       })}
@@ -129,8 +129,8 @@ export function EntityLegend({
       {totalEntities > 0 && (
         <button
           type="button"
-          className={`velum-legend__toggle ${
-            onlyUnconfirmed ? 'velum-legend__toggle--on' : ''
+          className={`cleargate-legend__toggle ${
+            onlyUnconfirmed ? 'cleargate-legend__toggle--on' : ''
           }`}
           onClick={onToggleOnlyUnconfirmed}
           aria-pressed={onlyUnconfirmed}
@@ -142,7 +142,7 @@ export function EntityLegend({
       {anyFilter && (
         <button
           type="button"
-          className="velum-legend__reset"
+          className="cleargate-legend__reset"
           onClick={onResetFilters}
           title={t('legend.resetFilters')}
         >
@@ -151,7 +151,7 @@ export function EntityLegend({
       )}
 
       {status === 'detected' && totalEntities > 0 && (
-        <span className="velum-legend__status">
+        <span className="cleargate-legend__status">
           {t('legend.total')}: {visibleEntities === totalEntities
             ? totalEntities
             : `${visibleEntities}/${totalEntities}`}

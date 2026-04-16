@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * VELUM — root page.
+ * CLEARGATE — root page.
  *
  * Shell layout:
  *   ┌──────────┬────────────────────────────────────────┐
@@ -110,16 +110,16 @@ export default function Home() {
   const showWorkspace = activeDoc && !isPicking;
 
   return (
-    <div className="velum-app">
+    <div className="cleargate-app">
       <Sidebar
         sessions={sidebarSessions}
         activeSessionId={showWorkspace ? activeDoc.sessionId : null}
         onNewDocument={handleNewDocument}
         onSelectSession={handleSelectSession}
       />
-      <div className="velum-app__main">
+      <div className="cleargate-app__main">
         <Header />
-        <div className="velum-app__content">
+        <div className="cleargate-app__content">
           {showWorkspace ? (
             <SplitWorkspace
               key={activeDoc.sessionId}

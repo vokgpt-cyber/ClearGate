@@ -1,4 +1,4 @@
-# VELUM Frontend
+# CLEARGATE Frontend
 
 Tauri 2 + Next.js 15 desktop application.
 

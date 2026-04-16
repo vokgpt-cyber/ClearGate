@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    VELUM snapshot script - "videogame save point" for working code.
+    CLEARGATE snapshot script - "videogame save point" for working code.
 
 .DESCRIPTION
     Stages all changes, commits them with a `snapshot:` message, and creates a
@@ -20,7 +20,7 @@
 
 .PARAMETER Push
     Push the commit and tag to `origin` after creating them. Off by default
-    because VELUM is currently developed locally only.
+    because CLEARGATE is currently developed locally only.
 
 .EXAMPLE
     .\scripts\snapshot.ps1
@@ -53,14 +53,14 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
-Write-Host "=== VELUM snapshot ===" -ForegroundColor Cyan
+Write-Host "=== CLEARGATE snapshot ===" -ForegroundColor Cyan
 Write-Host "Repo: $RepoRoot"
 Write-Host "Label: $Message"
 Write-Host ""
 
 # Safety: ensure we are inside a git repo.
 if (-not (Test-Path ".git")) {
-    Write-Error "Not a git repo at $RepoRoot. Run this from the VELUM project root."
+    Write-Error "Not a git repo at $RepoRoot. Run this from the CLEARGATE project root."
     exit 1
 }
 
@@ -125,7 +125,7 @@ if ($Backup) {
     if (Test-Path $BackupScript) {
         Write-Host ""
         Write-Host "Running off-tree backup..." -ForegroundColor Cyan
-        & $BackupScript -Destination "D:\Backups\VELUM"
+        & $BackupScript -Destination "D:\Backups\CLEARGATE"
     } else {
         Write-Warning "scripts/backup.ps1 not found, skipping off-tree backup."
     }

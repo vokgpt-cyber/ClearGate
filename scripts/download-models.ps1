@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Download ML models for VELUM based on deployment profile.
+    Download ML models for CLEARGATE based on deployment profile.
 
 .PARAMETER Profile
     Deployment profile: alpha (RTX 4060), mvp (RTX 3090), or final (cluster).
@@ -20,7 +20,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "  VELUM Model Download — Profile: $Profile" -ForegroundColor Cyan
+Write-Host "  CLEARGATE Model Download — Profile: $Profile" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -129,5 +129,5 @@ Write-Host "Update .env with the correct model names:" -ForegroundColor Yellow
 Write-Host "  SPACY_MODEL=$($models.spacy)"
 Write-Host "  GLINER_MODEL=$($models.gliner)"
 Write-Host "  OLLAMA_MODEL=$($models.ollama)"
-Write-Host "  VELUM_PROFILE=$Profile"
+Write-Host "  CLEARGATE_PROFILE=$Profile"
 Write-Host ""

@@ -41,7 +41,7 @@ async def health_check() -> HealthResponse:
     return HealthResponse(
         status="ok",
         version=settings.version,
-        profile=settings.velum_profile,
+        profile=settings.cleargate_profile,
         timestamp=datetime.now(UTC).isoformat(),
     )
 

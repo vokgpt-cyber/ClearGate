@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Restore VELUM project from a backup created by backup.ps1.
+    Restore CLEARGATE project from a backup created by backup.ps1.
 
 .DESCRIPTION
     Restores either git history (from .bundle) or full working directory
@@ -16,7 +16,7 @@
     If backup is encrypted (.enc extension), decrypt first.
 
 .EXAMPLE
-    .\scripts\restore-backup.ps1 -BackupPath "D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.bundle" -TargetDir "D:\Restored\velum"
+    .\scripts\restore-backup.ps1 -BackupPath "D:\Backups\CLEARGATE\daily\cleargate_2026-04-09_18-00-00.bundle" -TargetDir "D:\Restored\cleargate"
 #>
 
 [CmdletBinding()]

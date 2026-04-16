@@ -1,9 +1,9 @@
 @echo off
-title VELUM Alpha Launcher
+title CLEARGATE Alpha Launcher
 
 echo.
 echo  ============================================
-echo   VELUM Alpha - Launcher
+echo   CLEARGATE Alpha - Launcher
 echo  ============================================
 echo.
 
@@ -59,12 +59,12 @@ echo   OK - all prerequisites found.
 echo.
 
 echo [2/4] Starting backend on http://localhost:8000 ...
-start "VELUM Backend" cmd /k "cd /d %ROOT%backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+start "CLEARGATE Backend" cmd /k "cd /d %ROOT%backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 timeout /t 3 /nobreak >nul
 
 echo [3/4] Starting frontend on http://localhost:3000 ...
-start "VELUM Frontend" cmd /k "cd /d %ROOT%frontend && npm run dev"
+start "CLEARGATE Frontend" cmd /k "cd /d %ROOT%frontend && npm run dev"
 
 timeout /t 5 /nobreak >nul
 
@@ -73,7 +73,7 @@ start http://localhost:3000
 
 echo.
 echo  ============================================
-echo   VELUM Alpha is running!
+echo   CLEARGATE Alpha is running!
 echo.
 echo   Frontend:  http://localhost:3000
 echo   Backend:   http://localhost:8000

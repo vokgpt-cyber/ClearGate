@@ -1,7 +1,7 @@
 [project]
-name = "velum-backend"
+name = "cleargate-backend"
 version = "0.1.0"
-description = "VELUM — On-premise anonymization gateway for legal AI workflows at EPAM"
+description = "CLEARGATE — On-premise anonymization gateway for legal AI workflows at EPAM"
 authors = [{ name = "EPAM Legal", email = "dev@epam.ru" }]
 readme = "README.md"
 requires-python = ">=3.12"

@@ -5,8 +5,8 @@
  * We support two modes:
  *
  *   - `highlight`  (left pane)   — wraps each entity's text in-place
- *                                  inside a `<mark class="velum-entity
- *                                  velum-entity--{type}">`. Text content
+ *                                  inside a `<mark class="cleargate-entity
+ *                                  cleargate-entity--{type}">`. Text content
  *                                  is preserved.
  *
  *   - `placeholder` (right pane) — replaces each entity's range with a
@@ -135,7 +135,7 @@ export function applyEntities(
       // one bad anchor lookup can never crash the whole render pass.
       skipped++;
       // eslint-disable-next-line no-console
-      console.warn('[Velum] toRange threw — skipping entity', entity, e);
+      console.warn('[Cleargate] toRange threw — skipping entity', entity, e);
       continue;
     }
     if (!range) {
@@ -152,7 +152,7 @@ export function applyEntities(
       skipped++;
       // eslint-disable-next-line no-console
       console.warn(
-        '[Velum] entity text mismatch — skipping',
+        '[Cleargate] entity text mismatch — skipping',
         { expected: entity.text, got: rangeText, start: entity.start, end: entity.end },
       );
       continue;
@@ -168,7 +168,7 @@ export function applyEntities(
     } catch (e) {
       skipped++;
       // eslint-disable-next-line no-console
-      console.warn('[Velum] failed to apply entity', entity, e);
+      console.warn('[Cleargate] failed to apply entity', entity, e);
       continue;
     }
 
@@ -191,14 +191,14 @@ export function applyEntities(
         // If the rebuild itself fails, keep the stale map and rely on
         // the defensive clamp in toRange for the remaining entities.
         // eslint-disable-next-line no-console
-        console.warn('[Velum] rebuildAnchorMap failed — continuing with stale map', e);
+        console.warn('[Cleargate] rebuildAnchorMap failed — continuing with stale map', e);
       }
     }
   }
 
   if (skipped > 0) {
     // eslint-disable-next-line no-console
-    console.warn(`[Velum] ${skipped} of ${entities.length} entities could not be applied`);
+    console.warn(`[Cleargate] ${skipped} of ${entities.length} entities could not be applied`);
   }
 
   // Return in original (ascending) order for predictable downstream use.
@@ -263,7 +263,7 @@ function replaceRangeWithPlaceholder(
     fallbackPlaceholder(entity);
 
   const mark = doc.createElement('mark');
-  mark.className = `${composeEntityClass(entity)} velum-entity--placeholder`;
+  mark.className = `${composeEntityClass(entity)} cleargate-entity--placeholder`;
   applyEntityDataset(mark, entity);
   mark.textContent = placeholder;
 
@@ -309,7 +309,7 @@ function applyEntityDataset(mark: HTMLElement, entity: OverlayEntity): void {
 function composeEntityClass(entity: OverlayEntity): string {
   const base = entityClassName(entity.entity_type);
   const state = (entity as Partial<InteractiveEntity>).state;
-  return state && state !== 'pending' ? `${base} velum-entity--${state}` : base;
+  return state && state !== 'pending' ? `${base} cleargate-entity--${state}` : base;
 }
 
 /** Produce a placeholder when the backend didn't supply one. */
@@ -319,12 +319,12 @@ function fallbackPlaceholder(entity: OverlayEntity): string {
 }
 
 /**
- * Remove every `.velum-entity` mark from a container, unwrapping the
+ * Remove every `.cleargate-entity` mark from a container, unwrapping the
  * children back into the surrounding DOM. Used when re-applying
  * entities after a re-render.
  */
 export function clearEntityMarks(container: HTMLElement): void {
-  const marks = container.querySelectorAll<HTMLElement>('mark.velum-entity');
+  const marks = container.querySelectorAll<HTMLElement>('mark.cleargate-entity');
   for (const mark of marks) {
     const parent = mark.parentNode;
     if (!parent) continue;

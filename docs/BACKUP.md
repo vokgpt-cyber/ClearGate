@@ -1,4 +1,4 @@
-# Backup Strategy — VELUM
+# Backup Strategy — CLEARGATE
 
 ## Что бэкапится и зачем
 
@@ -34,10 +34,10 @@
 ```powershell
 # Создать задачу на ежедневный запуск в 22:00
 $action = New-ScheduledTaskAction -Execute "pwsh.exe" `
-    -Argument "-NoProfile -File D:\Projects\velum\scripts\backup.ps1"
+    -Argument "-NoProfile -File D:\Projects\cleargate\scripts\backup.ps1"
 $trigger = New-ScheduledTaskTrigger -Daily -At 10pm
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERNAME" -LogonType S4U
-Register-ScheduledTask -TaskName "VELUM Daily Backup" `
+Register-ScheduledTask -TaskName "CLEARGATE Daily Backup" `
     -Action $action -Trigger $trigger -Principal $principal
 ```
 
@@ -49,7 +49,7 @@ Register-ScheduledTask -TaskName "VELUM Daily Backup" `
 ## Хранение
 
 ### Локально
-- **Основное место**: внешний SSD (`D:\Backups\VELUM`)
+- **Основное место**: внешний SSD (`D:\Backups\CLEARGATE`)
 - **Резервное**: NAS или второй внешний диск
 - **Никогда**: не хранить только на том же диске, что и проект
 
@@ -68,7 +68,7 @@ Register-ScheduledTask -TaskName "VELUM Daily Backup" `
 .\scripts\backup.ps1 -Encrypt
 
 # Или установить пароль в env переменной (для автоматизации)
-$env:VELUM_BACKUP_PASSPHRASE = "your-strong-passphrase"
+$env:CLEARGATE_BACKUP_PASSPHRASE = "your-strong-passphrase"
 .\scripts\backup.ps1 -Encrypt
 ```
 
@@ -81,10 +81,10 @@ $env:VELUM_BACKUP_PASSPHRASE = "your-strong-passphrase"
 ```powershell
 # Git fsck выполняется автоматически перед каждым бэкапом
 # Можно запустить вручную:
-git -C D:\Projects\velum fsck --full
+git -C D:\Projects\cleargate fsck --full
 
 # Проверить bundle:
-git bundle verify D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.bundle
+git bundle verify D:\Backups\CLEARGATE\daily\cleargate_2026-04-09_18-00-00.bundle
 ```
 
 ## Восстановление
@@ -93,18 +93,18 @@ git bundle verify D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.bundle
 
 ### Из bundle (только git история)
 ```powershell
-git clone D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.bundle D:\Restored\velum
-cd D:\Restored\velum
+git clone D:\Backups\CLEARGATE\daily\cleargate_2026-04-09_18-00-00.bundle D:\Restored\cleargate
+cd D:\Restored\cleargate
 git checkout main
 ```
 
 ### Из 7z архива (полное состояние рабочей директории)
 ```powershell
 .\scripts\restore-backup.ps1 `
-    -BackupPath "D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.7z" `
-    -TargetDir "D:\Restored\velum"
+    -BackupPath "D:\Backups\CLEARGATE\daily\cleargate_2026-04-09_18-00-00.7z" `
+    -TargetDir "D:\Restored\cleargate"
 
-cd D:\Restored\velum
+cd D:\Restored\cleargate
 .\scripts\setup-dev.ps1
 .\scripts\download-models.ps1 -Profile alpha
 ```
@@ -112,8 +112,8 @@ cd D:\Restored\velum
 ### Из зашифрованного бэкапа
 ```powershell
 .\scripts\restore-backup.ps1 `
-    -BackupPath "D:\Backups\VELUM\daily\velum_2026-04-09_18-00-00.7z.enc" `
-    -TargetDir "D:\Restored\velum" `
+    -BackupPath "D:\Backups\CLEARGATE\daily\cleargate_2026-04-09_18-00-00.7z.enc" `
+    -TargetDir "D:\Restored\cleargate" `
     -Decrypt
 # Запросит passphrase
 ```

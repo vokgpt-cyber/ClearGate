@@ -1,4 +1,4 @@
-# API Specification — VELUM Backend
+# API Specification — CLEARGATE Backend
 
 REST API + WebSocket для frontend и внешних интеграций.
 

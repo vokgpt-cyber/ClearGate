@@ -1,6 +1,6 @@
 /**
  * Entity type registry — the single source of truth for every PII
- * category VELUM can detect. All colors, labels, and placeholder
+ * category CLEARGATE can detect. All colors, labels, and placeholder
  * fallbacks for the UI live here so the rest of the codebase can stay
  * agnostic of specific types.
  *
@@ -39,7 +39,7 @@ export interface EntityTypeInfo {
   labelEn: string;
   /**
    * CSS modifier class fragment. The full class becomes
-   * `velum-entity velum-entity--{cssKey}`.
+   * `cleargate-entity cleargate-entity--{cssKey}`.
    */
   cssKey: string;
   /**
@@ -209,7 +209,7 @@ export function getEntityTypeInfo(code: string): EntityTypeInfo {
 /** Build the CSS class string for an entity mark. */
 export function entityClassName(code: string): string {
   const info = getEntityTypeInfo(code);
-  return `velum-entity velum-entity--${info.cssKey}`;
+  return `cleargate-entity cleargate-entity--${info.cssKey}`;
 }
 
 /** Preferred order for displaying types in the legend. */

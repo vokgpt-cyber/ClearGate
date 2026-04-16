@@ -51,7 +51,7 @@ class DetectedEntity(BaseModel):
 
 
 class NERPipeline:
-    """Three-layer NER pipeline for VELUM."""
+    """Three-layer NER pipeline for CLEARGATE."""
 
     def __init__(
         self,

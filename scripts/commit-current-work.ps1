@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    One-shot script to commit VELUM iteration-3 work as five logical
+    One-shot script to commit CLEARGATE iteration-3 work as five logical
     Conventional Commits, then tag the final state as a snapshot.
 
 .DESCRIPTION
@@ -13,7 +13,7 @@
     Run this ONCE from the repo root after clearing any stale .git\index.lock.
 
 .EXAMPLE
-    cd C:\Users\V\Documents\Claude\Projects\Velum
+    cd C:\Users\V\Documents\Claude\Projects\Cleargate
     Remove-Item .git\index.lock -Force -ErrorAction SilentlyContinue
     .\scripts\commit-current-work.ps1
 #>
@@ -26,7 +26,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
-Write-Host "=== VELUM iteration-3 commit pass ===" -ForegroundColor Cyan
+Write-Host "=== CLEARGATE iteration-3 commit pass ===" -ForegroundColor Cyan
 Write-Host "Repo: $RepoRoot"
 Write-Host ""
 
@@ -127,7 +127,7 @@ Commit-Group -Message "chore(frontend): update locale/theme hooks and package de
 # Commit 5: launcher, claude local settings, snapshot scripts
 # -------------------------------------------------------------------
 Commit-Group -Message "chore: launcher tweaks, claude local settings, snapshot/commit scripts" -Paths @(
-    "START-VELUM-Alpha.bat",
+    "START-CLEARGATE-Alpha.bat",
     ".claude/settings.local.json",
     "scripts/snapshot.ps1",
     "scripts/commit-current-work.ps1"

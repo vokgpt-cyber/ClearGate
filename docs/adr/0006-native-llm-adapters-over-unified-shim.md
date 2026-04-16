@@ -6,7 +6,7 @@
 
 ## Контекст
 
-VELUM интегрируется с тремя облачными LLM провайдерами: Anthropic Claude, OpenAI GPT, Google Gemini. Каждый провайдер имеет свой SDK с уникальными возможностями (extended thinking у Claude, reasoning у OpenAI o-series, thinking у Gemini).
+CLEARGATE интегрируется с тремя облачными LLM провайдерами: Anthropic Claude, OpenAI GPT, Google Gemini. Каждый провайдер имеет свой SDK с уникальными возможностями (extended thinking у Claude, reasoning у OpenAI o-series, thinking у Gemini).
 
 Два подхода к интеграции:
 
@@ -31,7 +31,7 @@ VELUM интегрируется с тремя облачными LLM прова
 - ✅ Совсем простая интеграция (один OpenAI-совместимый endpoint)
 - ✅ Удобно для прототипов
 - ❌ Это **proxy через сторонний сервис** — данные проходят через OpenRouter
-- ❌ **КРИТИЧЕСКИ НЕДОПУСТИМО** для VELUM: даже анонимизированные данные не должны идти через лишний посредник
+- ❌ **КРИТИЧЕСКИ НЕДОПУСТИМО** для CLEARGATE: даже анонимизированные данные не должны идти через лишний посредник
 - ❌ Reasoning / thinking токены могут не передаваться корректно
 
 ### Vercel AI SDK

@@ -43,7 +43,7 @@
 
 ## Решение в деталях
 
-Конфигурация Presidio для VELUM:
+Конфигурация Presidio для CLEARGATE:
 
 1. **NLP Engine**: spaCy с моделью `ru_core_news_lg`
 2. **Recognizers** (зарегистрированы при старте):

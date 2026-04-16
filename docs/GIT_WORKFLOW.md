@@ -2,7 +2,7 @@
 
 ## Контекст
 
-VELUM разрабатывается **одним человеком** на **локальном git репозитории** (без GitHub/GitLab). Это меняет некоторые best practices: PR-флоу не нужен, code review делает Claude Code на лету, защита от concurrent коммитов не требуется. Но дисциплина веток, истории и коммитов всё равно важна — для возможности откатиться, для чтения истории через год, для будущего масштабирования на команду.
+CLEARGATE разрабатывается **одним человеком** на **локальном git репозитории** (без GitHub/GitLab). Это меняет некоторые best practices: PR-флоу не нужен, code review делает Claude Code на лету, защита от concurrent коммитов не требуется. Но дисциплина веток, истории и коммитов всё равно важна — для возможности откатиться, для чтения истории через год, для будущего масштабирования на команду.
 
 ## Branching strategy: Trunk-based с feature branches
 
@@ -153,7 +153,7 @@ fix bug                              # ❌ какой баг?
 
 ## Тегирование и версии
 
-VELUM использует [Semantic Versioning](https://semver.org/lang/ru/):
+CLEARGATE использует [Semantic Versioning](https://semver.org/lang/ru/):
 
 ```
 v<MAJOR>.<MINOR>.<PATCH>[-<pre-release>]
@@ -208,7 +208,7 @@ git show v0.1.0-alpha
 - mypy
 - detect-secrets
 - gitleaks
-- VELUM-specific: no-pii-in-logs, no-hardcoded-strings, no-unified-shim
+- CLEARGATE-specific: no-pii-in-logs, no-hardcoded-strings, no-unified-shim
 
 Конфигурация: `.pre-commit-config.yaml`
 

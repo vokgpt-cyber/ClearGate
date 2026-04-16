@@ -2,7 +2,7 @@
 /* Fonts loaded via <link> in layout.tsx */
 
 /* ============================================================
-   VELUM Design System — EPAM Law Brand
+   CLEARGATE Design System — EPAM Law Brand
    Burgundy accent, warm grays, serif headings, clean dividers
    ============================================================ */
 
@@ -163,7 +163,7 @@ h1, h2, h3, h4 {
    App shell — Sidebar | Main (Header + Content)
    ============================================================ */
 
-.velum-app {
+.cleargate-app {
   display: flex;
   height: 100vh;
   width: 100vw;
@@ -172,7 +172,7 @@ h1, h2, h3, h4 {
   overflow: hidden;
 }
 
-.velum-app__main {
+.cleargate-app__main {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -180,7 +180,7 @@ h1, h2, h3, h4 {
   min-height: 0;
 }
 
-.velum-app__content {
+.cleargate-app__content {
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -192,7 +192,7 @@ h1, h2, h3, h4 {
    Header
    ============================================================ */
 
-.velum-header {
+.cleargate-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -203,14 +203,14 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-header__left,
-.velum-header__right {
+.cleargate-header__left,
+.cleargate-header__right {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.velum-header__status {
+.cleargate-header__status {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -219,22 +219,22 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
 }
 
-.velum-header__status-dot {
+.cleargate-header__status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background-color: var(--error);
 }
 
-.velum-header__status-dot[data-ok="true"] {
+.cleargate-header__status-dot[data-ok="true"] {
   background-color: var(--success);
 }
 
-.velum-header__status-text {
+.cleargate-header__status-text {
   letter-spacing: 0.02em;
 }
 
-.velum-header__profile {
+.cleargate-header__profile {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 3px 8px;
@@ -244,7 +244,7 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 
-.velum-header__pill {
+.cleargate-header__pill {
   padding: 6px 12px;
   border: 1px solid var(--border);
   background-color: transparent;
@@ -258,12 +258,12 @@ h1, h2, h3, h4 {
   transition: border-color var(--transition-quick), color var(--transition-quick), background-color var(--transition-quick);
 }
 
-.velum-header__pill:focus-visible {
+.cleargate-header__pill:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
-.velum-header__pill:hover {
+.cleargate-header__pill:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
   background-color: var(--accent-soft);
@@ -273,7 +273,7 @@ h1, h2, h3, h4 {
    Sidebar
    ============================================================ */
 
-.velum-sidebar {
+.cleargate-sidebar {
   width: var(--sidebar-width);
   flex-shrink: 0;
   display: flex;
@@ -283,7 +283,7 @@ h1, h2, h3, h4 {
   padding: var(--space-5) var(--space-4) var(--space-4);
 }
 
-.velum-sidebar__brand {
+.cleargate-sidebar__brand {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -292,21 +292,21 @@ h1, h2, h3, h4 {
   margin-bottom: 18px;
 }
 
-.velum-sidebar__brand-bar {
+.cleargate-sidebar__brand-bar {
   width: 3px;
   height: 30px;
   background-color: var(--color-brand);
   border-radius: var(--radius-sm);
 }
 
-.velum-sidebar__brand-text {
+.cleargate-sidebar__brand-text {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
   min-width: 0;
 }
 
-.velum-sidebar__brand-name {
+.cleargate-sidebar__brand-name {
   font-family: var(--font-serif);
   font-size: 1rem;
   font-weight: 700;
@@ -314,11 +314,11 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
-.velum-sidebar__brand-tag {
+.cleargate-sidebar__brand-tag {
   display: none;
 }
 
-.velum-sidebar__new-btn {
+.cleargate-sidebar__new-btn {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -337,28 +337,28 @@ h1, h2, h3, h4 {
   transition: background-color var(--transition-quick), border-color var(--transition-quick), box-shadow var(--transition-quick), transform 80ms ease;
 }
 
-.velum-sidebar__new-btn:active {
+.cleargate-sidebar__new-btn:active {
   transform: translateY(1px);
 }
 
-.velum-sidebar__new-btn:focus-visible {
+.cleargate-sidebar__new-btn:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring), var(--shadow-sm);
 }
 
-.velum-sidebar__new-btn:hover {
+.cleargate-sidebar__new-btn:hover {
   background-color: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 
-.velum-sidebar__new-btn-plus {
+.cleargate-sidebar__new-btn-plus {
   font-size: 0.9375rem;
   line-height: 1;
   font-weight: 400;
   opacity: 0.9;
 }
 
-.velum-sidebar__section-label {
+.cleargate-sidebar__section-label {
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -367,7 +367,7 @@ h1, h2, h3, h4 {
   padding: 24px 4px 10px;
 }
 
-.velum-sidebar__list {
+.cleargate-sidebar__list {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -376,7 +376,7 @@ h1, h2, h3, h4 {
   min-height: 0;
 }
 
-.velum-sidebar__empty {
+.cleargate-sidebar__empty {
   font-family: var(--font-sans);
   font-style: italic;
   font-size: 0.75rem;
@@ -385,7 +385,7 @@ h1, h2, h3, h4 {
   line-height: 1.5;
 }
 
-.velum-sidebar__item {
+.cleargate-sidebar__item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -401,28 +401,28 @@ h1, h2, h3, h4 {
   transition: background-color var(--transition-quick), color var(--transition-quick);
 }
 
-.velum-sidebar__item:hover {
+.cleargate-sidebar__item:hover {
   background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.velum-sidebar__item:focus-visible {
+.cleargate-sidebar__item:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
-.velum-sidebar__item.is-active {
+.cleargate-sidebar__item.is-active {
   background-color: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
 }
 
-.velum-sidebar__item.is-active .velum-sidebar__item-meta {
+.cleargate-sidebar__item.is-active .cleargate-sidebar__item-meta {
   color: var(--accent);
   opacity: 0.72;
 }
 
-.velum-sidebar__item-title {
+.cleargate-sidebar__item-title {
   font-size: 0.75rem;
   font-weight: 500;
   max-width: 100%;
@@ -431,7 +431,7 @@ h1, h2, h3, h4 {
   white-space: nowrap;
 }
 
-.velum-sidebar__item-meta {
+.cleargate-sidebar__item-meta {
   font-size: 0.6875rem;
   color: var(--text-muted);
 }
@@ -440,7 +440,7 @@ h1, h2, h3, h4 {
    Empty state (drop zone)
    ============================================================ */
 
-.velum-empty {
+.cleargate-empty {
   flex: 1;
   display: flex;
   align-items: center;
@@ -450,11 +450,11 @@ h1, h2, h3, h4 {
   transition: background-color 150ms ease;
 }
 
-.velum-empty.is-drag {
+.cleargate-empty.is-drag {
   background-color: var(--bg-secondary);
 }
 
-.velum-empty__card {
+.cleargate-empty__card {
   max-width: 560px;
   width: 100%;
   text-align: center;
@@ -465,13 +465,13 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-md);
 }
 
-.velum-empty.is-drag .velum-empty__card {
+.cleargate-empty.is-drag .cleargate-empty__card {
   border-color: var(--color-brand);
   background-color: var(--accent-soft);
   box-shadow: var(--shadow-lg);
 }
 
-.velum-empty__eyebrow {
+.cleargate-empty__eyebrow {
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -481,7 +481,7 @@ h1, h2, h3, h4 {
   margin-bottom: 18px;
 }
 
-.velum-empty__title {
+.cleargate-empty__title {
   font-family: var(--font-sans);
   font-size: 1.625rem;
   font-weight: 700;
@@ -491,7 +491,7 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
 }
 
-.velum-empty__lede {
+.cleargate-empty__lede {
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-style: italic;
@@ -500,7 +500,7 @@ h1, h2, h3, h4 {
   margin-bottom: 32px;
 }
 
-.velum-empty__cta {
+.cleargate-empty__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -518,32 +518,32 @@ h1, h2, h3, h4 {
   transition: background-color var(--transition-quick), border-color var(--transition-quick), box-shadow var(--transition-quick), transform 80ms ease;
 }
 
-.velum-empty__cta:focus-visible {
+.cleargate-empty__cta:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring), var(--shadow-sm);
 }
 
-.velum-empty__cta:hover {
+.cleargate-empty__cta:hover {
   background-color: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 
-.velum-empty__cta:active {
+.cleargate-empty__cta:active {
   transform: translateY(1px);
 }
 
-.velum-empty__cta:disabled {
+.cleargate-empty__cta:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.velum-empty__hint {
+.cleargate-empty__hint {
   margin-top: 22px;
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.velum-empty__error {
+.cleargate-empty__error {
   margin-top: 18px;
   font-size: 0.75rem;
   color: var(--error);
@@ -557,7 +557,7 @@ h1, h2, h3, h4 {
    Split workspace
    ============================================================ */
 
-.velum-workspace {
+.cleargate-workspace {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -566,7 +566,7 @@ h1, h2, h3, h4 {
   background-color: var(--bg-primary);
 }
 
-.velum-workspace__subheader {
+.cleargate-workspace__subheader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -577,7 +577,7 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-workspace__doc-title {
+.cleargate-workspace__doc-title {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -585,7 +585,7 @@ h1, h2, h3, h4 {
   flex: 1;
 }
 
-.velum-workspace__doc-icon {
+.cleargate-workspace__doc-icon {
   font-family: var(--font-sans);
   color: var(--color-brand);
   font-size: 1rem;
@@ -593,7 +593,7 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-workspace__doc-name {
+.cleargate-workspace__doc-name {
   font-family: var(--font-sans);
   font-weight: 700;
   font-size: 0.875rem;
@@ -603,7 +603,7 @@ h1, h2, h3, h4 {
   white-space: nowrap;
 }
 
-.velum-workspace__doc-stats {
+.cleargate-workspace__doc-stats {
   font-size: 0.6875rem;
   color: var(--text-muted);
   font-family: var(--font-sans);
@@ -613,7 +613,7 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-workspace__close {
+.cleargate-workspace__close {
   padding: 5px 12px;
   border: 1px solid var(--border-strong);
   background-color: transparent;
@@ -627,19 +627,19 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-workspace__close:hover {
+.cleargate-workspace__close:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 
-.velum-workspace__actions {
+.cleargate-workspace__actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.velum-workspace__export {
+.cleargate-workspace__export {
   padding: 5px 12px;
   border: 1px solid var(--color-brand);
   background-color: var(--color-brand);
@@ -653,24 +653,24 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-workspace__export:hover:not(:disabled) {
+.cleargate-workspace__export:hover:not(:disabled) {
   background-color: transparent;
   color: var(--color-brand);
 }
 
-.velum-workspace__export:disabled {
+.cleargate-workspace__export:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.velum-workspace__split {
+.cleargate-workspace__split {
   flex: 1;
   display: flex;
   min-height: 0;
   min-width: 0;
 }
 
-.velum-workspace__pane {
+.cleargate-workspace__pane {
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -678,18 +678,18 @@ h1, h2, h3, h4 {
   flex-direction: column;
 }
 
-.velum-workspace__pane--placeholder .velum-docx-viewer__container {
+.cleargate-workspace__pane--placeholder .cleargate-docx-viewer__container {
   opacity: 0.55;
   filter: grayscale(0.3);
 }
 
-.velum-workspace__divider {
+.cleargate-workspace__divider {
   width: 1px;
   background-color: var(--border);
   flex-shrink: 0;
 }
 
-.velum-workspace__iteration-banner {
+.cleargate-workspace__iteration-banner {
   padding: 6px 20px;
   font-size: 0.6875rem;
   font-style: italic;
@@ -705,7 +705,7 @@ h1, h2, h3, h4 {
    DocxViewer — the actual rendered DOCX container
    ============================================================ */
 
-.velum-docx-viewer {
+.cleargate-docx-viewer {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -714,7 +714,7 @@ h1, h2, h3, h4 {
   background-color: var(--docx-viewer-bg);
 }
 
-.velum-docx-viewer__label {
+.cleargate-docx-viewer__label {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -731,7 +731,7 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-docx-viewer__spinner {
+.cleargate-docx-viewer__spinner {
   font-family: var(--font-sans);
   font-style: italic;
   font-size: 0.6875rem;
@@ -740,7 +740,7 @@ h1, h2, h3, h4 {
   color: var(--text-muted);
 }
 
-.velum-docx-viewer__scroll {
+.cleargate-docx-viewer__scroll {
   flex: 1;
   overflow: auto;
   padding: 24px 20px;
@@ -748,15 +748,15 @@ h1, h2, h3, h4 {
   position: relative;
 }
 
-.velum-docx-viewer__container {
+.cleargate-docx-viewer__container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
 }
 
-.velum-docx-viewer__placeholder,
-.velum-docx-viewer__error {
+.cleargate-docx-viewer__placeholder,
+.cleargate-docx-viewer__error {
   position: absolute;
   inset: 0;
   display: flex;
@@ -773,12 +773,12 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
-.velum-docx-viewer__error {
+.cleargate-docx-viewer__error {
   color: var(--error);
   font-style: normal;
 }
 
-.velum-docx-viewer__error strong {
+.cleargate-docx-viewer__error strong {
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 0.75rem;
@@ -789,13 +789,13 @@ h1, h2, h3, h4 {
 /* ------------------------------------------------------------
    docx-preview output — style the rendered Word pages
    ------------------------------------------------------------
-   docx-preview wraps the document in `.velum-docx-wrapper` (our
+   docx-preview wraps the document in `.cleargate-docx-wrapper` (our
    chosen className + "-wrapper"). Each page becomes a `<section
-   class="velum-docx">`. We override the outer background and
+   class="cleargate-docx">`. We override the outer background and
    add a paper shadow to make it feel like Word.
    ------------------------------------------------------------ */
 
-.velum-docx-wrapper {
+.cleargate-docx-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -812,9 +812,9 @@ h1, h2, h3, h4 {
   zoom: 0.7;
 }
 
-.velum-docx-wrapper section.velum-docx,
-.velum-docx-wrapper article.velum-docx,
-.velum-docx-wrapper .velum-docx {
+.cleargate-docx-wrapper section.cleargate-docx,
+.cleargate-docx-wrapper article.cleargate-docx,
+.cleargate-docx-wrapper .cleargate-docx {
   background: var(--docx-page-bg) !important;
   box-shadow: var(--docx-page-shadow);
   border: 1px solid var(--docx-page-border);
@@ -824,11 +824,11 @@ h1, h2, h3, h4 {
   position: relative;
 }
 
-.velum-docx-wrapper p,
-.velum-docx-wrapper span,
-.velum-docx-wrapper td,
-.velum-docx-wrapper th,
-.velum-docx-wrapper li {
+.cleargate-docx-wrapper p,
+.cleargate-docx-wrapper span,
+.cleargate-docx-wrapper td,
+.cleargate-docx-wrapper th,
+.cleargate-docx-wrapper li {
   color: inherit;
 }
 
@@ -836,7 +836,7 @@ h1, h2, h3, h4 {
    Entity overlays — colored highlights on detected PII spans
    ------------------------------------------------------------
    Each entity type has its own hue via CSS custom properties so
-   the base .velum-entity rule can stay tiny. States:
+   the base .cleargate-entity rule can stay tiny. States:
      - default   → soft tinted background
      - accepted  → solid underline, slightly stronger fill
      - rejected  → dashed outline, no fill (kept as-is)
@@ -844,7 +844,7 @@ h1, h2, h3, h4 {
      - active    → boost fill + outline for hover/sync
    ------------------------------------------------------------ */
 
-.velum-entity {
+.cleargate-entity {
   --entity-hue: 220;
   --entity-sat: 60%;
   background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.16);
@@ -855,62 +855,62 @@ h1, h2, h3, h4 {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.velum-entity:hover,
-.velum-entity--active {
+.cleargate-entity:hover,
+.cleargate-entity--active {
   background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.32);
   border-bottom-color: hsl(var(--entity-hue) var(--entity-sat) 40% / 0.9);
   box-shadow: 0 0 0 1px hsl(var(--entity-hue) var(--entity-sat) 45% / 0.4);
 }
 
-.velum-entity--accepted {
+.cleargate-entity--accepted {
   background-color: hsl(var(--entity-hue) var(--entity-sat) 55% / 0.26);
   border-bottom: 2px solid hsl(var(--entity-hue) var(--entity-sat) 40% / 0.95);
 }
 
-.velum-entity--rejected {
+.cleargate-entity--rejected {
   background-color: transparent;
   border-bottom: 1.5px dashed hsl(var(--entity-hue) var(--entity-sat) 45% / 0.7);
   color: var(--text-secondary);
 }
 
-.velum-entity--custom {
+.cleargate-entity--custom {
   border-bottom: double 3px hsl(var(--entity-hue) var(--entity-sat) 40% / 0.95);
 }
 
-[data-theme="dark"] .velum-entity {
+[data-theme="dark"] .cleargate-entity {
   background-color: hsl(var(--entity-hue) var(--entity-sat) 60% / 0.22);
   border-bottom-color: hsl(var(--entity-hue) var(--entity-sat) 65% / 0.7);
 }
 
-[data-theme="dark"] .velum-entity:hover,
-[data-theme="dark"] .velum-entity--active {
+[data-theme="dark"] .cleargate-entity:hover,
+[data-theme="dark"] .cleargate-entity--active {
   background-color: hsl(var(--entity-hue) var(--entity-sat) 60% / 0.38);
 }
 
 /* Per-type hue/sat overrides.
    Keys correspond to cssKey in src/lib/entity-types.ts. */
-.velum-entity--per      { --entity-hue: 355; --entity-sat: 72%; } /* crimson */
-.velum-entity--position { --entity-hue: 340; --entity-sat: 55%; } /* pink */
-.velum-entity--org      { --entity-hue: 210; --entity-sat: 70%; } /* blue */
-.velum-entity--project  { --entity-hue: 195; --entity-sat: 65%; } /* cyan */
-.velum-entity--loc      { --entity-hue: 145; --entity-sat: 55%; } /* green */
-.velum-entity--addr     { --entity-hue: 125; --entity-sat: 50%; } /* olive-green */
-.velum-entity--inn      { --entity-hue:  35; --entity-sat: 85%; } /* amber */
-.velum-entity--ogrn     { --entity-hue:  25; --entity-sat: 80%; } /* orange */
-.velum-entity--snils    { --entity-hue:  45; --entity-sat: 80%; } /* gold */
-.velum-entity--passport { --entity-hue:  15; --entity-sat: 75%; } /* burnt-orange */
-.velum-entity--bank     { --entity-hue: 270; --entity-sat: 55%; } /* purple */
-.velum-entity--phone    { --entity-hue: 180; --entity-sat: 55%; } /* teal */
-.velum-entity--email    { --entity-hue: 250; --entity-sat: 60%; } /* indigo */
-.velum-entity--case     { --entity-hue:  85; --entity-sat: 55%; } /* lime */
-.velum-entity--contract { --entity-hue: 100; --entity-sat: 50%; } /* fern */
-.velum-entity--mon      { --entity-hue:  55; --entity-sat: 80%; } /* yellow */
-.velum-entity--date     { --entity-hue: 230; --entity-sat: 55%; } /* slate-blue */
-.velum-entity--other    { --entity-hue: 220; --entity-sat: 10%; } /* neutral */
+.cleargate-entity--per      { --entity-hue: 355; --entity-sat: 72%; } /* crimson */
+.cleargate-entity--position { --entity-hue: 340; --entity-sat: 55%; } /* pink */
+.cleargate-entity--org      { --entity-hue: 210; --entity-sat: 70%; } /* blue */
+.cleargate-entity--project  { --entity-hue: 195; --entity-sat: 65%; } /* cyan */
+.cleargate-entity--loc      { --entity-hue: 145; --entity-sat: 55%; } /* green */
+.cleargate-entity--addr     { --entity-hue: 125; --entity-sat: 50%; } /* olive-green */
+.cleargate-entity--inn      { --entity-hue:  35; --entity-sat: 85%; } /* amber */
+.cleargate-entity--ogrn     { --entity-hue:  25; --entity-sat: 80%; } /* orange */
+.cleargate-entity--snils    { --entity-hue:  45; --entity-sat: 80%; } /* gold */
+.cleargate-entity--passport { --entity-hue:  15; --entity-sat: 75%; } /* burnt-orange */
+.cleargate-entity--bank     { --entity-hue: 270; --entity-sat: 55%; } /* purple */
+.cleargate-entity--phone    { --entity-hue: 180; --entity-sat: 55%; } /* teal */
+.cleargate-entity--email    { --entity-hue: 250; --entity-sat: 60%; } /* indigo */
+.cleargate-entity--case     { --entity-hue:  85; --entity-sat: 55%; } /* lime */
+.cleargate-entity--contract { --entity-hue: 100; --entity-sat: 50%; } /* fern */
+.cleargate-entity--mon      { --entity-hue:  55; --entity-sat: 80%; } /* yellow */
+.cleargate-entity--date     { --entity-hue: 230; --entity-sat: 55%; } /* slate-blue */
+.cleargate-entity--other    { --entity-hue: 220; --entity-sat: 10%; } /* neutral */
 
 /* Right pane: placeholders for anonymized text.
    Slightly muted pill so juries know it's replaced text. */
-.velum-placeholder {
+.cleargate-placeholder {
   display: inline-block;
   padding: 0 4px;
   border-radius: var(--radius-sm);
@@ -921,7 +921,7 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
-.velum-placeholder--active {
+.cleargate-placeholder--active {
   background-color: hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 55% / 0.35);
   box-shadow: 0 0 0 1px hsl(var(--entity-hue, 220) var(--entity-sat, 40%) 45% / 0.6);
 }
@@ -930,7 +930,7 @@ h1, h2, h3, h4 {
    Entity legend — bottom bar with per-type chips + filters
    ------------------------------------------------------------ */
 
-.velum-legend {
+.cleargate-legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -943,7 +943,7 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
-.velum-legend__title {
+.cleargate-legend__title {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -952,20 +952,20 @@ h1, h2, h3, h4 {
   margin-right: 4px;
 }
 
-.velum-legend__status {
+.cleargate-legend__status {
   color: var(--text-muted);
   font-style: italic;
 }
 
-.velum-legend__status--working {
+.cleargate-legend__status--working {
   color: var(--accent);
 }
 
-.velum-legend__error {
+.cleargate-legend__error {
   color: var(--error);
 }
 
-.velum-legend__item {
+.cleargate-legend__item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -979,17 +979,17 @@ h1, h2, h3, h4 {
   font: inherit;
 }
 
-.velum-legend__item:hover {
+.cleargate-legend__item:hover {
   background: var(--bg-primary);
   border-color: var(--border-strong);
 }
 
-.velum-legend__item--hidden {
+.cleargate-legend__item--hidden {
   opacity: 0.42;
   text-decoration: line-through;
 }
 
-.velum-legend__swatch {
+.cleargate-legend__swatch {
   width: 10px;
   height: 10px;
   border-radius: var(--radius-sm);
@@ -998,17 +998,17 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-legend__label {
+.cleargate-legend__label {
   white-space: nowrap;
 }
 
-.velum-legend__count {
+.cleargate-legend__count {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.velum-legend__toggle,
-.velum-legend__reset {
+.cleargate-legend__toggle,
+.cleargate-legend__reset {
   margin-left: auto;
   padding: 4px 10px;
   border-radius: var(--radius-sm);
@@ -1020,24 +1020,24 @@ h1, h2, h3, h4 {
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
-.velum-legend__reset {
+.cleargate-legend__reset {
   margin-left: 0;
 }
 
-.velum-legend__toggle:hover,
-.velum-legend__reset:hover {
+.cleargate-legend__toggle:hover,
+.cleargate-legend__reset:hover {
   background: var(--bg-primary);
   color: var(--text-primary);
   border-color: var(--border-strong);
 }
 
-.velum-legend__toggle--on {
+.cleargate-legend__toggle--on {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
-.velum-legend__toggle--on:hover {
+.cleargate-legend__toggle--on:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   color: #fff;
@@ -1047,7 +1047,7 @@ h1, h2, h3, h4 {
    Entity popover — floating action menu on click
    ------------------------------------------------------------ */
 
-.velum-popover {
+.cleargate-popover {
   position: fixed;
   z-index: 90;
   min-width: 220px;
@@ -1060,15 +1060,15 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   color: var(--text-primary);
-  animation: velum-popover-in 120ms ease-out;
+  animation: cleargate-popover-in 120ms ease-out;
 }
 
-@keyframes velum-popover-in {
+@keyframes cleargate-popover-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.velum-popover__header {
+.cleargate-popover__header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1077,7 +1077,7 @@ h1, h2, h3, h4 {
   margin-bottom: 6px;
 }
 
-.velum-popover__swatch {
+.cleargate-popover__swatch {
   width: 10px;
   height: 10px;
   border-radius: var(--radius-sm);
@@ -1085,12 +1085,12 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-popover__title {
+.cleargate-popover__title {
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.velum-popover__text {
+.cleargate-popover__text {
   color: var(--text-muted);
   font-style: italic;
   margin-left: auto;
@@ -1100,7 +1100,7 @@ h1, h2, h3, h4 {
   white-space: nowrap;
 }
 
-.velum-popover__list {
+.cleargate-popover__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1109,7 +1109,7 @@ h1, h2, h3, h4 {
   gap: 2px;
 }
 
-.velum-popover__action {
+.cleargate-popover__action {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1125,26 +1125,26 @@ h1, h2, h3, h4 {
   transition: background 100ms ease, color 100ms ease;
 }
 
-.velum-popover__action:hover {
+.cleargate-popover__action:hover {
   background: var(--bg-secondary);
 }
 
-.velum-popover__action--accept:hover {
+.cleargate-popover__action--accept:hover {
   background: hsl(145 55% 45% / 0.12);
   color: var(--success);
 }
 
-.velum-popover__action--reject:hover {
+.cleargate-popover__action--reject:hover {
   background: hsl(25 75% 50% / 0.12);
   color: var(--warning);
 }
 
-.velum-popover__action--danger:hover {
+.cleargate-popover__action--danger:hover {
   background: hsl(0 70% 50% / 0.12);
   color: var(--error);
 }
 
-.velum-popover__icon {
+.cleargate-popover__icon {
   display: inline-flex;
   width: 16px;
   justify-content: center;
@@ -1152,13 +1152,13 @@ h1, h2, h3, h4 {
   font-size: 0.9em;
 }
 
-.velum-popover__submenu {
+.cleargate-popover__submenu {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.velum-popover__submenu-title {
+.cleargate-popover__submenu-title {
   padding: 4px 6px;
   font-size: 0.6875rem;
   text-transform: uppercase;
@@ -1166,7 +1166,7 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 
-.velum-popover__types {
+.cleargate-popover__types {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1177,7 +1177,7 @@ h1, h2, h3, h4 {
   overflow-y: auto;
 }
 
-.velum-popover__type {
+.cleargate-popover__type {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1193,17 +1193,17 @@ h1, h2, h3, h4 {
   transition: background 100ms ease;
 }
 
-.velum-popover__type:hover {
+.cleargate-popover__type:hover {
   background: var(--bg-secondary);
 }
 
-.velum-popover__type--current {
+.cleargate-popover__type--current {
   background: var(--bg-secondary);
   opacity: 0.5;
   cursor: default;
 }
 
-.velum-popover__back {
+.cleargate-popover__back {
   align-self: flex-start;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
@@ -1215,7 +1215,7 @@ h1, h2, h3, h4 {
   transition: color 100ms ease, background 100ms ease;
 }
 
-.velum-popover__back:hover {
+.cleargate-popover__back:hover {
   color: var(--text-primary);
   background: var(--bg-secondary);
 }
@@ -1224,7 +1224,7 @@ h1, h2, h3, h4 {
    Selection toolbar — "Add as …" menu when user selects text
    ------------------------------------------------------------ */
 
-.velum-selection {
+.cleargate-selection {
   position: fixed;
   z-index: 85;
   min-width: 180px;
@@ -1237,10 +1237,10 @@ h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   color: var(--text-primary);
-  animation: velum-popover-in 120ms ease-out;
+  animation: cleargate-popover-in 120ms ease-out;
 }
 
-.velum-selection__primary {
+.cleargate-selection__primary {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1256,11 +1256,11 @@ h1, h2, h3, h4 {
   transition: background 100ms ease;
 }
 
-.velum-selection__primary:hover {
+.cleargate-selection__primary:hover {
   background: var(--bg-secondary);
 }
 
-.velum-selection__icon {
+.cleargate-selection__icon {
   display: inline-flex;
   width: 16px;
   justify-content: center;
@@ -1268,7 +1268,7 @@ h1, h2, h3, h4 {
   font-weight: 700;
 }
 
-.velum-selection__title {
+.cleargate-selection__title {
   padding: 4px 6px;
   font-size: 0.6875rem;
   text-transform: uppercase;
@@ -1276,7 +1276,7 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 
-.velum-selection__types {
+.cleargate-selection__types {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1287,7 +1287,7 @@ h1, h2, h3, h4 {
   overflow-y: auto;
 }
 
-.velum-selection__type {
+.cleargate-selection__type {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1303,10 +1303,10 @@ h1, h2, h3, h4 {
   transition: background 100ms ease;
 }
 
-.velum-selection__type:hover {
+.cleargate-selection__type:hover {
   background: var(--bg-secondary);
 }
-.velum-selection__swatch {
+.cleargate-selection__swatch {
   width: 10px;
   height: 10px;
   border-radius: var(--radius-sm);
@@ -1314,7 +1314,7 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-selection__error {
+.cleargate-selection__error {
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: var(--radius-sm);
@@ -1325,8 +1325,8 @@ h1, h2, h3, h4 {
 
 /* -- Import response & export deanonymized buttons -- */
 
-.velum-workspace__import-response,
-.velum-workspace__export-deanonymized {
+.cleargate-workspace__import-response,
+.cleargate-workspace__export-deanonymized {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -1338,15 +1338,15 @@ h1, h2, h3, h4 {
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
 }
-.velum-workspace__import-response:hover,
-.velum-workspace__export-deanonymized:hover {
+.cleargate-workspace__import-response:hover,
+.cleargate-workspace__export-deanonymized:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 
 /* -- Compare-with-original toggle (Word-style Track Changes) -- */
 
-.velum-workspace__compare {
+.cleargate-workspace__compare {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -1359,79 +1359,79 @@ h1, h2, h3, h4 {
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
 }
-.velum-workspace__compare:hover {
+.cleargate-workspace__compare:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
-.velum-workspace__compare[aria-pressed="true"] {
+.cleargate-workspace__compare[aria-pressed="true"] {
   background-color: var(--color-brand);
   color: #fff;
   border-color: var(--color-brand);
 }
 
 /* Inline diff markers inside the right pane when Compare mode is on. */
-.velum-compare {
+.cleargate-compare {
   color: var(--text-primary);
 }
-.velum-compare ins.velum-diff-ins {
+.cleargate-compare ins.cleargate-diff-ins {
   background-color: hsl(140 60% 45% / 0.22);
   color: hsl(140 70% 25%);
   text-decoration: none;
   padding: 0 2px;
   border-radius: var(--radius-sm);
 }
-.velum-compare del.velum-diff-del {
+.cleargate-compare del.cleargate-diff-del {
   background-color: hsl(0 70% 55% / 0.18);
   color: hsl(0 70% 35%);
   text-decoration: line-through;
   padding: 0 2px;
   border-radius: var(--radius-sm);
 }
-:root[data-theme="dark"] .velum-compare ins.velum-diff-ins {
+:root[data-theme="dark"] .cleargate-compare ins.cleargate-diff-ins {
   color: hsl(140 70% 75%);
 }
-:root[data-theme="dark"] .velum-compare del.velum-diff-del {
+:root[data-theme="dark"] .cleargate-compare del.cleargate-diff-del {
   color: hsl(0 70% 75%);
 }
 
 /* -- Unresolved placeholders panel -- */
 
-.velum-workspace__unresolved {
+.cleargate-workspace__unresolved {
   margin: 12px 16px;
   padding: 12px;
   border-radius: var(--radius-sm);
   background: hsl(45 80% 55% / 0.08);
   border: 1px solid hsl(45 60% 50% / 0.2);
 }
-.velum-workspace__unresolved-header {
+.cleargate-workspace__unresolved-header {
   font-size: 0.8rem;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
-.velum-workspace__unresolved-hint {
+.cleargate-workspace__unresolved-hint {
   font-size: 0.7rem;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
-.velum-workspace__unresolved-list {
+.cleargate-workspace__unresolved-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.velum-workspace__unresolved-item {
+.cleargate-workspace__unresolved-item {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.75rem;
 }
-.velum-workspace__unresolved-input {
+.cleargate-workspace__unresolved-input {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 1;
 }
-.velum-workspace__unresolved-input input {
+.cleargate-workspace__unresolved-input input {
   flex: 1;
   padding: 3px 6px;
   border: 1px solid var(--border);
@@ -1441,7 +1441,7 @@ h1, h2, h3, h4 {
   font: inherit;
   font-size: 0.75rem;
 }
-.velum-workspace__unresolved-apply {
+.cleargate-workspace__unresolved-apply {
   padding: 5px 14px;
   border-radius: var(--radius-sm);
   border: 0;
@@ -1456,7 +1456,7 @@ h1, h2, h3, h4 {
 
 /* -- Deanonymize stats -- */
 
-.velum-workspace__deanonymize-stats {
+.cleargate-workspace__deanonymize-stats {
   margin: 8px 16px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -1468,7 +1468,7 @@ h1, h2, h3, h4 {
 
 /* -- Custom entity type -- */
 
-.velum-selection__custom-toggle {
+.cleargate-selection__custom-toggle {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1485,17 +1485,17 @@ h1, h2, h3, h4 {
   cursor: pointer;
   transition: background 100ms ease, color 100ms ease;
 }
-.velum-selection__custom-toggle:hover {
+.cleargate-selection__custom-toggle:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
-.velum-selection__custom-input {
+.cleargate-selection__custom-input {
   display: flex;
   gap: 4px;
   padding: 4px 0;
 }
-.velum-selection__custom-field {
+.cleargate-selection__custom-field {
   flex: 1;
   min-width: 0;
   padding: 5px 8px;
@@ -1507,10 +1507,10 @@ h1, h2, h3, h4 {
   font-size: 0.8rem;
   outline: none;
 }
-.velum-selection__custom-field:focus {
+.cleargate-selection__custom-field:focus {
   border-color: var(--color-brand);
 }
-.velum-selection__custom-confirm {
+.cleargate-selection__custom-confirm {
   padding: 5px 10px;
   border-radius: var(--radius-sm);
   border: 0;
@@ -1522,14 +1522,14 @@ h1, h2, h3, h4 {
   white-space: nowrap;
   transition: opacity 100ms ease;
 }
-.velum-selection__custom-confirm:disabled {
+.cleargate-selection__custom-confirm:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
 /* -- Scale / zoom indicator badge -- */
 
-.velum-workspace__scale-indicator {
+.cleargate-workspace__scale-indicator {
   margin-left: auto;
   padding: 2px 8px;
   border-radius: var(--radius-xs);
@@ -1543,15 +1543,15 @@ h1, h2, h3, h4 {
   transition: color 200ms ease, border-color 200ms ease;
 }
 
-.velum-workspace__scale-indicator:hover {
+.cleargate-workspace__scale-indicator:hover {
   color: var(--text-primary);
   border-color: var(--text-muted);
 }
 
 /* -- Theme toggle & locale switcher -- */
 
-.velum-header__theme-btn,
-.velum-header__locale-btn {
+.cleargate-header__theme-btn,
+.cleargate-header__locale-btn {
   padding: 5px 10px;
   border: 1px solid var(--border);
   background-color: transparent;
@@ -1564,15 +1564,15 @@ h1, h2, h3, h4 {
   transition: border-color 120ms ease, color 120ms ease;
 }
 
-.velum-header__theme-btn:hover,
-.velum-header__locale-btn:hover {
+.cleargate-header__theme-btn:hover,
+.cleargate-header__locale-btn:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 
 /* -- LLM panel -- */
 
-.velum-llm-panel {
+.cleargate-llm-panel {
   width: var(--entity-panel-width);
   flex-shrink: 0;
   display: flex;
@@ -1586,7 +1586,7 @@ h1, h2, h3, h4 {
   font-size: 0.75rem;
 }
 
-.velum-llm-panel__label {
+.cleargate-llm-panel__label {
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1594,8 +1594,8 @@ h1, h2, h3, h4 {
   color: var(--text-muted);
 }
 
-.velum-llm-panel__select,
-.velum-llm-panel__textarea {
+.cleargate-llm-panel__select,
+.cleargate-llm-panel__textarea {
   width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--border);
@@ -1607,18 +1607,18 @@ h1, h2, h3, h4 {
   transition: border-color 120ms ease;
 }
 
-.velum-llm-panel__select:focus,
-.velum-llm-panel__textarea:focus {
+.cleargate-llm-panel__select:focus,
+.cleargate-llm-panel__textarea:focus {
   outline: none;
   border-color: var(--color-brand);
 }
 
-.velum-llm-panel__textarea {
+.cleargate-llm-panel__textarea {
   min-height: 80px;
   resize: vertical;
 }
 
-.velum-llm-panel__send {
+.cleargate-llm-panel__send {
   padding: 8px 14px;
   border: 1px solid var(--color-brand);
   background-color: var(--color-brand);
@@ -1631,19 +1631,19 @@ h1, h2, h3, h4 {
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
-.velum-llm-panel__send:hover:not(:disabled) {
+.cleargate-llm-panel__send:hover:not(:disabled) {
   background-color: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 
-.velum-llm-panel__send:disabled {
+.cleargate-llm-panel__send:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
 /* -- Floating version badge -- */
 
-.velum-version-badge {
+.cleargate-version-badge {
   position: fixed;
   bottom: 10px;
   right: 14px;
@@ -1666,11 +1666,11 @@ h1, h2, h3, h4 {
   -webkit-backdrop-filter: blur(8px);
 }
 
-.velum-version-badge:hover {
+.cleargate-version-badge:hover {
   opacity: 1;
 }
 
-.velum-version-badge__dot {
+.cleargate-version-badge__dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -1678,11 +1678,11 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
-.velum-version-badge__dot[data-ok="true"] {
+.cleargate-version-badge__dot[data-ok="true"] {
   background-color: var(--success);
 }
 
-.velum-version-badge__text {
+.cleargate-version-badge__text {
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }

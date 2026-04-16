@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 _NONCE_SIZE = 12  # 96-bit nonce per NIST SP 800-38D
 _KEY_SIZE = 32  # 256-bit key
-_HKDF_INFO = b"velum-mapping-table-v1"
+_HKDF_INFO = b"cleargate-mapping-table-v1"
 
 
 class CryptoService:

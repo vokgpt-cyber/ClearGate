@@ -1,4 +1,4 @@
-"""Session management for VELUM with optional disk persistence.
+"""Session management for CLEARGATE with optional disk persistence.
 
 Each session contains a NER pipeline and an EntityRegistry.
 Sessions auto-expire after a configurable TTL.

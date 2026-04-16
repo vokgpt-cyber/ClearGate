@@ -129,7 +129,7 @@ tail -5 "$FILE"                  # контент кончается прави�
 
 **Файлы:**
 - `frontend/src/components/Header.tsx` строка 66-73
-- `frontend/src/app/globals.css` — `.velum-version-badge` стили (opacity: 0.55)
+- `frontend/src/app/globals.css` — `.cleargate-version-badge` стили (opacity: 0.55)
 
 **Решение:** Увеличить контрастность: opacity 0.75+, добавить тонкий backdrop-blur и/или border, сделать фон полупрозрачным. Или переместить badge в sidebar footer.
 
@@ -140,7 +140,7 @@ tail -5 "$FILE"                  # контент кончается прави�
 **Файлы:**
 - `frontend/src/app/globals.css` — 20+ мест с `font-family` (serif в brand, sans в кнопках, serif в сессиях, sans в легенде...)
 
-**Решение:** Apple/Harvey стиль = ОДИН основной шрифт (sans-serif: Inter или SF Pro) для всего UI, serif ТОЛЬКО для brand name "VELUM". Убрать все `font-family: var(--font-serif)` кроме `.velum-sidebar__brand-name`. Всё остальное — `var(--font-sans)`.
+**Решение:** Apple/Harvey стиль = ОДИН основной шрифт (sans-serif: Inter или SF Pro) для всего UI, serif ТОЛЬКО для brand name "CLEARGATE". Убрать все `font-family: var(--font-serif)` кроме `.cleargate-sidebar__brand-name`. Всё остальное — `var(--font-sans)`.
 
 ### BUG-6: Подзаголовок "Анонимизация юридических документов" лишний [LOW]
 
@@ -151,7 +151,7 @@ tail -5 "$FILE"                  # контент кончается прави�
 - `frontend/src/lib/locales/ru.json` — `"subtitle": "Анонимизация юридических документов"`
 - `frontend/src/lib/locales/en.json` — `"subtitle": "Legal document anonymization"`
 
-**Решение:** Убрать подзаголовок полностью. Оставить только "VELUM" в brand area. Или заменить на минималистичный tagline в 2-3 слова (по аналогии с Harvey — там просто "Harvey" и всё).
+**Решение:** Убрать подзаголовок полностью. Оставить только "CLEARGATE" в brand area. Или заменить на минималистичный tagline в 2-3 слова (по аналогии с Harvey — там просто "Harvey" и всё).
 
 ### BUG-7: Деанонимизация возвращает canonical (нижний регистр) вместо оригинальных форм [MEDIUM]
 
@@ -212,7 +212,7 @@ tail -5 "$FILE"                  # контент кончается прави�
 15 файлов изменены относительно `bd6c5bb`. **Первое действие в новом чате:**
 
 ```bash
-cd /path/to/velum
+cd /path/to/cleargate
 git add -A
 git commit -m "feat(backend+frontend): BIK recognizer, deanonymize UX, version badge, entity overlap fix, stopwords multi-word filter
 

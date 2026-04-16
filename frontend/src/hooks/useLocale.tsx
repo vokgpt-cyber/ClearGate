@@ -56,7 +56,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('velum_locale') as Locale | null;
+      const stored = localStorage.getItem('cleargate_locale') as Locale | null;
       if (stored && stored !== locale && (stored === 'ru' || stored === 'en')) {
         setLocaleState(stored);
       }
@@ -70,7 +70,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
     try {
-      localStorage.setItem('velum_locale', newLocale);
+      localStorage.setItem('cleargate_locale', newLocale);
     } catch {
       // no-op
     }

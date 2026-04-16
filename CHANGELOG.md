@@ -1,6 +1,6 @@
 # Changelog
 
-Все значимые изменения в VELUM документируются в этом файле.
+Все значимые изменения в CLEARGATE документируются в этом файле.
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
 проект следует [Semantic Versioning](https://semver.org/lang/ru/).
@@ -74,7 +74,7 @@
 - **Task 08**: WebSocket `/ws/stream` для стриминга ответов LLM
 - **Frontend**: Tauri 2.10 + Next.js 15 + React 19 + TypeScript strict
 - **Tasks 05/09/10**: SplitScreen, LLMPanel, theme (light/dark), i18n (RU/EN)
-- **START-VELUM-Alpha.bat** — launcher для быстрого запуска
+- **START-CLEARGATE-Alpha.bat** — launcher для быстрого запуска
 
 ### Security
 - AES-256-GCM шифрование mapping table в памяти

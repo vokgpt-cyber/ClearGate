@@ -10,7 +10,7 @@
 
 ## Current State
 
-VELUM v0.7.3 is a working demo. The full Phase 1 round-trip works end-to-end:
+CLEARGATE v0.7.3 is a working demo. The full Phase 1 round-trip works end-to-end:
 
 ```
 Upload .docx → Anonymize (regex + NER + LLM) → Export anonymized .docx
@@ -26,7 +26,7 @@ All 8 bugs from iteration 6 are fixed. UI is clean (single sans font, dark/light
 |--------|--------|---------|
 | `START-DEMO.bat` | `master` | Stable demo for presentations |
 | `START-DEV.bat` | `dev` | Development with latest changes |
-| `START-VELUM-Alpha.bat` | (current) | Original launcher, no branch switch |
+| `START-CLEARGATE-Alpha.bat` | (current) | Original launcher, no branch switch |
 
 ### Branch Strategy
 
@@ -36,7 +36,7 @@ All 8 bugs from iteration 6 are fixed. UI is clean (single sans font, dark/light
 
 ---
 
-## VELUM Phases — Full Overview
+## CLEARGATE Phases — Full Overview
 
 ### Phase 1 — Perfect Round-Trip (CURRENT)
 
@@ -61,7 +61,7 @@ All 8 bugs from iteration 6 are fixed. UI is clean (single sans font, dark/light
    - Currently sessions live in RAM only, lost on backend restart
    - Need SessionStore that serializes EntityRegistry + session metadata to disk
    - Encrypted at rest (AES-256-GCM key derived from session)
-   - Without this, VELUM is demo-only — can't survive a restart
+   - Without this, CLEARGATE is demo-only — can't survive a restart
 
 2. **NER coverage expansion** — Size: M, Priority: HIGH
    - Add GLiNER labels for: monetary amounts, time periods, distances
@@ -94,7 +94,7 @@ All 8 bugs from iteration 6 are fixed. UI is clean (single sans font, dark/light
 
 ### Phase 3 — Built-in LLM Chat
 
-**Goal:** Eliminate the "copy to external LLM" step — talk to LLMs directly inside VELUM.
+**Goal:** Eliminate the "copy to external LLM" step — talk to LLMs directly inside CLEARGATE.
 
 - API key settings UI (Claude/GPT/Gemini)
 - Native adapters per provider (NOT unified shims — need extended thinking access per ADR-0006)
@@ -116,7 +116,7 @@ All 8 bugs from iteration 6 are fixed. UI is clean (single sans font, dark/light
 ### Pre-flight Checks
 
 ```powershell
-cd C:\Users\V\Documents\Claude\Projects\Velum
+cd C:\Users\V\Documents\Claude\Projects\Cleargate
 
 # Verify branches
 git log --oneline master -1   # should be 567ece5

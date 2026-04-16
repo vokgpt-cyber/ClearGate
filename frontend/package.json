@@ -1,8 +1,8 @@
 {
-  "name": "velum-frontend",
+  "name": "cleargate-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "VELUM desktop frontend — Tauri 2 + Next.js 15",
+  "description": "CLEARGATE desktop frontend — Tauri 2 + Next.js 15",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

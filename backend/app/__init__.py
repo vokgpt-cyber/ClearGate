@@ -1,1 +1,1 @@
-"""VELUM Backend — anonymization gateway for legal AI workflows."""
+"""CLEARGATE Backend — anonymization gateway for legal AI workflows."""

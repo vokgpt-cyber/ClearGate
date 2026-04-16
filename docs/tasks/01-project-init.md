@@ -2,7 +2,7 @@
 
 ## Контекст
 
-Это первая задача — создать базовый скелет проекта VELUM: структуру папок, конфиги Tauri+Next.js+FastAPI, Docker Compose, git инициализацию, базовые тесты-заглушки. Цель — получить рабочее окружение, в котором можно запустить пустой Tauri-app, обратиться к FastAPI бэкенду на `/health` и получить ответ.
+Это первая задача — создать базовый скелет проекта CLEARGATE: структуру папок, конфиги Tauri+Next.js+FastAPI, Docker Compose, git инициализацию, базовые тесты-заглушки. Цель — получить рабочее окружение, в котором можно запустить пустой Tauri-app, обратиться к FastAPI бэкенду на `/health` и получить ответ.
 
 ## Зависимости
 
@@ -20,7 +20,7 @@ cd backend && uvicorn app.main:app --reload
 
 # Frontend
 cd frontend && npm run tauri dev
-# → Tauri окно открывается, показывает страницу с надписью "VELUM" и статусом подключения к backend
+# → Tauri окно открывается, показывает страницу с надписью "CLEARGATE" и статусом подключения к backend
 ```
 
 ## Требования
@@ -51,12 +51,12 @@ cd frontend && npm run tauri dev
    - FastAPI app с lifespan handler
    - CORS middleware (origins из env)
    - Подключение router'а health
-   - Метаданные: title="VELUM Backend", version из config
+   - Метаданные: title="CLEARGATE Backend", version из config
 
 3. `app/config.py`:
    - Pydantic Settings класс
    - Загрузка из .env
-   - Поля: VELUM_PROFILE, BACKEND_HOST, BACKEND_PORT, BACKEND_CORS_ORIGINS, версия
+   - Поля: CLEARGATE_PROFILE, BACKEND_HOST, BACKEND_PORT, BACKEND_CORS_ORIGINS, версия
 
 4. `app/routers/health.py`:
    - GET `/health` — возвращает `{status, version, profile, timestamp}`
@@ -94,11 +94,11 @@ cd frontend && npm run tauri dev
 2. `next.config.js`: статический экспорт (`output: 'export'`), `images.unoptimized: true`
 
 3. `src-tauri/tauri.conf.json`:
-   - Window: 1400x900, resizable, title "VELUM"
+   - Window: 1400x900, resizable, title "CLEARGATE"
    - Build commands: `npm run build` → `npm run dev`
    - Capability config: пока разрешить только http запросы к localhost:8000
 
-4. `src/app/page.tsx`: простой компонент с заголовком "VELUM" и состоянием подключения к backend (fetch /health, показ статуса)
+4. `src/app/page.tsx`: простой компонент с заголовком "CLEARGATE" и состоянием подключения к backend (fetch /health, показ статуса)
 
 5. `package.json` scripts:
    - `dev`, `build`, `start`, `lint`, `format`, `test`
@@ -110,7 +110,7 @@ cd frontend && npm run tauri dev
    - Service `frontend` (build из `./frontend`)  
    - Service `ollama` (image `ollama/ollama:latest`)
    - GPU runtime для backend и ollama
-   - Networks: внутренняя `velum-net`
+   - Networks: внутренняя `cleargate-net`
    - Volumes для моделей
 
 2. `.pre-commit-config.yaml` (см. Task 10 для финальной версии, базовый сейчас):
@@ -141,7 +141,7 @@ pytest tests/test_health.py -v
 - [ ] `curl http://localhost:8000/health` возвращает JSON со статусом ok
 - [ ] `pytest backend/tests/` проходит
 - [ ] `cd frontend && npm install && npm run tauri dev` открывает окно Tauri
-- [ ] В окне Tauri виден заголовок VELUM и статус подключения к backend (зелёный, если backend запущен)
+- [ ] В окне Tauri виден заголовок CLEARGATE и статус подключения к backend (зелёный, если backend запущен)
 - [ ] `docker compose config` валидирует docker-compose.yml без ошибок
 - [ ] Pre-commit hooks установлены и работают (`pre-commit run --all-files`)
 
@@ -172,7 +172,7 @@ cd frontend && npm run tauri dev
 
 ```powershell
 git add .
-git commit -m "feat: initialize VELUM project structure
+git commit -m "feat: initialize CLEARGATE project structure
 
 - Backend: FastAPI skeleton with health endpoint
 - Frontend: Tauri 2 + Next.js 15 with Russian/English ready

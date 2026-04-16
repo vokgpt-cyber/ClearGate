@@ -1,6 +1,6 @@
-# Tasks Overview — VELUM MVP Development
+# Tasks Overview — CLEARGATE MVP Development
 
-Этот каталог содержит **task files** для разработки VELUM через Claude Code. Каждая задача — это самодостаточный документ с контекстом, требованиями, файлами и acceptance criteria, которого достаточно, чтобы Claude Code мог выполнить её без дополнительных вопросов.
+Этот каталог содержит **task files** для разработки CLEARGATE через Claude Code. Каждая задача — это самодостаточный документ с контекстом, требованиями, файлами и acceptance criteria, которого достаточно, чтобы Claude Code мог выполнить её без дополнительных вопросов.
 
 ## Как работать с задачами
 

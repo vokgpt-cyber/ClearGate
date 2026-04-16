@@ -97,7 +97,7 @@
 
 ### Отрицательные / компромиссы
 - Чуть медленнее, чем чистый llama.cpp с тонкой настройкой (но разница незначительна для наших объёмов)
-- Не для high-throughput production (нужно vLLM или Triton). Это OK, поскольку Final тоже не требует тысячи RPS — VELUM это interactive use case
+- Не для high-throughput production (нужно vLLM или Triton). Это OK, поскольку Final тоже не требует тысячи RPS — CLEARGATE это interactive use case
 - Ollama — обёртка → если она забагует на новой ОС, нужно ждать фикс
 
 ### Нейтральные

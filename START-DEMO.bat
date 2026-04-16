@@ -1,9 +1,9 @@
 @echo off
-title VELUM v0.9 - DEMO
+title CLEARGATE v0.9 - DEMO
 
 echo.
 echo  ============================================
-echo   VELUM v0.9 - DEMO MODE (Phase 1 complete)
+echo   CLEARGATE v0.9 - DEMO MODE (Phase 1 complete)
 echo  ============================================
 echo.
 
@@ -39,12 +39,12 @@ echo   OK
 echo.
 
 echo [3/5] Starting backend on http://localhost:8000 ...
-start "VELUM Backend DEMO" cmd /k "cd /d %ROOT%backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+start "CLEARGATE Backend DEMO" cmd /k "cd /d %ROOT%backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 timeout /t 3 /nobreak >nul
 
 echo [4/5] Starting frontend on http://localhost:3000 ...
-start "VELUM Frontend DEMO" cmd /k "cd /d %ROOT%frontend && npm run dev"
+start "CLEARGATE Frontend DEMO" cmd /k "cd /d %ROOT%frontend && npm run dev"
 
 timeout /t 5 /nobreak >nul
 
@@ -53,7 +53,7 @@ start http://localhost:3000
 
 echo.
 echo  ============================================
-echo   VELUM DEMO is running!
+echo   CLEARGATE DEMO is running!
 echo.
 echo   Frontend:  http://localhost:3000
 echo   Backend:   http://localhost:8000

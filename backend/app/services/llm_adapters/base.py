@@ -52,7 +52,7 @@ class LLMAdapter(ABC):
     """Abstract interface for cloud LLM adapters.
 
     Each implementation wraps a provider's native SDK and exposes
-    a uniform streaming interface for the VELUM application.
+    a uniform streaming interface for the CLEARGATE application.
     """
 
     @abstractmethod

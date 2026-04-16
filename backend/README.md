@@ -1,6 +1,6 @@
-# VELUM Backend
+# CLEARGATE Backend
 
-FastAPI backend for the VELUM anonymization gateway.
+FastAPI backend for the CLEARGATE anonymization gateway.
 
 ## Setup
 

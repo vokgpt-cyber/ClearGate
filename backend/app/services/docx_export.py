@@ -73,7 +73,7 @@ logger = structlog.get_logger(__name__)
 
 # Constant used anywhere the author/creator/initial has to be non-empty
 # (Word tolerates empty strings in most places but some viewers choke).
-_SCRUBBED_AUTHOR = "VELUM"
+_SCRUBBED_AUTHOR = "CLEARGATE"
 _SCRUBBED_INITIALS = "V"
 
 # Files inside the .docx that have their ZipInfo timestamp normalized.

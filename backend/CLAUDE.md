@@ -4,7 +4,7 @@ Sub-инструкции для Claude Code при работе в катало�
 
 ## Обзор
 
-Backend VELUM — Python 3.12 + FastAPI 0.116. Содержит трёхслойный NER pipeline (Presidio + spaCy + GLiNER + Ollama Qwen 2.5), EntityRegistry с AES-256-GCM шифрованием, нативные адаптеры для Claude/OpenAI/Gemini API, и REST + WebSocket endpoints.
+Backend CLEARGATE — Python 3.12 + FastAPI 0.116. Содержит трёхслойный NER pipeline (Presidio + spaCy + GLiNER + Ollama Qwen 2.5), EntityRegistry с AES-256-GCM шифрованием, нативные адаптеры для Claude/OpenAI/Gemini API, и REST + WebSocket endpoints.
 
 ## Структура
 

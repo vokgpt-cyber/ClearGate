@@ -1,7 +1,7 @@
 [package]
-name = "velum"
+name = "cleargate"
 version = "0.1.0"
-description = "VELUM — Legal document anonymization gateway"
+description = "CLEARGATE — Legal document anonymization gateway"
 authors = ["EPAM Legal"]
 edition = "2021"
 

@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    VELUM project backup script with GFS rotation, encryption and integrity check.
+    CLEARGATE project backup script with GFS rotation, encryption and integrity check.
 
 .DESCRIPTION
-    Creates a portable backup of the VELUM project consisting of:
+    Creates a portable backup of the CLEARGATE project consisting of:
     - Git bundle (full repository history)
     - Working directory archive (excluding node_modules, .venv, models, etc.)
     - Optional AES encryption
@@ -14,14 +14,14 @@
     Tested on Windows 11 + PowerShell 7+.
 
 .PARAMETER Destination
-    Directory where backups are stored. Default: D:\Backups\VELUM
+    Directory where backups are stored. Default: D:\Backups\CLEARGATE
 
 .PARAMETER ProjectRoot
-    Path to VELUM project root. Default: current directory.
+    Path to CLEARGATE project root. Default: current directory.
 
 .PARAMETER Encrypt
     Encrypt the working-directory archive with AES-256.
-    Will prompt for passphrase if VELUM_BACKUP_PASSPHRASE env var is not set.
+    Will prompt for passphrase if CLEARGATE_BACKUP_PASSPHRASE env var is not set.
 
 .PARAMETER RetentionDaily
     Number of daily backups to keep. Default: 7.
@@ -37,10 +37,10 @@
 
 .EXAMPLE
     .\scripts\backup.ps1
-    # Default backup to D:\Backups\VELUM, no encryption
+    # Default backup to D:\Backups\CLEARGATE, no encryption
 
 .EXAMPLE
-    .\scripts\backup.ps1 -Destination "E:\Backups\VELUM" -Encrypt
+    .\scripts\backup.ps1 -Destination "E:\Backups\CLEARGATE" -Encrypt
     # Backup to external drive with encryption
 
 .EXAMPLE
@@ -50,7 +50,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Destination = "D:\Backups\VELUM",
+    [string]$Destination = "D:\Backups\CLEARGATE",
     [string]$ProjectRoot = (Get-Location).Path,
     [switch]$Encrypt,
     [int]$RetentionDaily = 7,
@@ -215,7 +215,7 @@ function New-WorkingDirArchive {
         # Fallback to PowerShell Compress-Archive (slower, no encryption)
         Write-Log "7-Zip not found, using PowerShell Compress-Archive (slower)" "WARN"
 
-        $tempDir = Join-Path $env:TEMP "velum-backup-$timestamp"
+        $tempDir = Join-Path $env:TEMP "cleargate-backup-$timestamp"
         New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
         try {
@@ -251,7 +251,7 @@ function Protect-BackupFile {
     Write-Log "Encrypting $FilePath..."
 
     # Get passphrase
-    $passphrase = $env:VELUM_BACKUP_PASSPHRASE
+    $passphrase = $env:CLEARGATE_BACKUP_PASSPHRASE
     if (-not $passphrase) {
         $secureString = Read-Host "Enter backup passphrase" -AsSecureString
         $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
@@ -401,7 +401,7 @@ function Invoke-GfsRotation {
 
 try {
     Write-Log "================================================================"
-    Write-Log "VELUM backup started"
+    Write-Log "CLEARGATE backup started"
     Write-Log "Project: $ProjectRoot"
     Write-Log "Destination: $Destination"
     Write-Log "Encryption: $Encrypt"
@@ -419,8 +419,8 @@ try {
         New-Item -ItemType Directory -Path $dailyDir -Force | Out-Null
     }
 
-    $bundlePath = Join-Path $dailyDir "velum_${timestamp}.bundle"
-    $archivePath = Join-Path $dailyDir "velum_${timestamp}.7z"
+    $bundlePath = Join-Path $dailyDir "cleargate_${timestamp}.bundle"
+    $archivePath = Join-Path $dailyDir "cleargate_${timestamp}.7z"
 
     # Create git bundle
     New-GitBundle -OutputPath $bundlePath

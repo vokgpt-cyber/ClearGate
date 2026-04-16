@@ -264,7 +264,7 @@ class CryptoService:
             algorithm=hashes.SHA256(),
             length=32,
             salt=session_id.encode("utf-8"),
-            info=b"velum-mapping-table-v1",
+            info=b"cleargate-mapping-table-v1",
         )
         return hkdf.derive(self.master_key)
 

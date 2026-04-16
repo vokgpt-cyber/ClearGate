@@ -4,7 +4,7 @@ Sub-инструкции для Claude Code при работе в катало�
 
 ## Обзор
 
-Frontend VELUM — Tauri 2.10 desktop shell + React 19 + Next.js 15 (статический экспорт) + TypeScript 5 strict + Tailwind CSS 4. Главные компоненты: SplitScreen с подсветкой сущностей, LLMPanel для выбора провайдера, WebSocket-стриминг ответов LLM, переключатели тем (light/dark) и языков (RU/EN).
+Frontend CLEARGATE — Tauri 2.10 desktop shell + React 19 + Next.js 15 (статический экспорт) + TypeScript 5 strict + Tailwind CSS 4. Главные компоненты: SplitScreen с подсветкой сущностей, LLMPanel для выбора провайдера, WebSocket-стриминг ответов LLM, переключатели тем (light/dark) и языков (RU/EN).
 
 ## Структура
 

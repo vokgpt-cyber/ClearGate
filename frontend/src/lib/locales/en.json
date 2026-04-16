@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "VELUM",
+    "title": "CLEARGATE",
     "subtitle": "Legal document anonymization"
   },
   "nav": {
@@ -24,7 +24,7 @@
     "noSessions": "No documents opened yet"
   },
   "empty": {
-    "eyebrow": "VELUM · Anonymization",
+    "eyebrow": "CLEARGATE · Anonymization",
     "title": "Open a document to anonymize",
     "lede": "Drag a DOCX file here or pick one manually. The document never leaves your computer.",
     "pick": "Choose a document",

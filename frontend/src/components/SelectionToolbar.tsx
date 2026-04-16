@@ -118,7 +118,7 @@ export function SelectionToolbar({
   return (
     <div
       ref={ref}
-      className={`velum-selection ${open ? 'velum-selection--open' : ''}`}
+      className={`cleargate-selection ${open ? 'cleargate-selection--open' : ''}`}
       style={{
         top: position?.top ?? -9999,
         left: position?.left ?? -9999,
@@ -132,15 +132,15 @@ export function SelectionToolbar({
       {!open ? (
         <button
           type="button"
-          className="velum-selection__primary"
+          className="cleargate-selection__primary"
           onClick={() => setOpen(true)}
           disabled={busy}
         >
-          <span className="velum-selection__icon" aria-hidden>+</span>
+          <span className="cleargate-selection__icon" aria-hidden>+</span>
           {busy ? t('selection.adding') : t('selection.addAs')}        </button>
       ) : (
-        <div className="velum-selection__types">
-          <div className="velum-selection__title">{t('selection.pickType')}</div>
+        <div className="cleargate-selection__types">
+          <div className="cleargate-selection__title">{t('selection.pickType')}</div>
           {!customMode ? (
             <>
               <ul>
@@ -151,12 +151,12 @@ export function SelectionToolbar({
                     <li key={code}>
                       <button
                         type="button"
-                        className="velum-selection__type"
+                        className="cleargate-selection__type"
                         onClick={() => onAddEntity(selection, code)}
                         disabled={busy}
                       >
                         <span
-                          className={`velum-selection__swatch velum-entity--${info.cssKey}`}
+                          className={`cleargate-selection__swatch cleargate-entity--${info.cssKey}`}
                           aria-hidden
                         />
                         {label}
@@ -167,7 +167,7 @@ export function SelectionToolbar({
               </ul>
               <button
                 type="button"
-                className="velum-selection__custom-toggle"
+                className="cleargate-selection__custom-toggle"
                 onClick={() => setCustomMode(true)}
                 disabled={busy}
               >
@@ -175,11 +175,11 @@ export function SelectionToolbar({
               </button>
             </>
           ) : (
-            <div className="velum-selection__custom-input">
+            <div className="cleargate-selection__custom-input">
               <input
                 ref={customInputRef}
                 type="text"
-                className="velum-selection__custom-field"
+                className="cleargate-selection__custom-field"
                 placeholder={t('selection.customPlaceholder')}
                 value={customValue}
                 onChange={(e) => setCustomValue(e.target.value)}
@@ -197,7 +197,7 @@ export function SelectionToolbar({
               />
               <button
                 type="button"
-                className="velum-selection__custom-confirm"
+                className="cleargate-selection__custom-confirm"
                 onClick={() => {
                   if (customValue.trim()) {
                     onAddEntity(selection, customValue.trim().toUpperCase());
@@ -209,7 +209,7 @@ export function SelectionToolbar({
               </button>
             </div>
           )}
-          {error && <div className="velum-selection__error">{error}</div>}
+          {error && <div className="cleargate-selection__error">{error}</div>}
         </div>
       )}
     </div>

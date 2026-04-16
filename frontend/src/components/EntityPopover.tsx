@@ -117,31 +117,31 @@ export function EntityPopover({
   return (
     <div
       ref={ref}
-      className="velum-popover"
+      className="cleargate-popover"
       role="menu"
       style={{
         top: position?.top ?? -9999,
         left: position?.left ?? -9999,
       }}
     >
-      <div className="velum-popover__header">
-        <span className={`velum-popover__swatch velum-entity--${info.cssKey}`} aria-hidden />
-        <span className="velum-popover__title">{label}</span>
-        <span className="velum-popover__text" title={entity.text}>
+      <div className="cleargate-popover__header">
+        <span className={`cleargate-popover__swatch cleargate-entity--${info.cssKey}`} aria-hidden />
+        <span className="cleargate-popover__title">{label}</span>
+        <span className="cleargate-popover__text" title={entity.text}>
           {truncate(entity.text, 36)}
         </span>
       </div>
       {!submenuOpen ? (
-        <ul className="velum-popover__list" role="menu">
+        <ul className="cleargate-popover__list" role="menu">
           {entity.state !== 'accepted' && (
             <li>
               <button
                 type="button"
                 role="menuitem"
-                className="velum-popover__action velum-popover__action--accept"
+                className="cleargate-popover__action cleargate-popover__action--accept"
                 onClick={() => onAccept(entity)}
               >
-                <span className="velum-popover__icon" aria-hidden>✓</span>
+                <span className="cleargate-popover__icon" aria-hidden>✓</span>
                 {entity.state === 'rejected'
                   ? t('popover.reanonymize')
                   : t('popover.accept')}
@@ -153,10 +153,10 @@ export function EntityPopover({
               <button
                 type="button"
                 role="menuitem"
-                className="velum-popover__action velum-popover__action--reject"
+                className="cleargate-popover__action cleargate-popover__action--reject"
                 onClick={() => onReject(entity)}
               >
-                <span className="velum-popover__icon" aria-hidden>∅</span>
+                <span className="cleargate-popover__icon" aria-hidden>∅</span>
                 {t('popover.reject')}
               </button>
             </li>
@@ -165,10 +165,10 @@ export function EntityPopover({
             <button
               type="button"
               role="menuitem"
-              className="velum-popover__action"
+              className="cleargate-popover__action"
               onClick={() => setSubmenuOpen(true)}
             >
-              <span className="velum-popover__icon" aria-hidden>⇌</span>
+              <span className="cleargate-popover__icon" aria-hidden>⇌</span>
               {t('popover.changeType')}
             </button>
           </li>
@@ -177,21 +177,21 @@ export function EntityPopover({
               <button
                 type="button"
                 role="menuitem"
-                className="velum-popover__action velum-popover__action--danger"
+                className="cleargate-popover__action cleargate-popover__action--danger"
                 onClick={() => onRemove(entity)}
               >
-                <span className="velum-popover__icon" aria-hidden>×</span>
+                <span className="cleargate-popover__icon" aria-hidden>×</span>
                 {t('popover.remove')}
               </button>
             </li>
           )}
         </ul>
       ) : (
-        <div className="velum-popover__submenu">
-          <div className="velum-popover__submenu-title">
+        <div className="cleargate-popover__submenu">
+          <div className="cleargate-popover__submenu-title">
             {t('popover.pickType')}
           </div>
-          <ul className="velum-popover__types">
+          <ul className="cleargate-popover__types">
             {LEGEND_ORDER.map((code) => {
               const typeInfo = ENTITY_TYPES[code as EntityTypeCode];
               const typeLabel = locale === 'ru' ? typeInfo.labelRu : typeInfo.labelEn;
@@ -201,14 +201,14 @@ export function EntityPopover({
                   <button
                     type="button"
                     role="menuitem"
-                    className={`velum-popover__type ${
-                      current ? 'velum-popover__type--current' : ''
+                    className={`cleargate-popover__type ${
+                      current ? 'cleargate-popover__type--current' : ''
                     }`}
                     onClick={() => onChangeType(entity, code)}
                     disabled={current}
                   >
                     <span
-                      className={`velum-popover__swatch velum-entity--${typeInfo.cssKey}`}
+                      className={`cleargate-popover__swatch cleargate-entity--${typeInfo.cssKey}`}
                       aria-hidden
                     />
                     {typeLabel}
@@ -219,7 +219,7 @@ export function EntityPopover({
           </ul>
           <button
             type="button"
-            className="velum-popover__back"
+            className="cleargate-popover__back"
             onClick={() => setSubmenuOpen(false)}
           >
             ← {t('popover.cancel')}

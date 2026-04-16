@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default permissions for VELUM desktop app",
+  "description": "Default permissions for CLEARGATE desktop app",
   "windows": ["main"],
   "permissions": [
     "core:default"

@@ -1,4 +1,4 @@
-# Code Style Guide — VELUM
+# Code Style Guide — CLEARGATE
 
 ## Принципы
 
@@ -361,7 +361,7 @@ export function MyComponent() {
 
 // ❌ Плохо — хардкоженные строки
 export function MyComponent() {
-  return <h1>Добро пожаловать в VELUM</h1>;
+  return <h1>Добро пожаловать в CLEARGATE</h1>;
 }
 ```
 

@@ -2,7 +2,7 @@
 
 ## Контекст
 
-VELUM должен поддерживать переключение между русским и английским языками интерфейса, а также светлой и тёмной темами. Переключение должно работать без перезагрузки, состояние сохраняется в localStorage. Все пользовательские строки централизованы в i18n словарях. Дизайн-система основана на CSS-переменных, переключаемых добавлением класса на `<html>`.
+CLEARGATE должен поддерживать переключение между русским и английским языками интерфейса, а также светлой и тёмной темами. Переключение должно работать без перезагрузки, состояние сохраняется в localStorage. Все пользовательские строки централизованы в i18n словарях. Дизайн-система основана на CSS-переменных, переключаемых добавлением класса на `<html>`.
 
 ## Зависимости
 
@@ -144,7 +144,7 @@ import { useEffect, useState, useCallback } from 'react';
 
 type Theme = 'light' | 'dark';
 
-const THEME_KEY = 'velum_theme';
+const THEME_KEY = 'cleargate_theme';
 
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>('dark');
@@ -195,7 +195,7 @@ i18n
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'velum_locale',
+      lookupLocalStorage: 'cleargate_locale',
       caches: ['localStorage'],
     },
   });
@@ -218,7 +218,7 @@ export function useLocale() {
 
   const setLocale = useCallback((newLocale: Locale) => {
     i18n.changeLanguage(newLocale);
-    localStorage.setItem('velum_locale', newLocale);
+    localStorage.setItem('cleargate_locale', newLocale);
     document.documentElement.lang = newLocale;
   }, [i18n]);
 
@@ -294,7 +294,7 @@ export function LocaleToggle() {
 // frontend/src/lib/locales/ru.json
 {
   "app": {
-    "name": "VELUM",
+    "name": "CLEARGATE",
     "tagline": "Завеса, за которой — адвокатская тайна"
   },
   "nav": {
@@ -387,7 +387,7 @@ export function LocaleToggle() {
 // frontend/src/lib/locales/en.json
 {
   "app": {
-    "name": "VELUM",
+    "name": "CLEARGATE",
     "tagline": "The veil that protects attorney-client privilege"
   },
   "nav": {
@@ -487,7 +487,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LocaleToggle } from '@/components/LocaleToggle';
 
 export const metadata: Metadata = {
-  title: 'VELUM',
+  title: 'CLEARGATE',
   description: 'On-premise anonymization gateway for legal AI workflows',
 };
 
@@ -498,7 +498,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <I18nProvider>
           <header className="flex items-center justify-between border-b border-border bg-bg-elevated px-6 py-3">
             <div className="flex items-center gap-3">
-              <div className="text-2xl font-bold text-accent">VELUM</div>
+              <div className="text-2xl font-bold text-accent">CLEARGATE</div>
               <div className="text-sm text-text-muted">Адвокатское бюро ЕПАМ</div>
             </div>
             <div className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-# Testing Strategy — VELUM
+# Testing Strategy — CLEARGATE
 
 ## Принципы
 

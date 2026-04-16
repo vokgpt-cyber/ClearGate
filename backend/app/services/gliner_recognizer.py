@@ -17,7 +17,7 @@ from app.models.entities import DetectedEntity
 
 logger = structlog.get_logger(__name__)
 
-# Label mapping: GLiNER label → VELUM entity type
+# Label mapping: GLiNER label → CLEARGATE entity type
 _LABEL_MAP: dict[str, str] = {
     "person": "PER",
     "organization": "ORG",

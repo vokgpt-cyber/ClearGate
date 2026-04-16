@@ -1,4 +1,4 @@
-"""Three-layer NER pipeline for VELUM.
+"""Three-layer NER pipeline for CLEARGATE.
 
 Orchestrates regex recognizers (Layer 1), spaCy + GLiNER NER (Layer 2),
 and local LLM verification (Layer 3) to detect PII in Russian legal text.
@@ -25,7 +25,7 @@ from app.services.stopwords import is_stopword
 
 logger = structlog.get_logger(__name__)
 
-# Presidio entity types → VELUM entity types
+# Presidio entity types → CLEARGATE entity types
 _PRESIDIO_TYPE_MAP: dict[str, str] = {
     "PERSON": "PER",
     "LOCATION": "LOC",

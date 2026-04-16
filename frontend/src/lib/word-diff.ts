@@ -5,16 +5,16 @@
  * runs, run a plain LCS, and emit an inline HTML overlay where:
  *   - unchanged tokens render as-is
  *   - insertions (present on the right, missing on the left) wrap in
- *     `<ins class="velum-diff-ins">…</ins>`
+ *     `<ins class="cleargate-diff-ins">…</ins>`
  *   - deletions (present on the left, missing on the right) wrap in
- *     `<del class="velum-diff-del">…</del>`
+ *     `<del class="cleargate-diff-del">…</del>`
  *
  * The caller is responsible for putting the returned HTML string inside
  * a container that preserves whitespace / line breaks (we emit <br> for
  * newlines ourselves so the overlay works inside any block element).
  *
  * Complexity is O(n*m) in tokens; fine for the 5-10k-word documents
- * VELUM targets in Phase 1. If that ever becomes a bottleneck we swap
+ * CLEARGATE targets in Phase 1. If that ever becomes a bottleneck we swap
  * the core for Myers or histogram diff — the public surface stays.
  */
 
@@ -122,9 +122,9 @@ export function renderDiffHtml(ops: DiffOp[]): string {
     if (op.kind === 'eq') {
       parts.push(html);
     } else if (op.kind === 'ins') {
-      parts.push(`<ins class="velum-diff-ins">${html}</ins>`);
+      parts.push(`<ins class="cleargate-diff-ins">${html}</ins>`);
     } else {
-      parts.push(`<del class="velum-diff-del">${html}</del>`);
+      parts.push(`<del class="cleargate-diff-del">${html}</del>`);
     }
   }
   return parts.join('');

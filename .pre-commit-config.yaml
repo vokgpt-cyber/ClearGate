@@ -1,4 +1,4 @@
-# Pre-commit hooks for VELUM
+# Pre-commit hooks for CLEARGATE
 # Install: pre-commit install
 # Run manually: pre-commit run --all-files
 
@@ -81,25 +81,25 @@ repos:
         files: ^frontend/.*\.(ts|tsx)$
         pass_filenames: false
 
-  # ----------- VELUM-specific checks -----------
+  # ----------- CLEARGATE-specific checks -----------
   - repo: local
     hooks:
       - id: no-pii-in-logs
-        name: 'VELUM: no PII in log statements'
+        name: 'CLEARGATE: no PII in log statements'
         entry: bash -c '! grep -rn -E "logger\.(info|debug|warning|error)\(.*(text=|content=|mapping=)" backend/app/ || (echo "ERROR: Possible PII logging detected. Use metadata only." && exit 1)'
         language: system
         files: ^backend/app/.*\.py$
         pass_filenames: false
 
       - id: no-hardcoded-strings
-        name: 'VELUM: no hardcoded Russian/English in JSX'
+        name: 'CLEARGATE: no hardcoded Russian/English in JSX'
         entry: bash -c '! grep -rEn ">[А-Яа-я]{4,}" frontend/src/components/ frontend/src/app/ || (echo "ERROR: Hardcoded Russian strings in JSX. Use i18next." && exit 1)'
         language: system
         files: ^frontend/src/.*\.(tsx|jsx)$
         pass_filenames: false
 
       - id: no-unified-shim
-        name: 'VELUM: no unified LLM shim libraries'
+        name: 'CLEARGATE: no unified LLM shim libraries'
         entry: bash -c '! grep -rEn "(litellm|openrouter)" backend/app/ frontend/src/ || (echo "ERROR: Unified LLM shim detected. Use native SDKs only (see ADR-0006)." && exit 1)'
         language: system
         pass_filenames: false

@@ -34,7 +34,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('velum_theme') as Theme | null;
+      const saved = localStorage.getItem('cleargate_theme') as Theme | null;
       if (saved === 'light' || saved === 'dark') {
         setThemeState(saved);
         return;
@@ -53,7 +53,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
     try {
-      localStorage.setItem('velum_theme', newTheme);
+      localStorage.setItem('cleargate_theme', newTheme);
     } catch {
       // no-op
     }

@@ -4,7 +4,7 @@
  * EmptyState — shown when no document is loaded yet.
  *
  * A large, calm drop zone with a clear call-to-action and a short
- * statement of what VELUM does. Harvey/Legal-tech style: confident and
+ * statement of what CLEARGATE does. Harvey/Legal-tech style: confident and
  * restrained, not playful.
  */
 
@@ -36,7 +36,7 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
 
   return (
     <div
-      className={`velum-empty ${dragging ? 'is-drag' : ''}`}
+      className={`cleargate-empty ${dragging ? 'is-drag' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -44,14 +44,14 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
     >
-      <div className="velum-empty__card">
-        <div className="velum-empty__eyebrow">{t('empty.eyebrow')}</div>
-        <h1 className="velum-empty__title">{t('empty.title')}</h1>
-        <p className="velum-empty__lede">{t('empty.lede')}</p>
+      <div className="cleargate-empty__card">
+        <div className="cleargate-empty__eyebrow">{t('empty.eyebrow')}</div>
+        <h1 className="cleargate-empty__title">{t('empty.title')}</h1>
+        <p className="cleargate-empty__lede">{t('empty.lede')}</p>
 
         <button
           type="button"
-          className="velum-empty__cta"
+          className="cleargate-empty__cta"
           onClick={() => inputRef.current?.click()}
           disabled={isWorking}
         >
@@ -67,8 +67,8 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
             if (f) onFile(f);
           }}
         />
-        <div className="velum-empty__hint">{t('empty.hint')}</div>
-        {error && <div className="velum-empty__error">{error}</div>}
+        <div className="cleargate-empty__hint">{t('empty.hint')}</div>
+        {error && <div className="cleargate-empty__error">{error}</div>}
       </div>
     </div>
   );

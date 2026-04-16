@@ -70,7 +70,7 @@ export function DocxViewer({ documentId, onReady, className, label, urlOverride 
         if (cancelled) return;
 
         await docx.renderAsync(blob, container, undefined, {
-          className: 'velum-docx',
+          className: 'cleargate-docx',
           inWrapper: true,
           ignoreWidth: false,
           ignoreHeight: false,
@@ -106,24 +106,24 @@ export function DocxViewer({ documentId, onReady, className, label, urlOverride 
   }, [documentId, onReady, urlOverride]);
 
   return (
-    <div className={`velum-docx-viewer ${className ?? ''}`}>
+    <div className={`cleargate-docx-viewer ${className ?? ''}`}>
       {label && (
-        <div className="velum-docx-viewer__label">
+        <div className="cleargate-docx-viewer__label">
           <span>{label}</span>
           {status === 'loading' && (
-            <span className="velum-docx-viewer__spinner" aria-label={t('docx.loading')}>
+            <span className="cleargate-docx-viewer__spinner" aria-label={t('docx.loading')}>
               {t('docx.loading')}
             </span>
           )}
         </div>
       )}
-      <div className="velum-docx-viewer__scroll">
-        <div ref={containerRef} className="velum-docx-viewer__container" />
+      <div className="cleargate-docx-viewer__scroll">
+        <div ref={containerRef} className="cleargate-docx-viewer__container" />
         {status === 'idle' && (
-          <div className="velum-docx-viewer__placeholder">{t('docx.empty')}</div>
+          <div className="cleargate-docx-viewer__placeholder">{t('docx.empty')}</div>
         )}
         {status === 'error' && (
-          <div className="velum-docx-viewer__error">
+          <div className="cleargate-docx-viewer__error">
             <strong>{t('docx.error')}</strong>
             <span>{error}</span>
           </div>

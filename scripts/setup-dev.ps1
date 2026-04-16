@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Initialize VELUM development environment on Windows 11.
+    Initialize CLEARGATE development environment on Windows 11.
 
 .DESCRIPTION
     Checks prerequisites, creates Python venv, installs dependencies,
@@ -51,7 +51,7 @@ function Test-Command {
 # ----------------------------------------------------------------
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "  VELUM Development Environment Setup" -ForegroundColor Cyan
+Write-Host "  CLEARGATE Development Environment Setup" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 
 # ----------------------------------------------------------------
@@ -117,7 +117,7 @@ else {
 # Configure git for the project (local config only)
 git config core.autocrlf false
 git config core.eol lf
-git config user.name "VELUM Developer" -ErrorAction SilentlyContinue
+git config user.name "CLEARGATE Developer" -ErrorAction SilentlyContinue
 Write-OK "Git config set"
 
 # ----------------------------------------------------------------
@@ -215,13 +215,13 @@ else {
     Write-Skip ".env already exists"
 }
 
-# Generate VELUM_MASTER_KEY if not set
+# Generate CLEARGATE_MASTER_KEY if not set
 $envContent = Get-Content .env -Raw -ErrorAction SilentlyContinue
-if ($envContent -and $envContent -match "VELUM_MASTER_KEY=replace-me") {
+if ($envContent -and $envContent -match "CLEARGATE_MASTER_KEY=replace-me") {
     $newKey = & python -c "import secrets; print(secrets.token_urlsafe(32))"
-    $envContent = $envContent -replace "VELUM_MASTER_KEY=replace-me-with-32-byte-random-key", "VELUM_MASTER_KEY=$newKey"
+    $envContent = $envContent -replace "CLEARGATE_MASTER_KEY=replace-me-with-32-byte-random-key", "CLEARGATE_MASTER_KEY=$newKey"
     Set-Content .env $envContent -NoNewline
-    Write-OK "Generated VELUM_MASTER_KEY"
+    Write-OK "Generated CLEARGATE_MASTER_KEY"
 }
 
 # ----------------------------------------------------------------

@@ -14,7 +14,7 @@ _DEFAULT_CORS = "http://localhost:3000,http://localhost:1420,tauri://localhost"
 
 
 class Settings(BaseSettings):
-    """VELUM backend settings loaded from environment / .env file."""
+    """CLEARGATE backend settings loaded from environment / .env file."""
 
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE) if _ENV_FILE.exists() else None,
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     # Deployment profile
-    velum_profile: str = "alpha"
+    cleargate_profile: str = "alpha"
 
     # Server
     backend_host: str = "0.0.0.0"  # noqa: S104

@@ -6,7 +6,7 @@
 
 ## Контекст
 
-Mapping table — это таблица соответствий между реальными данными (ФИО, ИНН, суммы) и плейсхолдерами (`[ЛИЦО_1]`, `[ИНН_1]`, ...). Это **самые чувствительные данные** во всей системе VELUM: тот, кто получит mapping и анонимизированный текст, может полностью восстановить оригинальный документ.
+Mapping table — это таблица соответствий между реальными данными (ФИО, ИНН, суммы) и плейсхолдерами (`[ЛИЦО_1]`, `[ИНН_1]`, ...). Это **самые чувствительные данные** во всей системе CLEARGATE: тот, кто получит mapping и анонимизированный текст, может полностью восстановить оригинальный документ.
 
 Требования к шифрованию:
 - **Сильный алгоритм** с authenticated encryption (защита от tampering)
@@ -66,7 +66,7 @@ import base64
 # Однократно при установке
 master_key = secrets.token_bytes(32)  # 256 бит
 print(base64.b64encode(master_key).decode())
-# Сохранить в .env как VELUM_MASTER_KEY
+# Сохранить в .env как CLEARGATE_MASTER_KEY
 ```
 
 ### Шифрование mapping table
@@ -87,7 +87,7 @@ class CryptoService:
             algorithm=hashes.SHA256(),
             length=32,
             salt=session_id.encode(),
-            info=b"velum-mapping-table-v1",
+            info=b"cleargate-mapping-table-v1",
         )
         return hkdf.derive(self.master_key)
 
@@ -116,7 +116,7 @@ class CryptoService:
 
 ### Хранение
 - **In-memory only** для большинства сценариев
-- **Опциональный disk cache** — зашифрованный blob сохраняется в `~/.velum/sessions/<uuid>.blob` с TTL (по умолчанию 24 часа)
+- **Опциональный disk cache** — зашифрованный blob сохраняется в `~/.cleargate/sessions/<uuid>.blob` с TTL (по умолчанию 24 часа)
 - TTL enforced через scheduled task, при истечении файл удаляется и перезаписывается случайными байтами
 
 ## Последствия

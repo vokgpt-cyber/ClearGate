@@ -40,13 +40,13 @@ export function Header() {
 
   return (
     <>
-      <header className="velum-header">
-        <div className="velum-header__left" />
+      <header className="cleargate-header">
+        <div className="cleargate-header__left" />
 
-        <div className="velum-header__right">
+        <div className="cleargate-header__right">
           <button
             type="button"
-            className="velum-header__pill"
+            className="cleargate-header__pill"
             onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}
             aria-label="Toggle language"
           >
@@ -54,7 +54,7 @@ export function Header() {
           </button>
           <button
             type="button"
-            className="velum-header__pill"
+            className="cleargate-header__pill"
             onClick={toggleTheme}
             aria-label="Toggle theme"
           >
@@ -64,12 +64,12 @@ export function Header() {
       </header>
 
       {/* Floating version badge */}
-      <div className="velum-version-badge" title={backendOk ? t('status.connected') : t('status.disconnected')}>
+      <div className="cleargate-version-badge" title={backendOk ? t('status.connected') : t('status.disconnected')}>
         <span
-          className="velum-version-badge__dot"
+          className="cleargate-version-badge__dot"
           data-ok={backendOk ? 'true' : 'false'}
         />
-        <span className="velum-version-badge__text">{APP_VERSION}</span>
+        <span className="cleargate-version-badge__text">{APP_VERSION}</span>
       </div>
     </>
   );

@@ -1,6 +1,6 @@
 # Development Environment Setup — Windows 11
 
-Полная инструкция по подготовке dev окружения для VELUM на Windows 11. Все шаги протестированы на чистой системе.
+Полная инструкция по подготовке dev окружения для CLEARGATE на Windows 11. Все шаги протестированы на чистой системе.
 
 ## Аппаратные требования (Alpha)
 
@@ -88,8 +88,8 @@ winget install Microsoft.PowerShell
 ```powershell
 # Распаковать
 cd D:\Projects
-Expand-Archive velum.zip -DestinationPath .
-cd velum
+Expand-Archive cleargate.zip -DestinationPath .
+cd cleargate
 
 # Инициализировать git
 git init -b main
@@ -99,15 +99,15 @@ git commit -m "Initial import from package"
 
 ### Если есть git bundle
 ```powershell
-git clone D:\Backups\VELUM\daily\velum_2026-04-09.bundle D:\Projects\velum
-cd D:\Projects\velum
+git clone D:\Backups\CLEARGATE\daily\cleargate_2026-04-09.bundle D:\Projects\cleargate
+cd D:\Projects\cleargate
 ```
 
 ## Setup проекта
 
 ### Автоматический setup
 ```powershell
-cd D:\Projects\velum
+cd D:\Projects\cleargate
 .\scripts\setup-dev.ps1
 ```
 
@@ -118,7 +118,7 @@ cd D:\Projects\velum
 - Установит зависимости frontend
 - Настроит pre-commit hooks
 - Создаст .env из .env.example
-- Сгенерирует VELUM_MASTER_KEY
+- Сгенерирует CLEARGATE_MASTER_KEY
 
 ### Ручной setup (если автоматический не сработал)
 
@@ -152,7 +152,7 @@ notepad .env
 - `ANTHROPIC_API_KEY` — получить на https://console.anthropic.com
 - `OPENAI_API_KEY` — получить на https://platform.openai.com
 - `GOOGLE_API_KEY` — получить на https://aistudio.google.com
-- `VELUM_MASTER_KEY` — сгенерируется автоматически через setup-dev.ps1
+- `CLEARGATE_MASTER_KEY` — сгенерируется автоматически через setup-dev.ps1
 
 ## Загрузка ML моделей
 
@@ -298,11 +298,11 @@ $env:OLLAMA_USE_CUDA = "1"
 ollama serve
 ```
 
-### "VELUM_MASTER_KEY not set"
+### "CLEARGATE_MASTER_KEY not set"
 ```powershell
 # Сгенерировать новый ключ
 $key = python -c "import secrets; print(secrets.token_urlsafe(32))"
-Add-Content .env "VELUM_MASTER_KEY=$key"
+Add-Content .env "CLEARGATE_MASTER_KEY=$key"
 ```
 
 ### Tauri build падает с ошибкой "link.exe not found"

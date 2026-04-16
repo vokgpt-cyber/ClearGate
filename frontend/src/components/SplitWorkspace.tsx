@@ -16,9 +16,9 @@
  *      handler reads through `pane.getAnchorMap()`, which always builds
  *      a fresh map against the live DOM, so stale-map bugs (the iter3.x
  *      IndexSizeError class) are structurally impossible by design.
- *   3. Click on any `<mark.velum-entity>` in either pane opens the
+ *   3. Click on any `<mark.cleargate-entity>` in either pane opens the
  *      EntityPopover with accept / reject / change type / remove actions.
- *   4. Hovering over a mark adds `.velum-entity--active` to every mark
+ *   4. Hovering over a mark adds `.cleargate-entity--active` to every mark
  *      sharing the same `data-entity-id` in BOTH panes, so the user
  *      can see at a glance how a span maps across panes.
  *   5. Selecting text in the LEFT pane surfaces the SelectionToolbar:
@@ -72,7 +72,7 @@ interface SplitWorkspaceProps {
   onClose: () => void;
 }
 
-const ACTIVE_CLASS = 'velum-entity--active';
+const ACTIVE_CLASS = 'cleargate-entity--active';
 
 // Document zoom limits. Step is fine-grained enough that Ctrl+wheel
 // feels smooth on a typical mouse, but coarse enough that the rounding
@@ -207,7 +207,7 @@ export function SplitWorkspace({
       const pane = new DocxPane(container);
       leftPaneRef.current = pane;
       // eslint-disable-next-line no-console
-      console.info('[Velum] original pane ready', {
+      console.info('[Cleargate] original pane ready', {
         chars: pane.getPlainText().length,
       });
       markBothReadyIfPossible();
@@ -260,12 +260,12 @@ export function SplitWorkspace({
       try {
         pane.rerender(overlays, { mode: 'highlight' });
         // eslint-disable-next-line no-console
-        console.info('[Velum] restoration overlays applied', {
+        console.info('[Cleargate] restoration overlays applied', {
           count: overlays.length,
         });
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.warn('[Velum] restoration overlay render failed', e);
+        console.warn('[Cleargate] restoration overlay render failed', e);
       }
     }
   }, []);
@@ -276,7 +276,7 @@ export function SplitWorkspace({
       const pane = new DocxPane(container);
       rightPaneRef.current = pane;
       // eslint-disable-next-line no-console
-      console.info('[Velum] anonymized pane ready');
+      console.info('[Cleargate] anonymized pane ready');
 
       // If we just switched to the deanonymized preview, overlay the
       // restored values using the same interactive entity system as the
@@ -382,7 +382,7 @@ export function SplitWorkspace({
     const rightPane = rightPaneRef.current;
     if (!leftPane || !rightPane) {
       // eslint-disable-next-line no-console
-      console.warn('[Velum] rerender skipped — panes not ready');
+      console.warn('[Cleargate] rerender skipped — panes not ready');
       return;
     }
     leftPane.rerender(entitiesToDraw, { mode: 'highlight' });
@@ -410,13 +410,13 @@ export function SplitWorkspace({
     (async () => {
       try {
         // eslint-disable-next-line no-console
-        console.info('[Velum] anonymize start', {
+        console.info('[Cleargate] anonymize start', {
           documentId,
           chars: plainText.length,
         });
         const response = await anonymizeText(documentId, plainText);
         // eslint-disable-next-line no-console
-        console.info('[Velum] anonymize response', {
+        console.info('[Cleargate] anonymize response', {
           entities: response.entities?.length ?? 0,
         });
         if (cancelled) return;
@@ -437,7 +437,7 @@ export function SplitWorkspace({
       } catch (e) {
         if (cancelled) return;
         // eslint-disable-next-line no-console
-        console.error('[Velum] anonymize failed', e);
+        console.error('[Cleargate] anonymize failed', e);
         setError(e instanceof Error ? e.message : String(e));
         setStatus('error');
         // Allow the user to retry via the legend "retry" button.
@@ -469,7 +469,7 @@ export function SplitWorkspace({
 
     const findMark = (target: EventTarget | null): HTMLElement | null => {
       if (!(target instanceof Element)) return null;
-      return target.closest('mark.velum-entity') as HTMLElement | null;
+      return target.closest('mark.cleargate-entity') as HTMLElement | null;
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -486,7 +486,7 @@ export function SplitWorkspace({
     const markActive = (id: string, on: boolean) => {
       for (const container of [leftContainer, rightContainer]) {
         const marks = container.querySelectorAll<HTMLElement>(
-          `mark.velum-entity[data-entity-id="${CSS.escape(id)}"]`,
+          `mark.cleargate-entity[data-entity-id="${CSS.escape(id)}"]`,
         );
         marks.forEach((m) => m.classList.toggle(ACTIVE_CLASS, on));
       }
@@ -550,7 +550,7 @@ export function SplitWorkspace({
       const rightContainer = rightContainerRef.current;
       if (!leftContainer || !rightContainer) {
         // eslint-disable-next-line no-console
-        console.info('[Velum] selection: containers not ready');
+        console.info('[Cleargate] selection: containers not ready');
         return;
       }
 
@@ -588,7 +588,7 @@ export function SplitWorkspace({
 
       // If the selection starts inside an existing entity mark, that is
       // a click/tap on the entity itself — belongs to the popover flow.
-      if (startNode.closest('mark.velum-entity')) {
+      if (startNode.closest('mark.cleargate-entity')) {
         setSelection(null);
         return;
       }
@@ -602,7 +602,7 @@ export function SplitWorkspace({
         range.endContainer.nodeType === Node.TEXT_NODE
           ? range.endContainer.parentElement
           : (range.endContainer as Element);
-      const endsInMark = endNode?.closest('mark.velum-entity');
+      const endsInMark = endNode?.closest('mark.cleargate-entity');
       if (endsInMark) {
         // Selection ends mid-entity — partial overlap.
         setSelection(null);
@@ -617,7 +617,7 @@ export function SplitWorkspace({
         const leftPane = leftPaneRef.current;
         if (!leftPane) {
           // eslint-disable-next-line no-console
-          console.warn('[Velum] selection: left pane not ready');
+          console.warn('[Cleargate] selection: left pane not ready');
           return;
         }
         // Always-fresh map: leftPane.getAnchorMap() rebuilds against the
@@ -628,7 +628,7 @@ export function SplitWorkspace({
         const rightPane = rightPaneRef.current;
         if (!rightPane) {
           // eslint-disable-next-line no-console
-          console.warn('[Velum] selection: right pane not ready');
+          console.warn('[Cleargate] selection: right pane not ready');
           return;
         }
         const rightOffsets = rightPane.getAnchorMap().rangeToOffsets(range);
@@ -644,7 +644,7 @@ export function SplitWorkspace({
         if (!leftOffsets) {
           // eslint-disable-next-line no-console
           console.info(
-            '[Velum] selection: right→left translation failed (touches placeholder)',
+            '[Cleargate] selection: right→left translation failed (touches placeholder)',
           );
           setSelection(null);
           setSelectionError(t('selection.crossesPlaceholder'));
@@ -673,8 +673,8 @@ export function SplitWorkspace({
       // the selection (which would clear the toolbar instantly).
       const target = e.target as Element | null;
       if (
-        target?.closest?.('.velum-selection') ||
-        target?.closest?.('.velum-popover')
+        target?.closest?.('.cleargate-selection') ||
+        target?.closest?.('.cleargate-popover')
       ) {
         return;
       }
@@ -686,7 +686,7 @@ export function SplitWorkspace({
     const handleKeyUp = (e: KeyboardEvent) => {
       // Ignore keyboard events originating inside the toolbar
       // (e.g. typing in the custom-type input field).
-      if ((e.target as Element)?.closest?.('.velum-selection')) return;
+      if ((e.target as Element)?.closest?.('.cleargate-selection')) return;
       if (e.key === 'Escape') {
         setSelection(null);
         setSelectionError(null);
@@ -838,7 +838,7 @@ export function SplitWorkspace({
       downloadBlob(blob, filename);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('[Velum] export failed', e);
+      console.error('[Cleargate] export failed', e);
       setExportError(
         e instanceof Error ? e.message : String(e),
       );
@@ -856,7 +856,7 @@ export function SplitWorkspace({
       try {
         const result = await importResponseDocx(documentId, file);
         // eslint-disable-next-line no-console
-        console.info('[Velum] response imported', {
+        console.info('[Cleargate] response imported', {
           chars: result.char_count,
           placeholders: result.placeholder_count,
         });
@@ -876,13 +876,13 @@ export function SplitWorkspace({
             `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
           );
           // eslint-disable-next-line no-console
-          console.info('[Velum] deanonymize complete', {
+          console.info('[Cleargate] deanonymize complete', {
             replacements: dResult.total_replacements,
             unresolved: dResult.total_unresolved,
           });
         } catch (e) {
           // eslint-disable-next-line no-console
-          console.error('[Velum] deanonymize failed', e);
+          console.error('[Cleargate] deanonymize failed', e);
           setDeanonymizeError(
             e instanceof Error ? e.message : String(e),
           );
@@ -891,7 +891,7 @@ export function SplitWorkspace({
         }
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('[Velum] import response failed', e);
+        console.error('[Cleargate] import response failed', e);
         setImportError(e instanceof Error ? e.message : String(e));
       } finally {
         setImportBusy(false);
@@ -920,13 +920,13 @@ export function SplitWorkspace({
       const newText = rightPane.getPlainText();
       const diffInner = diffWordsHtml(oldText, newText);
       container.innerHTML =
-        `<div class="velum-compare" style="white-space: pre-wrap; ` +
+        `<div class="cleargate-compare" style="white-space: pre-wrap; ` +
         `font-family: inherit; padding: 1rem; line-height: 1.5;">` +
         diffInner +
         `</div>`;
       setCompareMode(true);
       // eslint-disable-next-line no-console
-      console.info('[Velum] compare mode ON', {
+      console.info('[Cleargate] compare mode ON', {
         oldChars: oldText.length,
         newChars: newText.length,
       });
@@ -937,7 +937,7 @@ export function SplitWorkspace({
       applyRestorationOverlays(rightPane);
       setCompareMode(false);
       // eslint-disable-next-line no-console
-      console.info('[Velum] compare mode OFF');
+      console.info('[Cleargate] compare mode OFF');
     }
   }, [compareMode, applyRestorationOverlays]);
 
@@ -951,7 +951,7 @@ export function SplitWorkspace({
       downloadBlob(blob, filename);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('[Velum] export deanonymized failed', e);
+      console.error('[Cleargate] export deanonymized failed', e);
       setExportDeanonymizedError(
         e instanceof Error ? e.message : String(e),
       );
@@ -961,18 +961,18 @@ export function SplitWorkspace({
   }, [documentId, exportDeanonymizedBusy, manualResolutions]);
 
   return (
-    <div className="velum-workspace">
-      <div className="velum-workspace__subheader">
-        <div className="velum-workspace__doc-title">
-          <span className="velum-workspace__doc-icon" aria-hidden>
+    <div className="cleargate-workspace">
+      <div className="cleargate-workspace__subheader">
+        <div className="cleargate-workspace__doc-title">
+          <span className="cleargate-workspace__doc-icon" aria-hidden>
             ¶
           </span>
-          <span className="velum-workspace__doc-name" title={documentName}>
+          <span className="cleargate-workspace__doc-name" title={documentName}>
             {documentName}
           </span>
           <button
             type="button"
-            className="velum-workspace__scale-indicator"
+            className="cleargate-workspace__scale-indicator"
             onClick={resetScale}
             title={t('workspace.resetZoom')}
             aria-label={`${t('workspace.zoomLevel')} ${Math.round(docScale * 100)}%`}
@@ -980,10 +980,10 @@ export function SplitWorkspace({
             {Math.round(docScale * 100)}%
           </button>
         </div>
-        <div className="velum-workspace__actions">
+        <div className="cleargate-workspace__actions">
           <button
             type="button"
-            className="velum-workspace__export"
+            className="cleargate-workspace__export"
             onClick={handleExport}
             disabled={exportBusy || !bothReady}
             title={
@@ -1000,7 +1000,7 @@ export function SplitWorkspace({
           {/* Phase 1 round-trip: import response */}
           <button
             type="button"
-            className="velum-workspace__import-response"
+            className="cleargate-workspace__import-response"
             onClick={() => responseFileRef.current?.click()}
             disabled={importBusy || deanonymizeBusy || !bothReady || entities.length === 0}
             title={
@@ -1034,7 +1034,7 @@ export function SplitWorkspace({
           {responseImported && (
             <button
               type="button"
-              className="velum-workspace__compare"
+              className="cleargate-workspace__compare"
               onClick={toggleCompareMode}
               disabled={deanonymizeBusy}
               aria-pressed={compareMode}
@@ -1054,7 +1054,7 @@ export function SplitWorkspace({
           {responseImported && (
             <button
               type="button"
-              className="velum-workspace__export-deanonymized"
+              className="cleargate-workspace__export-deanonymized"
               onClick={handleExportDeanonymized}
               disabled={exportDeanonymizedBusy || deanonymizeBusy}
               title={
@@ -1072,7 +1072,7 @@ export function SplitWorkspace({
 
           <button
             type="button"
-            className="velum-workspace__close"
+            className="cleargate-workspace__close"
             onClick={onClose}
             title={t('workspace.close')}
           >
@@ -1081,19 +1081,19 @@ export function SplitWorkspace({
         </div>
       </div>
 
-      <div className="velum-workspace__split">
+      <div className="cleargate-workspace__split">
         <DocxViewer
           documentId={documentId}
           label={t('editor.original')}
           onReady={handleOriginalReady}
-          className="velum-workspace__pane"
+          className="cleargate-workspace__pane"
         />
-        <div className="velum-workspace__divider" aria-hidden />
+        <div className="cleargate-workspace__divider" aria-hidden />
         <DocxViewer
           documentId={documentId}
           label={rightPaneUrl ? t('workspace.deanonymizedPreview') : t('editor.anonymized')}
           onReady={handleAnonymizedReady}
-          className="velum-workspace__pane"
+          className="cleargate-workspace__pane"
           urlOverride={rightPaneUrl}
         />
       </div>
@@ -1115,21 +1115,21 @@ export function SplitWorkspace({
 
       {/* Unresolved placeholders panel with manual input */}
       {deanonymizeResult && deanonymizeResult.total_unresolved > 0 && (
-        <div className="velum-workspace__unresolved">
-          <div className="velum-workspace__unresolved-header">
+        <div className="cleargate-workspace__unresolved">
+          <div className="cleargate-workspace__unresolved-header">
             {t('workspace.unresolvedTitle')} ({deanonymizeResult.total_unresolved})
           </div>
-          <p className="velum-workspace__unresolved-hint">
+          <p className="cleargate-workspace__unresolved-hint">
             {t('workspace.unresolvedHint')}
           </p>
-          <ul className="velum-workspace__unresolved-list">
+          <ul className="cleargate-workspace__unresolved-list">
             {deanonymizeResult.unresolved.map((u, i) => (
-              <li key={`${u.normalized}-${i}`} className="velum-workspace__unresolved-item">
+              <li key={`${u.normalized}-${i}`} className="cleargate-workspace__unresolved-item">
                 <code>{u.normalized}</code>
                 <span>{' \u2192 '}</span>
                 <input
                   type="text"
-                  className="velum-workspace__unresolved-input"
+                  className="cleargate-workspace__unresolved-input"
                   placeholder={t('workspace.unresolvedValue')}
                   data-placeholder={u.normalized}
                   defaultValue=""
@@ -1139,10 +1139,10 @@ export function SplitWorkspace({
           </ul>
           <button
             type="button"
-            className="velum-workspace__unresolved-apply"
+            className="cleargate-workspace__unresolved-apply"
             onClick={() => {
               const inputs = document.querySelectorAll<HTMLInputElement>(
-                '.velum-workspace__unresolved-input',
+                '.cleargate-workspace__unresolved-input',
               );
               const resolutions: Array<{ placeholder: string; value: string }> = [];
               inputs.forEach((input) => {
@@ -1164,7 +1164,7 @@ export function SplitWorkspace({
                   );
                 })
                 .catch((e) => {
-                  console.error('[Velum] apply resolutions failed', e);
+                  console.error('[Cleargate] apply resolutions failed', e);
                   setDeanonymizeError(
                     e instanceof Error ? e.message : String(e),
                   );
@@ -1179,7 +1179,7 @@ export function SplitWorkspace({
 
       {/* Deanonymize stats */}
       {deanonymizeResult && (
-        <div className="velum-workspace__deanonymize-stats">
+        <div className="cleargate-workspace__deanonymize-stats">
           <span>{t('workspace.replacementsDone')}: {deanonymizeResult.total_replacements}</span>
           {deanonymizeResult.total_unresolved > 0 && (
             <span> | {t('workspace.unresolvedCount')}: {deanonymizeResult.total_unresolved}</span>
