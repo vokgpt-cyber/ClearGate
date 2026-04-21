@@ -1,16 +1,22 @@
 # CLEARGATE Docker Compose — Pilot profile (CPU-only VM, 32 GB RAM)
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml up -d
-#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml logs -f
-#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml down
+#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml --profile pilot up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml --profile pilot logs -f
+#   docker compose -f docker-compose.yml -f docker-compose.pilot.yml --profile pilot down
+#
+# In practice, use install.bat / start.bat / stop.bat / logs.bat — they wrap
+# these commands. Operators don't need to type them by hand.
 #
 # This override:
-#   - Removes GPU requirements from all services
+#   - Removes GPU requirements from all services (CPU-only VM)
 #   - Uses the full qwen2.5:7b model on CPU (same quality as dev)
-#   - Sets memory limits appropriate for 32 GB VM
-#   - Enables the web frontend profile by default
-#   - Configures CORS for network access
+#   - Sets memory limits appropriate for a 32 GB VM
+#   - Enables the web frontend under the "pilot" profile
+#   - Passes NEXT_PUBLIC_* as BUILD ARGS so the static export bakes in
+#     the real server IP (critical — runtime env does nothing for
+#     Next.js `output: 'export'`)
+#   - Configures CORS for cross-host browser access
 #
 # Note: LLM responses will take 30-60s on CPU vs 1-3s on GPU.
 # Layers 1-2 (regex + NER) are instant regardless.
@@ -22,17 +28,17 @@ services:
       resources:
         reservations:
           devices: []
+          memory: 6G
         limits:
           memory: 8G
-        reservations:
-          memory: 6G
     environment:
       - CLEARGATE_PROFILE=pilot
       - BACKEND_WORKERS=1
       - OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M
       - SPACY_MODEL=ru_core_news_lg
       - GLINER_MODEL=urchade/gliner_medium-v2.1
-      # CORS: allow connections from any machine on the network
+      # CORS: allow connections from any machine on the network.
+      # Safe because our /api/* routes don't rely on cookies.
       - BACKEND_CORS_ORIGINS=*
 
   ollama:
@@ -41,10 +47,9 @@ services:
       resources:
         reservations:
           devices: []
+          memory: 8G
         limits:
           memory: 12G
-        reservations:
-          memory: 8G
     environment:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
@@ -53,8 +58,23 @@ services:
       - OLLAMA_MAX_LOADED_MODELS=1
 
   frontend:
-    profiles: []  # Remove "web" profile gate — always start
+    # The base file has `profiles: [web]` on the frontend. Compose merges
+    # profile arrays by union, so `profiles: []` here would NOT remove
+    # the gate — we'd still need `--profile web`. Instead we add a new
+    # profile "pilot" and the operator scripts always pass `--profile pilot`.
+    profiles:
+      - pilot
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+      # CRITICAL: Next.js `output: 'export'` bakes NEXT_PUBLIC_* into
+      # the static JS at BUILD time. Runtime env does nothing. We pass
+      # the real server IP through build args so pilot users' browsers
+      # know where to call the backend.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000}
     environment:
-      # These will be overridden in .env with actual server IP
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+      # Kept for parity; the baked URL from build args is authoritative.
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:8000}

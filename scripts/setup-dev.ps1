@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Initialize CLEARGATE development environment on Windows 11.
 
@@ -28,17 +28,17 @@ $ErrorActionPreference = "Stop"
 function Write-Step {
     param([string]$Message)
     Write-Host ""
-    Write-Host "▶ $Message" -ForegroundColor Cyan
+    Write-Host ">> $Message" -ForegroundColor Cyan
 }
 
 function Write-OK {
     param([string]$Message)
-    Write-Host "  ✓ $Message" -ForegroundColor Green
+    Write-Host "  [OK] $Message" -ForegroundColor Green
 }
 
 function Write-Skip {
     param([string]$Message)
-    Write-Host "  ⊘ $Message" -ForegroundColor Yellow
+    Write-Host "  [-] $Message" -ForegroundColor Yellow
 }
 
 function Test-Command {
@@ -74,7 +74,7 @@ foreach ($cmd in $prereqs.Keys) {
         Write-OK "$($prereqs[$cmd]) found"
     }
     else {
-        Write-Host "  ✗ $($prereqs[$cmd]) NOT found" -ForegroundColor Red
+        Write-Host "  [X] $($prereqs[$cmd]) NOT found" -ForegroundColor Red
         $missing += $prereqs[$cmd]
     }
 }
@@ -96,7 +96,7 @@ if ($missing.Count -gt 0) {
 # Python version check
 $pythonVersion = & python --version 2>&1
 if ($pythonVersion -notmatch "Python 3\.(1[2-9]|[2-9]\d)") {
-    Write-Host "  ✗ Python version too old: $pythonVersion (need 3.12+)" -ForegroundColor Red
+    Write-Host "  [X] Python version too old: $pythonVersion (need 3.12+)" -ForegroundColor Red
     exit 1
 }
 Write-OK "Python version: $pythonVersion"
@@ -208,7 +208,7 @@ if (-not (Test-Path ".env")) {
     if (Test-Path ".env.example") {
         Copy-Item ".env.example" ".env"
         Write-OK "Created .env from .env.example"
-        Write-Host "  ⚠ Don't forget to fill in API keys in .env" -ForegroundColor Yellow
+        Write-Host "  [!] Don't forget to fill in API keys in .env" -ForegroundColor Yellow
     }
 }
 else {

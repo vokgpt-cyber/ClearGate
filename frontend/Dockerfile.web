@@ -4,10 +4,26 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm install
+# Bundle `serve` into the image so the container doesn't do a lazy install
+# on first start (which slows pilot bring-up and can fail if the VM has
+# restricted outbound network access).
+RUN npm install -g serve@14
 
 COPY . .
+
+# Build-time configuration.
+# Next.js with `output: 'export'` inlines NEXT_PUBLIC_* values into the
+# static JS at build time — the same env vars set at runtime do NOTHING.
+# The pilot compose override passes the real server IP via build args so
+# the baked URL is correct for pilot lawyers' browsers.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_WS_URL=ws://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+
 RUN npm run build
 
 EXPOSE 3000
 
-CMD ["npx", "serve", "out", "-l", "3000"]
+# Serve the static export. `-s` enables SPA fallback so deep links resolve.
+CMD ["serve", "out", "-l", "3000", "-s"]

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Download ML models for CLEARGATE based on deployment profile.
 
@@ -20,7 +20,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "  CLEARGATE Model Download — Profile: $Profile" -ForegroundColor Cyan
+Write-Host "  CLEARGATE Model Download - Profile: $Profile" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -56,7 +56,7 @@ Write-Host "Profile $Profile requires approximately $($models.sizeGB) GB of disk
 Write-Host ""
 
 # 1. spaCy Russian model
-Write-Host "▶ Downloading spaCy: $($models.spacy)" -ForegroundColor Cyan
+Write-Host ">> Downloading spaCy: $($models.spacy)" -ForegroundColor Cyan
 
 if (Test-Path "backend\.venv\Scripts\python.exe") {
     & .\backend\.venv\Scripts\python.exe -m spacy download $models.spacy
@@ -64,11 +64,11 @@ if (Test-Path "backend\.venv\Scripts\python.exe") {
 else {
     & python -m spacy download $models.spacy
 }
-Write-Host "  ✓ spaCy model installed" -ForegroundColor Green
+Write-Host "  [OK] spaCy model installed" -ForegroundColor Green
 
 # 2. GLiNER (downloads on first use via huggingface_hub)
 Write-Host ""
-Write-Host "▶ Pre-downloading GLiNER: $($models.gliner)" -ForegroundColor Cyan
+Write-Host ">> Pre-downloading GLiNER: $($models.gliner)" -ForegroundColor Cyan
 
 $glinerScript = @"
 from gliner import GLiNER
@@ -83,14 +83,14 @@ if (Test-Path "backend\.venv\Scripts\python.exe") {
 else {
     $glinerScript | & python -
 }
-Write-Host "  ✓ GLiNER downloaded" -ForegroundColor Green
+Write-Host "  [OK] GLiNER downloaded" -ForegroundColor Green
 
 # 3. Ollama / Qwen
 Write-Host ""
-Write-Host "▶ Downloading Ollama model: $($models.ollama)" -ForegroundColor Cyan
+Write-Host ">> Downloading Ollama model: $($models.ollama)" -ForegroundColor Cyan
 
 if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
-    Write-Host "  ✗ Ollama not installed. Install from https://ollama.com/" -ForegroundColor Red
+    Write-Host "  [X] Ollama not installed. Install from https://ollama.com/" -ForegroundColor Red
     Write-Host "  Or: winget install Ollama.Ollama" -ForegroundColor Yellow
     exit 1
 }
@@ -100,24 +100,24 @@ try {
     $null = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -ErrorAction Stop
 }
 catch {
-    Write-Host "  ⚠ Ollama service not running. Starting it..." -ForegroundColor Yellow
+    Write-Host "  [!] Ollama service not running. Starting it..." -ForegroundColor Yellow
     Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden
     Start-Sleep -Seconds 3
 }
 
 ollama pull $models.ollama
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "  ✗ Failed to pull Ollama model" -ForegroundColor Red
+    Write-Host "  [X] Failed to pull Ollama model" -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ Ollama model downloaded" -ForegroundColor Green
+Write-Host "  [OK] Ollama model downloaded" -ForegroundColor Green
 
 # Verify
 Write-Host ""
-Write-Host "▶ Verifying installations" -ForegroundColor Cyan
+Write-Host ">> Verifying installations" -ForegroundColor Cyan
 
 ollama list | Select-String $models.ollama.Split(":")[0] | ForEach-Object {
-    Write-Host "  ✓ $_" -ForegroundColor Green
+    Write-Host "  [OK] $_" -ForegroundColor Green
 }
 
 Write-Host ""
