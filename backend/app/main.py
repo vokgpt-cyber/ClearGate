@@ -41,6 +41,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         host=settings.backend_host,
         port=settings.backend_port,
         session_store=str(db_path),
+        # Surfaced for IT diagnosability — these three values are the
+        # most common source of "LLM verification not working" tickets,
+        # so they go into the very first log line on boot.
+        ollama_host=settings.ollama_host,
+        ollama_model=settings.ollama_model,
+        llm_layer_disabled=settings.cleargate_disable_llm_layer,
     )
     yield
     # Shutdown: close store

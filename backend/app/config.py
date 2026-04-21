@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     session_store_dir: str = "data"  # relative to backend/, or absolute path
     session_ttl_minutes: int = 1440  # 24 hours
 
+    # Local LLM (Ollama) — surfaced in settings so startup logging can
+    # show the resolved value without re-reading the env var by hand.
+    ollama_host: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:7b-instruct-q4_K_M"
+
+    # Kill switch for the LLM verification layer. On CPU-only pilot boxes
+    # LLM verification adds 30-60 s per request; IT can disable it without
+    # touching code by setting CLEARGATE_DISABLE_LLM_LAYER=true in .env.
+    # Layers 1-2 (regex + spaCy NER) keep working — anonymisation quality
+    # drops slightly but interactivity is restored.
+    cleargate_disable_llm_layer: bool = False
+
     # Version (not from env -- hardcoded to match pyproject.toml)
     version: str = "0.1.0-alpha"
 

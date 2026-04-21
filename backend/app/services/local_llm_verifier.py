@@ -7,13 +7,22 @@ This is Layer 3 — the slowest but most context-aware layer.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 
 import structlog
 
 from app.models.entities import DetectedEntity
 
 logger = structlog.get_logger(__name__)
+
+# Cold-start retry knobs — on `docker compose up` the backend often races
+# ollama. Rather than fail the very first verification call, wait for the
+# server to come up. Only the first attempt retries; steady-state latency
+# is unaffected.
+_FIRST_CALL_RETRIES = 6
+_FIRST_CALL_BACKOFF_SECONDS = 5.0
 
 VERIFICATION_PROMPT = """Ты эксперт по обработке юридических текстов на русском языке. Тебе дан текст и список кандидатов в чувствительные сущности, найденных автоматически.
 
@@ -47,20 +56,34 @@ class LocalLLMVerifier:
 
     Args:
         model: Ollama model name (e.g., "qwen2.5:7b-instruct-q4_K_M").
+        host: Explicit Ollama HTTP host (e.g., "http://ollama:11434").
+            If not given, falls back to the OLLAMA_HOST env var, then to
+            http://localhost:11434.
 
     The verifier is optional — the pipeline works without it (degraded mode).
     """
 
-    def __init__(self, model: str = "qwen2.5:7b-instruct-q4_K_M") -> None:
+    def __init__(
+        self,
+        model: str = "qwen2.5:7b-instruct-q4_K_M",
+        host: str | None = None,
+    ) -> None:
         self.model = model
+        # Resolve and freeze the host once. We pass it explicitly to the
+        # AsyncClient (instead of relying on the OLLAMA_HOST env var) so
+        # that the value we *log* matches the value the client actually
+        # talks to — IT can compare the two during diagnosis.
+        self.host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
         self._client: object | None = None
+        self._first_call_done = False
+        logger.info("llm_verifier.configured", host=self.host, model=self.model)
 
     def _get_client(self) -> object:
         """Lazy-init Ollama async client."""
         if self._client is None:
             import ollama
 
-            self._client = ollama.AsyncClient()
+            self._client = ollama.AsyncClient(host=self.host)
         return self._client
 
     async def verify_and_refine(
@@ -92,13 +115,7 @@ class LocalLLMVerifier:
         )
 
         try:
-            client = self._get_client()
-            response = await client.generate(  # type: ignore[union-attr]
-                model=self.model,
-                prompt=prompt,
-                format="json",
-                options={"temperature": 0.0},
-            )
+            response = await self._generate_with_retry(prompt)
 
             result = json.loads(response["response"])
             verified = self._parse_llm_results(result, candidates)
@@ -114,9 +131,47 @@ class LocalLLMVerifier:
             logger.warning(
                 "llm_verifier.failed",
                 candidate_count=len(candidates),
+                host=self.host,
+                model=self.model,
                 exc_info=True,
             )
             return candidates  # graceful degradation
+
+    async def _generate_with_retry(self, prompt: str) -> dict:
+        """Call ollama.generate(), retrying the very first call.
+
+        Subsequent calls go through immediately. Only the cold-start case
+        (where ollama is still warming up after `docker compose up`) gets
+        the retry treatment, so steady-state latency is unaffected.
+        """
+        client = self._get_client()
+        attempts = 1 if self._first_call_done else _FIRST_CALL_RETRIES
+        last_exc: Exception | None = None
+        for attempt in range(1, attempts + 1):
+            try:
+                response = await client.generate(  # type: ignore[union-attr]
+                    model=self.model,
+                    prompt=prompt,
+                    format="json",
+                    options={"temperature": 0.0},
+                )
+                self._first_call_done = True
+                return response
+            except Exception as exc:
+                last_exc = exc
+                if attempt >= attempts:
+                    break
+                logger.warning(
+                    "llm_verifier.retry",
+                    attempt=attempt,
+                    of=attempts,
+                    host=self.host,
+                    model=self.model,
+                    error=str(exc),
+                )
+                await asyncio.sleep(_FIRST_CALL_BACKOFF_SECONDS)
+        assert last_exc is not None
+        raise last_exc
 
     def _parse_llm_results(
         self,

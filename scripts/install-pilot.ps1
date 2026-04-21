@@ -166,13 +166,24 @@ if ($needNewKey) {
 
 # URLs and CORS - always rewrite so the IP stays fresh if operator re-runs
 Set-EnvLine -Path $envPath -Key "CLEARGATE_PROFILE" -Value "pilot"
+Set-EnvLine -Path $envPath -Key "OLLAMA_HOST"      -Value "http://ollama:11434"
 Set-EnvLine -Path $envPath -Key "OLLAMA_MODEL"     -Value "qwen2.5:7b-instruct-q4_K_M"
 Set-EnvLine -Path $envPath -Key "NEXT_PUBLIC_API_URL" -Value $apiUrl
 Set-EnvLine -Path $envPath -Key "NEXT_PUBLIC_WS_URL"  -Value $wsUrl
 Set-EnvLine -Path $envPath -Key "BACKEND_CORS_ORIGINS" -Value "*"
+# COMPOSE_FILE / COMPOSE_PROFILES tell every bare "docker compose ..."
+# command run from this folder to automatically load the pilot override
+# and activate the pilot profile. Without this, if someone runs "docker
+# compose restart" or "docker compose down" without the -f/--profile
+# flags, the frontend service drops out of the effective config and
+# disappears. With COMPOSE_FILE in .env, the correct files are always
+# loaded. Windows uses ";" as the path separator for this variable.
+Set-EnvLine -Path $envPath -Key "COMPOSE_FILE"     -Value "docker-compose.yml;docker-compose.pilot.yml"
+Set-EnvLine -Path $envPath -Key "COMPOSE_PROFILES" -Value "pilot"
 Write-Ok "NEXT_PUBLIC_API_URL=$apiUrl"
 Write-Ok "NEXT_PUBLIC_WS_URL=$wsUrl"
 Write-Ok "BACKEND_CORS_ORIGINS=*"
+Write-Ok "COMPOSE_FILE + COMPOSE_PROFILES (bare 'docker compose' now picks up pilot)"
 
 # --- 4. Firewall -----------------------------------------------------------
 if (-not $SkipFirewall) {
@@ -239,18 +250,4 @@ if (-not $SkipModelPull) {
 
 # --- 7. Done ----------------------------------------------------------------
 Write-Host ""
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "  Cleargate is running." -ForegroundColor Green
-Write-Host "  Share this URL with pilot users:" -ForegroundColor Green
-Write-Host ""
-Write-Host "      $appUrl" -ForegroundColor White -BackgroundColor DarkGreen
-Write-Host ""
-Write-Host "  Helper scripts (double-click any of these):" -ForegroundColor Green
-Write-Host "      start.bat     - start containers"
-Write-Host "      stop.bat      - stop containers"
-Write-Host "      status.bat    - show container state"
-Write-Host "      logs.bat      - tail logs"
-Write-Host "      update.bat    - git pull + rebuild"
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host ""
-Read-Host "Press Enter to close" | Out-Null
+Write-Host "====

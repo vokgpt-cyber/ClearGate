@@ -113,7 +113,23 @@ class SessionManager:
         custom_entities: list[str] | None = None,
         spacy_model: str | None = "ru_core_news_sm",
     ) -> Session:
-        """Create a new anonymization session."""
+        """Create a new anonymization session.
+
+        If ``CLEARGATE_DISABLE_LLM_LAYER=true`` is set in the environment,
+        the slow LLM verification layer is force-disabled here even when
+        the caller asked for LLM verification. This lets IT turn off the
+        slow CPU-bound layer on a pilot box without a code change.
+        """
+        # Late import to avoid a circular module-load order at startup.
+        from app.config import settings
+
+        if settings.cleargate_disable_llm_layer and enable_llm_layer:
+            logger.info(
+                "session.llm_layer_disabled_by_env",
+                reason="CLEARGATE_DISABLE_LLM_LAYER=true",
+            )
+            enable_llm_layer = False
+
         if session_id is None:
             session_id = secrets.token_urlsafe(16)
         session = Session(
