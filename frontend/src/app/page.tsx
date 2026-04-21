@@ -18,11 +18,14 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
 import { createSession, listSessions, uploadDocx } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocale } from '@/hooks/useLocale';
 
 interface LoadedDoc {
   sessionId: string;
@@ -31,14 +34,32 @@ interface LoadedDoc {
 }
 
 export default function Home() {
+  // Protected-route gate. While the initial /me probe is running we
+  // render a minimal loading card instead of the full shell; once it
+  // resolves, an unauthenticated caller is redirected to /login and
+  // the hook below bails out before fetching any protected data.
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLocale();
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [authLoading, user, router]);
+  const isAuthed = !!user;
+
   const [sessions, setSessions] = useState<LoadedDoc[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isPicking, setIsPicking] = useState(false);
   const [isWorking, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore persisted sessions from the backend on mount
+  // Restore persisted sessions from the backend on mount — but only
+  // once the auth check has confirmed the user is signed in. Firing
+  // listSessions() while unauthenticated triggers an avoidable 401
+  // that clutters the backend logs and confuses pilot operators.
   useEffect(() => {
+    if (!isAuthed) return;
     let cancelled = false;
     listSessions()
       .then((metas) => {
@@ -59,7 +80,7 @@ export default function Home() {
         // Backend may not be ready yet — silently ignore
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [isAuthed]);
 
   const handleFile = useCallback(async (file: File) => {
     setWorking(true);
@@ -108,6 +129,17 @@ export default function Home() {
   }));
 
   const showWorkspace = activeDoc && !isPicking;
+
+  // Render a neutral splash until the auth state is resolved; once
+  // resolved, unauthenticated callers are being redirected to /login
+  // by the effect above, so we don't leak any protected UI.
+  if (authLoading || !isAuthed) {
+    return (
+      <div className="cg-login cg-login--loading">
+        <div className="cg-login__checking">{t('auth.checking')}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="cleargate-app">

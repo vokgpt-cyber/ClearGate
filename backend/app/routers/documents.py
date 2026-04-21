@@ -3,13 +3,18 @@
 For DOCX uploads we additionally keep the raw bytes inside the session so
 that the frontend can render the document with Word-like fidelity via
 docx-preview (iteration 1 of the new anonymizer UX).
+
+Sprint B.3: every session-scoped endpoint requires an authenticated user
+and looks up / mutates only sessions owned by that user.  Cross-user
+access returns 404 indistinguishably from a missing session.
 """
 
 from __future__ import annotations
 
+from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
 import structlog
@@ -23,11 +28,14 @@ from app.models.api import (
     UnresolvedPlaceholder,
     UploadResponse,
 )
+from app.routers.auth import get_current_user
+from app.routers.sessions import get_session_manager
 from app.services.doc_processor import DocumentProcessor
 from app.services.docx_deanonymize import deanonymize_docx, scan_placeholders
 from app.services.docx_export import EntitySubstitution, export_anonymized_docx
 from app.services.docx_utils import copy_page_setup
 from app.services.session_manager import SessionManager
+from app.services.user_store import UserRecord
 
 logger = structlog.get_logger(__name__)
 
@@ -44,6 +52,8 @@ _DOCX_CONTENT_TYPE = (
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
     session_id: str | None = Query(
         default=None,
         description=(
@@ -74,8 +84,7 @@ async def upload_document(
 
     document_id: str | None = None
     if suffix == "docx" and session_id is not None:
-        manager = SessionManager.instance()
-        session = manager.get_session(session_id)
+        session = sm.get_session(session_id, user_id=current_user.user_id)
         if session is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -84,7 +93,7 @@ async def upload_document(
         session.docx_bytes = content
         session.docx_filename = file.filename
         document_id = session_id
-        manager.save_session(session_id)
+        sm.save_session(session_id, user_id=current_user.user_id)
         logger.info(
             "document.attached_to_session",
             session_id=session_id,
@@ -110,10 +119,13 @@ async def upload_document(
 
 
 @router.get("/{session_id}/raw")
-async def get_raw_document(session_id: str) -> Response:
+async def get_raw_document(
+    session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> Response:
     """Return the raw DOCX bytes stored for this session."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -140,8 +152,15 @@ async def get_raw_document(session_id: str) -> Response:
 
 
 @router.post("/parse-text", response_model=UploadResponse)
-async def parse_text(request: ParseTextRequest) -> UploadResponse:
-    """Accept plain text directly (no file upload needed)."""
+async def parse_text(
+    request: ParseTextRequest,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+) -> UploadResponse:
+    """Accept plain text directly (no file upload needed).
+
+    Auth-gated like every other /api/documents endpoint -- we do not want
+    an anonymous caller using the backend as a free NLP endpoint.
+    """
     return UploadResponse(
         text=request.text,
         format="txt",
@@ -166,11 +185,12 @@ class ExportAnonymizedRequest(BaseModel):
 @router.post("/{session_id}/export-anonymized")
 async def export_anonymized(
     session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
     payload: ExportAnonymizedRequest = Body(...),
 ) -> Response:
     """Return the uploaded DOCX with every non-rejected entity replaced."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -195,7 +215,7 @@ async def export_anonymized(
     session.registry.record_surface_forms(
         [(s.text, s.placeholder) for s in subs]
     )
-    manager.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     try:
         output_bytes = export_anonymized_docx(session.docx_bytes, subs)
@@ -243,10 +263,13 @@ async def export_anonymized(
 
 
 @router.get("/{session_id}/response-raw")
-async def get_response_raw(session_id: str) -> Response:
+async def get_response_raw(
+    session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> Response:
     """Return the deanonymized DOCX bytes for client-side preview."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -285,10 +308,11 @@ async def get_response_raw(session_id: str) -> Response:
 async def import_response(
     session_id: str,
     file: UploadFile,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> ImportResponseResult:
     """Import an LLM-response DOCX for deanonymization."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -309,7 +333,7 @@ async def import_response(
         content = copy_page_setup(original, content)
 
     session.response_docx_bytes = content
-    manager.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     placeholders = scan_placeholders(result.text)
 
@@ -339,11 +363,12 @@ class DeanonymizeRequest(BaseModel):
 @router.post("/{session_id}/deanonymize-docx", response_model=DeanonymizeDocxResult)
 async def deanonymize_docx_endpoint(
     session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
     payload: DeanonymizeRequest = Body(default=DeanonymizeRequest()),
 ) -> DeanonymizeDocxResult:
     """Deanonymize the previously imported response DOCX."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -377,7 +402,7 @@ async def deanonymize_docx_endpoint(
         raise HTTPException(status_code=500, detail="Deanonymization failed") from exc
 
     session.deanonymized_docx_bytes = result.docx_bytes
-    manager.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     unresolved = [
         UnresolvedPlaceholder(
@@ -391,7 +416,7 @@ async def deanonymize_docx_endpoint(
     # Build restoration list with entity_type resolved from the registry so
     # the frontend can apply the matching overlay color/style per type.
     restorations: list[Restoration] = []
-    reverse = session.registry._reverse  # placeholder → MappingEntry
+    reverse = session.registry._reverse  # placeholder -> MappingEntry
     for m in result.replacements:
         if m.real_value is None:
             continue
@@ -424,11 +449,12 @@ async def deanonymize_docx_endpoint(
 @router.post("/{session_id}/export-deanonymized")
 async def export_deanonymized(
     session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
     payload: ExportDeanonymizedRequest = Body(default=ExportDeanonymizedRequest()),
 ) -> Response:
     """Export the deanonymized DOCX, optionally applying manual resolutions."""
-    manager = SessionManager.instance()
-    session = manager.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -459,7 +485,7 @@ async def export_deanonymized(
         raise HTTPException(status_code=500, detail="Deanonymization export failed") from exc
 
     session.deanonymized_docx_bytes = result.docx_bytes
-    manager.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     original = session.docx_filename or "document.docx"
     stem = original[:-5] if original.lower().endswith(".docx") else original

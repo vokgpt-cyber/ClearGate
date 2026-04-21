@@ -22,7 +22,9 @@ param(
     [string]$ServerIp = "",
     [switch]$ResetEnv,
     [switch]$SkipFirewall,
-    [switch]$SkipModelPull
+    [switch]$SkipModelPull,
+    [switch]$SkipSeedUsers,
+    [string]$TestPassword = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -260,6 +262,55 @@ if (-not $SkipModelPull) {
     Write-Warn2 "-SkipModelPull - skipping; pull manually when ready"
 }
 
+# --- 6.5. Seed pilot test users ------------------------------------------
+# The first time install.bat runs on a fresh machine the users.db is empty,
+# so nobody can log in. Seed two demo accounts (test1 / test2) that the
+# operator can hand out to the two pilot lawyers. Subsequent runs see a
+# non-empty table and skip this block via `seed --if-empty`. The installer
+# never overwrites an existing account - use `users.bat reset-password`
+# for that, not a re-run of install.bat.
+if (-not $SkipSeedUsers) {
+    Write-Step "Seeding pilot users (test1, test2)"
+    if (-not $TestPassword) { $TestPassword = "cleargate-pilot" }
+
+    # Sanity-check the backend container is up before docker exec;
+    # a half-booted stack would return a confusing error otherwise.
+    $backendUp = $false
+    for ($i = 1; $i -le 12; $i++) {
+        Start-Sleep -Seconds 2
+        $state = docker inspect --format '{{.State.Status}}' cleargate-backend 2>$null
+        if ($state -eq "running") { $backendUp = $true; break }
+        Write-Host "    waiting for backend container... ($i/12, status=$state)" -ForegroundColor DarkGray
+    }
+    if (-not $backendUp) {
+        Write-Warn2 "Backend container did not reach 'running' within 24s. Skipping seed."
+        Write-Host "      Retry manually once the backend is up:" -ForegroundColor DarkGray
+        Write-Host "      users.bat seed --username test1 --password-stdin --if-empty" -ForegroundColor DarkGray
+    } else {
+        foreach ($u in @("test1","test2")) {
+            # docker exec -i (no -t) keeps stdin open without allocating a
+            # TTY, which is exactly what --password-stdin wants. --if-empty
+            # makes the whole seed a no-op once any user exists, so it is
+            # safe to re-run install.bat without clobbering real accounts.
+            try {
+                $out = $TestPassword | & docker exec -i cleargate-backend cleargate-admin seed --username $u --password-stdin --if-empty 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    if ($out) { Write-Host "    $out" -ForegroundColor DarkGray }
+                    Write-Ok "seed: $u"
+                } else {
+                    Write-Warn2 "seed: $u failed (exit $LASTEXITCODE): $out"
+                }
+            } catch {
+                Write-Warn2 "seed: $u raised $($_.Exception.Message)"
+            }
+        }
+        Write-Host "    Default password for seeded users: $TestPassword" -ForegroundColor DarkGray
+        Write-Warn2 "Change these passwords before handing them out: users.bat reset-password --username test1"
+    }
+} else {
+    Write-Warn2 "-SkipSeedUsers - not seeding users; create them manually with users.bat"
+}
+
 # --- 7. Done ----------------------------------------------------------------
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green
@@ -273,6 +324,7 @@ Write-Host "      start.bat     - start containers"
 Write-Host "      stop.bat      - stop containers"
 Write-Host "      status.bat    - show container state"
 Write-Host "      logs.bat      - tail logs"
+Write-Host "      users.bat     - manage pilot user accounts"
 Write-Host "      update.bat    - git pull + rebuild"
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""

@@ -9,8 +9,10 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/hooks/useTheme';
 import { useLocale } from '@/hooks/useLocale';
+import { useAuth } from '@/hooks/useAuth';
 import { healthCheck } from '@/lib/api';
 
 const APP_VERSION = 'v0.7.3';
@@ -18,7 +20,14 @@ const APP_VERSION = 'v0.7.3';
 export function Header() {
   const { theme, toggleTheme } = useTheme();
   const { locale, setLocale, t } = useLocale();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [backendOk, setBackendOk] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +53,14 @@ export function Header() {
         <div className="cleargate-header__left" />
 
         <div className="cleargate-header__right">
+          {user ? (
+            <span
+              className="cleargate-header__user"
+              title={`${t('auth.signedInAs')} ${user.username}`}
+            >
+              {user.username}
+            </span>
+          ) : null}
           <button
             type="button"
             className="cleargate-header__pill"
@@ -60,6 +77,16 @@ export function Header() {
           >
             {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
+          {user ? (
+            <button
+              type="button"
+              className="cleargate-header__pill"
+              onClick={handleLogout}
+              aria-label={t('auth.logout')}
+            >
+              {t('auth.logout')}
+            </button>
+          ) : null}
         </div>
       </header>
 

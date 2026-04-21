@@ -1,8 +1,14 @@
-"""Anonymization and entity management endpoints."""
+"""Anonymization and entity management endpoints.
+
+Sprint B.3: every endpoint requires an authenticated user and scopes
+session lookups/mutations by ``user_id``.  Cross-user access returns 404
+indistinguishably from a missing session.
+"""
 
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -17,8 +23,10 @@ from app.models.api import (
     DeanonymizeResponse,
 )
 from app.models.entities import DetectedEntity
-from app.services.session_manager import SessionManager
+from app.routers.auth import get_current_user
 from app.routers.sessions import get_session_manager
+from app.services.session_manager import SessionManager
+from app.services.user_store import UserRecord
 
 
 def _stable_entity_id(entity: DetectedEntity) -> str:
@@ -39,10 +47,11 @@ router = APIRouter(prefix="/api/sessions/{session_id}", tags=["anonymize"])
 async def anonymize(
     session_id: str,
     request: AnonymizeRequest,
-    sm: SessionManager = Depends(get_session_manager),
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> AnonymizeResponse:
     """Run NER pipeline and return anonymized text with detected entities."""
-    session = sm.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -58,12 +67,12 @@ async def anonymize(
     # Attach the placeholder that the registry assigned to each entity so
     # the frontend can render the anonymized view (substituting ranges
     # with placeholders) without having to parse `anonymized_text` itself.
-    # `get_or_create_placeholder` is idempotent — `anonymize_text` above
+    # `get_or_create_placeholder` is idempotent -- `anonymize_text` above
     # already created the entries, so these lookups are cheap hits.
     for e in entities:
         try:
             placeholder = session.registry.get_or_create_placeholder(e)
-        except Exception:  # pragma: no cover — defensive
+        except Exception:  # pragma: no cover -- defensive
             placeholder = None
         if placeholder is not None:
             e.metadata["placeholder"] = placeholder
@@ -86,7 +95,7 @@ async def anonymize(
     )
 
     # Persist session state after registry mutation
-    sm.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     return AnonymizeResponse(
         anonymized_text=anonymized,
@@ -99,10 +108,11 @@ async def anonymize(
 async def deanonymize(
     session_id: str,
     request: DeanonymizeRequest,
-    sm: SessionManager = Depends(get_session_manager),
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> DeanonymizeResponse:
     """Replace placeholders in text with original values."""
-    session = sm.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return DeanonymizeResponse(text=session.registry.deanonymize_text(request.text))
@@ -112,14 +122,15 @@ async def deanonymize(
 async def send_to_llm(
     session_id: str,
     request: DeanonymizeRequest,
-    sm: SessionManager = Depends(get_session_manager),
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> dict:
     """Send anonymized text to Cloud LLM and return deanonymized response.
 
     This is a synchronous (non-streaming) alternative to the WebSocket endpoint.
     The request.text should contain the prompt + anonymized document.
     """
-    session = sm.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -161,23 +172,24 @@ async def send_to_llm(
 async def add_entity(
     session_id: str,
     request: AddEntityRequest,
-    sm: SessionManager = Depends(get_session_manager),
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> AddEntityResponse:
     """Manually register a custom entity selected by the user.
 
     Used by the UI "Add as entity" flow: user selects text in the left
     panel, picks a type from the popover, frontend POSTs here. We create
-    a :class:`DetectedEntity`, register it in the session's
+    a :class:`DetectedEntity`, register it in the session\'s
     :class:`EntityRegistry` (which assigns a consistent placeholder like
     the pipeline does), and hand back the id + placeholder so the client
     can render the new overlay immediately.
 
-    The entity is NOT persisted on the backend — the source of truth for
+    The entity is NOT persisted on the backend -- the source of truth for
     the set of currently-active entities is the frontend workspace state.
     This keeps the backend stateless per anonymization run and avoids
     having to reconcile state on reload (iteration 3 scope).
     """
-    session = sm.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -212,7 +224,7 @@ async def add_entity(
     )
 
     # Persist after manual entity addition
-    sm.save_session(session_id)
+    sm.save_session(session_id, user_id=current_user.user_id)
 
     return AddEntityResponse(id=entity_id, placeholder=placeholder, entity=entity)
 
@@ -220,10 +232,11 @@ async def add_entity(
 @router.get("/entities")
 async def get_entities(
     session_id: str,
-    sm: SessionManager = Depends(get_session_manager),
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> dict:
     """Get all detected entities for this session."""
-    session = sm.get_session(session_id)
+    session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     entries = session.registry.get_all_entries()

@@ -147,5 +147,18 @@
   "locale": {
     "ru": "Русский",
     "en": "English"
+  },
+  "auth": {
+    "loginTitle": "Вход в CLEARGATE",
+    "loginSubtitle": "Анонимизация правовых документов",
+    "username": "Логин",
+    "password": "Пароль",
+    "submit": "Войти",
+    "submitting": "Входим…",
+    "errorInvalid": "Неверный логин или пароль",
+    "errorNetwork": "Сервер недоступен",
+    "logout": "Выйти",
+    "signedInAs": "Вы вошли как",
+    "checking": "Проверяем сессию…"
   }
 }

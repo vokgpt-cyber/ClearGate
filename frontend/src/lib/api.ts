@@ -31,6 +31,11 @@ export { API_URL, wsUrl };
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    // credentials:'include' is required so the cg_session cookie rides along
+    // with every API call; without it the browser strips cookies on
+    // cross-origin requests (local dev: :3000 → :8000) and the backend
+    // treats the user as unauthenticated.
+    credentials: 'include',
     ...options,
   });
   if (!response.ok) {
@@ -65,7 +70,7 @@ export async function uploadDocx(
   formData.append('file', file);
 
   const url = `${API_URL}/api/documents/upload?session_id=${encodeURIComponent(sessionId)}`;
-  const response = await fetch(url, { method: 'POST', body: formData });
+  const response = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Upload failed (${response.status}): ${error}`);
@@ -206,6 +211,7 @@ export async function exportAnonymizedDocx(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      credentials: 'include',
     },
   );
   if (!response.ok) {
@@ -297,7 +303,7 @@ export async function importResponseDocx(
 
   const response = await fetch(
     `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/import-response`,
-    { method: 'POST', body: formData },
+    { method: 'POST', body: formData, credentials: 'include' },
   );
   if (!response.ok) {
     const errorText = await response.text();
@@ -325,6 +331,7 @@ export async function deanonymizeDocx(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      credentials: 'include',
     },
   );
   if (!response.ok) {
@@ -350,6 +357,7 @@ export async function exportDeanonymizedDocx(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      credentials: 'include',
     },
   );
   if (!response.ok) {
@@ -374,4 +382,75 @@ export async function exportDeanonymizedDocx(
   }
 
   return { blob, filename };
+}
+
+
+// ── Sprint B.4: auth helpers ─────────────────────────────────────────────
+
+/** Public user view returned by the backend. */
+export interface AuthUser {
+  user_id: string;
+  username: string;
+  is_active: boolean;
+}
+
+/** Shape of a successful POST /api/auth/login response. */
+export interface LoginResponse {
+  user: AuthUser;
+}
+
+/**
+ * POST /api/auth/login — exchange credentials for a session cookie.
+ *
+ * On success the backend sets the `cg_session` HttpOnly cookie and
+ * returns the authenticated user; callers should stash the user in
+ * AuthContext so the rest of the app knows who is logged in.
+ *
+ * On 401 the backend replies with a generic "Invalid username or
+ * password" detail; we preserve that via the shared `request()`
+ * helper's Error message so the login form can surface it.
+ */
+export async function login(username: string, password: string): Promise<AuthUser> {
+  const res = await request<LoginResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+  return res.user;
+}
+
+/**
+ * POST /api/auth/logout — clear the session cookie on the server.
+ *
+ * The endpoint returns 204 No Content with no body, so we bypass the
+ * JSON-parsing `request()` helper and call fetch directly. This is a
+ * best-effort call: if the network fails we still want the UI to
+ * forget the local user, so the caller should clear AuthContext state
+ * regardless of what this returns.
+ */
+export async function logout(): Promise<void> {
+  await fetch(`${API_URL}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+}
+
+/**
+ * GET /api/auth/me — resolve the currently authenticated user from the
+ * session cookie.
+ *
+ * Returns `null` when the cookie is missing / expired / invalid — that
+ * is the "not logged in" signal. Any other failure surfaces as a
+ * thrown Error so unexpected backend problems don't silently drop the
+ * user into an unauthenticated state and mask bugs.
+ */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const response = await fetch(`${API_URL}/api/auth/me`, {
+    credentials: 'include',
+  });
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API error ${response.status}: ${body}`);
+  }
+  return (await response.json()) as AuthUser;
 }

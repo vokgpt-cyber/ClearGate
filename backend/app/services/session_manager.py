@@ -5,6 +5,12 @@ Sessions auto-expire after a configurable TTL.
 
 When a SessionStore is provided, sessions are transparently
 persisted to SQLite and can survive backend restarts.
+
+Sprint B.3: every session is owned by a user.  All public accessor
+methods require a ``user_id`` and return/mutate only sessions the
+caller owns.  Cross-user access returns the same "session not found"
+answer as a missing session, so nothing leaks about the existence of
+other users' data.
 """
 
 from __future__ import annotations
@@ -37,10 +43,12 @@ class Session:
         enable_llm_layer: bool,
         custom_entities: list[str],
         master_key: bytes,
+        user_id: str,
         spacy_model: str | None = "ru_core_news_sm",
         created_at: datetime | None = None,
     ) -> None:
         self.session_id = session_id
+        self.user_id = user_id
         self.locale = locale
         self.enable_llm_layer = enable_llm_layer
         self.custom_entities = custom_entities
@@ -105,21 +113,29 @@ class SessionManager:
     def store(self) -> SessionStore | None:
         return self._store
 
+    # ------------------------------------------------------------------
+    # Public API -- every method is scoped to a user_id.
+    # ------------------------------------------------------------------
+
     def create_session(
         self,
+        user_id: str,
         session_id: str | None = None,
         locale: str = "ru",
         enable_llm_layer: bool = False,
         custom_entities: list[str] | None = None,
         spacy_model: str | None = "ru_core_news_sm",
     ) -> Session:
-        """Create a new anonymization session.
+        """Create a new anonymization session owned by ``user_id``.
 
         If ``CLEARGATE_DISABLE_LLM_LAYER=true`` is set in the environment,
         the slow LLM verification layer is force-disabled here even when
         the caller asked for LLM verification. This lets IT turn off the
         slow CPU-bound layer on a pilot box without a code change.
         """
+        if not user_id:
+            raise ValueError("create_session requires a non-empty user_id")
+
         # Late import to avoid a circular module-load order at startup.
         from app.config import settings
 
@@ -134,6 +150,7 @@ class SessionManager:
             session_id = secrets.token_urlsafe(16)
         session = Session(
             session_id=session_id,
+            user_id=user_id,
             locale=locale,
             enable_llm_layer=enable_llm_layer,
             custom_entities=custom_entities or [],
@@ -142,27 +159,49 @@ class SessionManager:
         )
         self._sessions[session_id] = session
         self._persist(session)
-        logger.info("session.created", session_id=session_id, locale=locale)
+        logger.info(
+            "session.created",
+            session_id=session_id, user_id=user_id, locale=locale,
+        )
         return session
 
-    def get_session(self, session_id: str) -> Session | None:
-        """Get session by ID, or None if not found or expired.
+    def get_session(self, session_id: str, user_id: str) -> Session | None:
+        """Get session by ID scoped to ``user_id``.
 
-        If the session is not in RAM but exists on disk, it is
-        hydrated from the persisted state.
+        Returns None if:
+          * the session does not exist, or
+          * it has expired, or
+          * it is owned by a different user.
+
+        If the session is not in RAM but a matching row exists on disk
+        for this user, it is hydrated.
         """
+        if not user_id:
+            return None
         session = self._sessions.get(session_id)
+        if session is not None and session.user_id != user_id:
+            # Somebody else's live session -- pretend it does not exist.
+            return None
         if session is None and self._store is not None:
-            session = self._hydrate_from_store(session_id)
+            session = self._hydrate_from_store(session_id, user_id)
         if session is None:
             return None
         if self._is_expired(session):
-            self.close_session(session_id)
+            self.close_session(session_id, user_id)
             return None
         return session
 
-    def close_session(self, session_id: str) -> None:
-        """Close session and securely clear all data (RAM + disk)."""
+    def close_session(self, session_id: str, user_id: str) -> None:
+        """Close session and securely clear all data (RAM + disk).
+
+        Only closes the session if it is owned by ``user_id``.  Calls
+        for somebody else's session are a silent no-op so nothing leaks.
+        """
+        if not user_id:
+            return
+        session = self._sessions.get(session_id)
+        if session is not None and session.user_id != user_id:
+            return
         session = self._sessions.pop(session_id, None)
         if session:
             session.registry.clear()
@@ -172,20 +211,24 @@ class SessionManager:
             session.response_docx_filename = None
             session.deanonymized_docx_bytes = None
         if self._store is not None:
-            self._store.delete_session(session_id)
-        logger.info("session.closed", session_id=session_id)
+            self._store.delete_session(session_id, user_id=user_id)
+        logger.info("session.closed", session_id=session_id, user_id=user_id)
 
-    def save_session(self, session_id: str) -> None:
+    def save_session(self, session_id: str, user_id: str) -> None:
         """Explicitly persist current state to disk.
 
         Called by routers after mutations (anonymize, upload, etc.).
+        No-op if the session is not owned by ``user_id``.
         """
         session = self._sessions.get(session_id)
-        if session is not None:
-            self._persist(session)
+        if session is None or session.user_id != user_id:
+            return
+        self._persist(session)
 
-    def list_sessions(self) -> list[dict]:
-        """List all persisted sessions (metadata only, no blobs)."""
+    def list_sessions(self, user_id: str) -> list[dict]:
+        """List persisted sessions for ``user_id`` (metadata only, no blobs)."""
+        if not user_id:
+            return []
         if self._store is None:
             return [
                 {
@@ -197,9 +240,9 @@ class SessionManager:
                     "docx_filename": s.docx_filename,
                 }
                 for s in self._sessions.values()
-                if not self._is_expired(s)
+                if s.user_id == user_id and not self._is_expired(s)
             ]
-        rows = self._store.list_sessions()
+        rows = self._store.list_sessions(user_id=user_id)
         result = []
         for row in rows:
             mem_session = self._sessions.get(row["session_id"])
@@ -234,6 +277,7 @@ class SessionManager:
             registry_blob = None
         self._store.save_session(
             session_id=session.session_id,
+            user_id=session.user_id,
             locale=session.locale,
             created_at=session.created_at,
             custom_entities=session.custom_entities,
@@ -249,19 +293,23 @@ class SessionManager:
             deanonymized_docx_bytes=session.deanonymized_docx_bytes,
         )
 
-    def _hydrate_from_store(self, session_id: str) -> Session | None:
-        """Restore a session from disk into RAM."""
+    def _hydrate_from_store(self, session_id: str, user_id: str) -> Session | None:
+        """Restore a session from disk into RAM, scoped to ``user_id``."""
         if self._store is None:
             return None
-        data = self._store.load_session(session_id)
+        data = self._store.load_session(session_id, user_id=user_id)
         if data is None:
             return None
         created_at = datetime.fromisoformat(data["created_at"])
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=UTC)
         custom_entities = json.loads(data.get("custom_entities", "[]"))
+        # Fallback is defence in depth: the store already filtered by
+        # user_id, but if the row predates Sprint B.3 and happens to
+        # match the session_id, we still require a user_id to hydrate.
         session = Session(
             session_id=session_id,
+            user_id=data.get("user_id") or user_id,
             locale=data["locale"],
             enable_llm_layer=bool(data.get("enable_llm_layer", 0)),
             custom_entities=custom_entities,
@@ -289,7 +337,7 @@ class SessionManager:
         session.response_docx_filename = data.get("response_docx_filename")
         session.deanonymized_docx_bytes = data.get("deanonymized_docx_bytes")
         self._sessions[session_id] = session
-        logger.info("session.hydrated", session_id=session_id)
+        logger.info("session.hydrated", session_id=session_id, user_id=user_id)
         return session
 
     def _is_expired(self, session: Session) -> bool:

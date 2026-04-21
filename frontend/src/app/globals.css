@@ -269,6 +269,163 @@ h1, h2, h3, h4 {
   background-color: var(--accent-soft);
 }
 
+.cleargate-header__user {
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--accent-soft);
+}
+
+/* ============================================================
+   Login screen (Sprint B.4)
+   ============================================================ */
+
+.cg-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.cg-login--loading .cg-login__checking {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.cg-login__card {
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  background-color: var(--bg-elevated, var(--bg-primary));
+  box-shadow: var(--shadow-card, 0 8px 24px rgba(0, 0, 0, 0.06));
+}
+
+.cg-login__brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.cg-login__brand-title {
+  font-family: var(--font-serif, var(--font-sans));
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.cg-login__brand-sub {
+  margin-top: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.cg-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cg-login__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cg-login__label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.cg-login__field input {
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-quick), box-shadow var(--transition-quick);
+}
+
+.cg-login__field input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: var(--focus-ring);
+}
+
+.cg-login__error {
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: #b91c1c;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-md);
+}
+
+.cg-login__submit {
+  margin-top: 4px;
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--color-brand);
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-quick), filter var(--transition-quick);
+}
+
+.cg-login__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cg-login__submit:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
+.cg-login__footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.cg-login__lang {
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.cg-login__lang:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
 /* ============================================================
    Sidebar
    ============================================================ */
@@ -1532,157 +1689,4 @@ h1, h2, h3, h4 {
 .cleargate-workspace__scale-indicator {
   margin-left: auto;
   padding: 2px 8px;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  border: 1px solid var(--border);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 200ms ease, border-color 200ms ease;
-}
-
-.cleargate-workspace__scale-indicator:hover {
-  color: var(--text-primary);
-  border-color: var(--text-muted);
-}
-
-/* -- Theme toggle & locale switcher -- */
-
-.cleargate-header__theme-btn,
-.cleargate-header__locale-btn {
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  background-color: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.cleargate-header__theme-btn:hover,
-.cleargate-header__locale-btn:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand);
-}
-
-/* -- LLM panel -- */
-
-.cleargate-llm-panel {
-  width: var(--entity-panel-width);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--border);
-  background-color: var(--bg-secondary);
-  padding: 12px;
-  gap: 10px;
-  overflow-y: auto;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-}
-
-.cleargate-llm-panel__label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
-
-.cleargate-llm-panel__select,
-.cleargate-llm-panel__textarea {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 0.75rem;
-  transition: border-color 120ms ease;
-}
-
-.cleargate-llm-panel__select:focus,
-.cleargate-llm-panel__textarea:focus {
-  outline: none;
-  border-color: var(--color-brand);
-}
-
-.cleargate-llm-panel__textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.cleargate-llm-panel__send {
-  padding: 8px 14px;
-  border: 1px solid var(--color-brand);
-  background-color: var(--color-brand);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.cleargate-llm-panel__send:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-
-.cleargate-llm-panel__send:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* -- Floating version badge -- */
-
-.cleargate-version-badge {
-  position: fixed;
-  bottom: 10px;
-  right: 14px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  font-family: var(--font-sans);
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  opacity: 0.75;
-  transition: opacity 200ms ease;
-  pointer-events: auto;
-  user-select: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.cleargate-version-badge:hover {
-  opacity: 1;
-}
-
-.cleargate-version-badge__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: var(--error);
-  flex-shrink: 0;
-}
-
-.cleargate-version-badge__dot[data-ok="true"] {
-  background-color: var(--success);
-}
-
-.cleargate-version-badge__text {
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-}
+  border-r

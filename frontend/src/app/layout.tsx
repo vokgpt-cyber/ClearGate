@@ -3,6 +3,7 @@
 import './globals.css';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { LocaleProvider } from '@/hooks/useLocale';
+import { AuthProvider } from '@/hooks/useAuth';
 
 export default function RootLayout({
   children,
@@ -20,7 +21,9 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <LocaleProvider>{children}</LocaleProvider>
+          <LocaleProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

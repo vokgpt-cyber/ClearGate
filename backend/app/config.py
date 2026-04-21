@@ -51,6 +51,21 @@ class Settings(BaseSettings):
     # drops slightly but interactivity is restored.
     cleargate_disable_llm_layer: bool = False
 
+    # Auth (Sprint B.2) — HMAC secret for signing HttpOnly session cookies.
+    # Must be stable across restarts (otherwise all users are logged out on
+    # every redeploy). Empty string triggers a one-time auto-generation into
+    # data/session_cookie.key at startup; IT can also set it explicitly via
+    # CLEARGATE_SESSION_COOKIE_SECRET in .env for reproducible deployments.
+    cleargate_session_cookie_secret: str = ""
+
+    # Auth session cookie lifetime. Independent of anonymization session TTL
+    # so lawyers stay logged in across multiple document sessions.
+    cleargate_auth_session_ttl_minutes: int = 720  # 12 hours
+
+    # Cookie name — kept short and opaque so nothing leaks about the stack
+    # to anyone inspecting browser devtools.
+    cleargate_auth_cookie_name: str = "cg_session"
+
     # Version (not from env -- hardcoded to match pyproject.toml)
     version: str = "0.1.0-alpha"
 

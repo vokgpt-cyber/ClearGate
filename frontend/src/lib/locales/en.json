@@ -147,5 +147,18 @@
   "locale": {
     "ru": "Русский",
     "en": "English"
+  },
+  "auth": {
+    "loginTitle": "Sign in to CLEARGATE",
+    "loginSubtitle": "Legal document anonymization",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "errorInvalid": "Invalid username or password",
+    "errorNetwork": "Could not reach the server",
+    "logout": "Sign out",
+    "signedInAs": "Signed in as",
+    "checking": "Checking session…"
   }
 }
