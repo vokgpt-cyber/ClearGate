@@ -10,7 +10,8 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 echo.
-echo Cleargate is up. Pilot users open: http://^<server-ip^>:3000
+echo Cleargate is up. Pilot users open: http://^<server-ip^>
+echo (served by nginx on port 80 - no explicit port in the URL)
 echo Use status.bat to check container health.
 echo.
 pause

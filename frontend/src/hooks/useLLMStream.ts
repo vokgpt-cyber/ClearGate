@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000';
+import { wsUrl } from '@/lib/api';
 
 export interface StreamRequest {
   sessionId: string;
@@ -37,7 +37,7 @@ export function useLLMStream() {
   const start = useCallback((request: StreamRequest) => {
     setState({ ...initialState, isStreaming: true });
 
-    const ws = new WebSocket(`${WS_URL}/ws/stream`);
+    const ws = new WebSocket(`${wsUrl()}/ws/stream`);
     wsRef.current = ws;
 
     ws.onopen = () => {

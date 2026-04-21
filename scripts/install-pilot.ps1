@@ -9,9 +9,9 @@
 #   2. Detects the server's primary LAN IP (or asks the operator)
 #   3. Creates .env from .env.example if missing, injecting:
 #        - a fresh CLEARGATE_MASTER_KEY
-#        - NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL pointing to the server IP
+#        - empty NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL (same-origin via nginx)
 #        - BACKEND_CORS_ORIGINS=*
-#   4. Opens Windows Firewall for TCP 3000 and 8000
+#   4. Opens Windows Firewall for TCP 80 (nginx), 3000, 8000
 #   5. Builds and starts the containers via docker compose (pilot profile)
 #   6. Waits for Ollama to be healthy, then pulls qwen2.5:7b-instruct-q4_K_M
 #   7. Prints the URL for pilot users
@@ -99,9 +99,13 @@ if (-not ($ServerIp -match '^\d{1,3}(\.\d{1,3}){3}$')) {
 }
 Write-Ok "Using server IP: $ServerIp"
 
-$apiUrl = "http://${ServerIp}:8000"
-$wsUrl  = "ws://${ServerIp}:8000"
-$appUrl = "http://${ServerIp}:3000"
+# Same-origin via nginx on port 80. Empty NEXT_PUBLIC_* values mean the
+# frontend build emits relative URLs ("/api/...", "/ws/...") which nginx
+# then proxies to the backend on behalf of the user's browser. No more
+# IP baking, no CORS round-trip, a single URL on a single port.
+$apiUrl = ""
+$wsUrl  = ""
+$appUrl = "http://${ServerIp}"
 
 # --- 3. .env --------------------------------------------------------------
 Write-Step "Configuring .env"
@@ -180,17 +184,25 @@ Set-EnvLine -Path $envPath -Key "BACKEND_CORS_ORIGINS" -Value "*"
 # loaded. Windows uses ";" as the path separator for this variable.
 Set-EnvLine -Path $envPath -Key "COMPOSE_FILE"     -Value "docker-compose.yml;docker-compose.pilot.yml"
 Set-EnvLine -Path $envPath -Key "COMPOSE_PROFILES" -Value "pilot"
-Write-Ok "NEXT_PUBLIC_API_URL=$apiUrl"
-Write-Ok "NEXT_PUBLIC_WS_URL=$wsUrl"
+Write-Ok "NEXT_PUBLIC_API_URL=(empty - same-origin via nginx)"
+Write-Ok "NEXT_PUBLIC_WS_URL=(empty - same-origin via nginx)"
 Write-Ok "BACKEND_CORS_ORIGINS=*"
 Write-Ok "COMPOSE_FILE + COMPOSE_PROFILES (bare 'docker compose' now picks up pilot)"
 
 # --- 4. Firewall -----------------------------------------------------------
+# Port 80 is the one pilot users actually need (nginx reverse proxy).
+# 3000 and 8000 stay open for operator-side debugging - you can hit the
+# frontend container or the backend directly if the proxy is acting up.
+# If TCP/80 is already taken by IIS on this Windows Server, install.bat
+# will succeed but docker compose will fail to publish nginx on :80 -
+# stop IIS ("Stop-Service W3SVC") or change the port mapping in
+# docker-compose.pilot.yml before re-running.
 if (-not $SkipFirewall) {
-    Write-Step "Windows Firewall (TCP 3000, 8000)"
+    Write-Step "Windows Firewall (TCP 80, 3000, 8000)"
     $rules = @(
-        @{ Name = "Cleargate Frontend"; Port = 3000 },
-        @{ Name = "Cleargate Backend";  Port = 8000 }
+        @{ Name = "Cleargate Web (HTTP)"; Port = 80 },
+        @{ Name = "Cleargate Frontend";   Port = 3000 },
+        @{ Name = "Cleargate Backend";    Port = 8000 }
     )
     foreach ($r in $rules) {
         $exists = Get-NetFirewallRule -DisplayName $r.Name -ErrorAction SilentlyContinue
@@ -250,4 +262,18 @@ if (-not $SkipModelPull) {
 
 # --- 7. Done ----------------------------------------------------------------
 Write-Host ""
-Write-Host "====
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host "  Cleargate is running." -ForegroundColor Green
+Write-Host "  Share this URL with pilot users:" -ForegroundColor Green
+Write-Host ""
+Write-Host "      $appUrl" -ForegroundColor White -BackgroundColor DarkGreen
+Write-Host ""
+Write-Host "  Helper scripts (double-click any of these):" -ForegroundColor Green
+Write-Host "      start.bat     - start containers"
+Write-Host "      stop.bat      - stop containers"
+Write-Host "      status.bat    - show container state"
+Write-Host "      logs.bat      - tail logs"
+Write-Host "      update.bat    - git pull + rebuild"
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host ""
+Read-Host "Press Enter to close" | Out-Null

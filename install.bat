@@ -6,7 +6,8 @@ REM Double-click this file (or run it from an elevated PowerShell prompt if
 REM you want the Windows Firewall rules to be added automatically).
 REM
 REM What it does: verifies Docker, writes .env with the right server IP,
-REM opens firewall ports 3000/8000, builds & starts Cleargate, pulls the
+REM opens firewall ports 80/3000/8000, builds & starts Cleargate (nginx on
+REM :80 reverse-proxies to the frontend and backend containers), pulls the
 REM language model. Re-running is safe.
 REM ==========================================================================
 setlocal

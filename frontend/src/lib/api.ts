@@ -1,6 +1,32 @@
+// Resolve the backend base URL at module load.
+//
+// Three intended states:
+//   undefined → local dev (npm run dev / Tauri) → hit localhost:8000
+//   ""        → pilot behind nginx → use relative URLs (same-origin)
+//   "http://…" → baked by Docker build arg → use that absolute URL
+//
+// Nullish-coalescing (??) treats only `undefined`/`null` as missing, so an
+// explicit empty string survives and turns every fetch into a relative call
+// (e.g. `/api/sessions`), which nginx then proxies to the backend.
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-export { API_URL };
+/**
+ * Build the WebSocket base URL at call time (not at import time) so we can
+ * inherit the hostname the user actually typed. Same tri-state as API_URL,
+ * but for `""` we derive the URL from `window.location` — the same-origin
+ * case that nginx proxies via `/ws/*`.
+ */
+function wsUrl(): string {
+  const env = process.env.NEXT_PUBLIC_WS_URL;
+  if (env === undefined) return 'ws://localhost:8000'; // local dev
+  if (env !== '') return env; // explicit absolute URL
+  // Same-origin: inherit whatever hostname:port the page is served from.
+  if (typeof window === 'undefined') return 'ws://localhost:8000';
+  const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${scheme}//${window.location.host}`;
+}
+
+export { API_URL, wsUrl };
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
