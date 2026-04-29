@@ -1,0 +1,205 @@
+{
+  "total_docs": 7,
+  "total_chars": 18595,
+  "total_entities": 332,
+  "roundtrip_ok": 0,
+  "roundtrip_fail": 7,
+  "per_doc": [
+    {
+      "doc": "01_NDA.docx",
+      "chars": 2370,
+      "words": 277,
+      "entities_total": 42,
+      "by_type": {
+        "EMAIL_ADDRESS": 2,
+        "LOC": 7,
+        "ORG": 8,
+        "PER": 9,
+        "RU_BANK_ACCOUNT": 4,
+        "RU_BIK": 2,
+        "RU_CONTRACT_NUMBER": 1,
+        "RU_DATE": 1,
+        "RU_INN": 4,
+        "RU_OGRN": 2,
+        "RU_PHONE": 2
+      },
+      "by_layer": {
+        "regex": 42
+      },
+      "elapsed_sec": 0.12,
+      "roundtrip_ok": false,
+      "registry_entries": 35
+    },
+    {
+      "doc": "02_Dogovor_uslug.docx",
+      "chars": 2480,
+      "words": 294,
+      "entities_total": 44,
+      "by_type": {
+        "EMAIL_ADDRESS": 3,
+        "LOC": 10,
+        "ORG": 4,
+        "PER": 5,
+        "RU_BANK_ACCOUNT": 4,
+        "RU_BIK": 2,
+        "RU_CONTRACT_NUMBER": 1,
+        "RU_DATE": 4,
+        "RU_INN": 4,
+        "RU_OGRN": 3,
+        "RU_PASSPORT": 1,
+        "RU_PHONE": 3
+      },
+      "by_layer": {
+        "ner": 4,
+        "regex": 40
+      },
+      "elapsed_sec": 0.11,
+      "roundtrip_ok": false,
+      "registry_entries": 36
+    },
+    {
+      "doc": "03_Trudovoy_dogovor.docx",
+      "chars": 2365,
+      "words": 307,
+      "entities_total": 45,
+      "by_type": {
+        "EMAIL_ADDRESS": 2,
+        "LOC": 15,
+        "ORG": 3,
+        "PER": 9,
+        "RU_CONTRACT_NUMBER": 1,
+        "RU_DATE": 4,
+        "RU_INN": 3,
+        "RU_OGRN": 2,
+        "RU_PASSPORT": 2,
+        "RU_PHONE": 3,
+        "RU_SNILS": 1
+      },
+      "by_layer": {
+        "ner": 1,
+        "regex": 44
+      },
+      "elapsed_sec": 0.1,
+      "roundtrip_ok": false,
+      "registry_entries": 32
+    },
+    {
+      "doc": "04_Agentskiy_dogovor.docx",
+      "chars": 2511,
+      "words": 333,
+      "entities_total": 46,
+      "by_type": {
+        "EMAIL_ADDRESS": 3,
+        "LOC": 13,
+        "ORG": 6,
+        "PER": 7,
+        "RU_BANK_ACCOUNT": 1,
+        "RU_BIK": 1,
+        "RU_CONTRACT_NUMBER": 1,
+        "RU_DATE": 2,
+        "RU_INN": 4,
+        "RU_OGRN": 3,
+        "RU_PASSPORT": 1,
+        "RU_PHONE": 3,
+        "RU_SNILS": 1
+      },
+      "by_layer": {
+        "ner": 2,
+        "regex": 44
+      },
+      "elapsed_sec": 0.11,
+      "roundtrip_ok": false,
+      "registry_entries": 36
+    },
+    {
+      "doc": "05_Politika_PDn.docx",
+      "chars": 2681,
+      "words": 335,
+      "entities_total": 32,
+      "by_type": {
+        "EMAIL_ADDRESS": 2,
+        "LOC": 3,
+        "ORG": 12,
+        "PER": 9,
+        "RU_DATE": 3,
+        "RU_INN": 1,
+        "RU_OGRN": 1,
+        "RU_PHONE": 1
+      },
+      "by_layer": {
+        "ner": 3,
+        "regex": 29
+      },
+      "elapsed_sec": 0.11,
+      "roundtrip_ok": false,
+      "registry_entries": 21
+    },
+    {
+      "doc": "06_Dop_soglashenie.docx",
+      "chars": 2503,
+      "words": 343,
+      "entities_total": 39,
+      "by_type": {
+        "EMAIL_ADDRESS": 1,
+        "LOC": 6,
+        "ORG": 8,
+        "PER": 5,
+        "RU_BANK_ACCOUNT": 1,
+        "RU_BIK": 1,
+        "RU_CONTRACT_NUMBER": 4,
+        "RU_DATE": 6,
+        "RU_INN": 3,
+        "RU_OGRN": 2,
+        "RU_PHONE": 2
+      },
+      "by_layer": {
+        "ner": 6,
+        "regex": 33
+      },
+      "elapsed_sec": 0.12,
+      "roundtrip_ok": false,
+      "registry_entries": 30
+    },
+    {
+      "doc": "07_Protokol_sobraniya.txt",
+      "chars": 3685,
+      "words": 470,
+      "entities_total": 84,
+      "by_type": {
+        "EMAIL_ADDRESS": 5,
+        "LOC": 14,
+        "ORG": 21,
+        "PER": 18,
+        "RU_CONTRACT_NUMBER": 1,
+        "RU_DATE": 7,
+        "RU_INN": 3,
+        "RU_OGRN": 2,
+        "RU_PASSPORT": 4,
+        "RU_PHONE": 6,
+        "RU_SNILS": 3
+      },
+      "by_layer": {
+        "ner": 7,
+        "regex": 77
+      },
+      "elapsed_sec": 0.17,
+      "roundtrip_ok": false,
+      "registry_entries": 61
+    }
+  ],
+  "global_by_type": {
+    "LOC": 68,
+    "ORG": 62,
+    "PER": 62,
+    "RU_DATE": 27,
+    "RU_INN": 22,
+    "RU_PHONE": 20,
+    "EMAIL_ADDRESS": 18,
+    "RU_OGRN": 15,
+    "RU_BANK_ACCOUNT": 10,
+    "RU_CONTRACT_NUMBER": 9,
+    "RU_PASSPORT": 8,
+    "RU_BIK": 6,
+    "RU_SNILS": 5
+  }
+}

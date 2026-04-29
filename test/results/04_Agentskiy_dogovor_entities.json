@@ -1,0 +1,370 @@
+[
+  {
+    "text": "№ АГ-2025/011",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 18,
+    "end": 31,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Казань",
+    "type": "LOC",
+    "start": 35,
+    "end": 41,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "22 апреля 2025",
+    "type": "RU_DATE",
+    "start": 158,
+    "end": 172,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "МедиаПро",
+    "type": "ORG",
+    "start": 218,
+    "end": 226,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7700012340",
+    "type": "RU_INN",
+    "start": 233,
+    "end": 243,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1027701234560",
+    "type": "RU_OGRN",
+    "start": 250,
+    "end": 263,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Москва",
+    "type": "LOC",
+    "start": 283,
+    "end": 289,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Павловская",
+    "type": "LOC",
+    "start": 295,
+    "end": 305,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Волковой Натальи Сергеевны",
+    "type": "PER",
+    "start": 388,
+    "end": 414,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Кузнецова Анна Сергеевна",
+    "type": "PER",
+    "start": 499,
+    "end": 523,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "166012345678",
+    "type": "RU_INN",
+    "start": 529,
+    "end": 541,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "321169000123456",
+    "type": "RU_OGRN",
+    "start": 550,
+    "end": 565,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "9214 987654",
+    "type": "RU_PASSPORT",
+    "start": 575,
+    "end": 586,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "УФМС",
+    "type": "ORG",
+    "start": 602,
+    "end": 606,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "России",
+    "type": "LOC",
+    "start": 607,
+    "end": 613,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Республике Татарстан",
+    "type": "LOC",
+    "start": 617,
+    "end": 637,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Вахитовском районе",
+    "type": "LOC",
+    "start": 640,
+    "end": 658,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Казани",
+    "type": "LOC",
+    "start": 662,
+    "end": 668,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "14.05.2014",
+    "type": "RU_DATE",
+    "start": 669,
+    "end": 679,
+    "score": 0.95,
+    "layer": "regex"
+  },
+  {
+    "text": "223-344-556 39",
+    "type": "RU_SNILS",
+    "start": 687,
+    "end": 701,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Республика Татарстан",
+    "type": "LOC",
+    "start": 739,
+    "end": 759,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Казань",
+    "type": "LOC",
+    "start": 764,
+    "end": 770,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Муштари",
+    "type": "LOC",
+    "start": 776,
+    "end": 783,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Принципала",
+    "type": "PER",
+    "start": 958,
+    "end": 968,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Принципала",
+    "type": "LOC",
+    "start": 1036,
+    "end": 1046,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Приволжский федеральный округ",
+    "type": "LOC",
+    "start": 1168,
+    "end": 1197,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Принципала",
+    "type": "PER",
+    "start": 1272,
+    "end": 1282,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Фёдоров Максим Андреевич",
+    "type": "PER",
+    "start": 1319,
+    "end": 1343,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (495) 230-11-44",
+    "type": "RU_PHONE",
+    "start": 1350,
+    "end": 1368,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "m.fedorov@mediapro.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1381,
+    "end": 1402,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Агентом",
+    "type": "ORG",
+    "start": 1545,
+    "end": 1552,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Принципалом",
+    "type": "LOC",
+    "start": 1959,
+    "end": 1970,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Агента",
+    "type": "ORG",
+    "start": 1989,
+    "end": 1995,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "40802810500000222333",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2017,
+    "end": 2037,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ПАО «Ак Барс Банк»",
+    "type": "ORG",
+    "start": 2040,
+    "end": 2058,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "049205805",
+    "type": "RU_BIK",
+    "start": 2064,
+    "end": 2073,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Агента",
+    "type": "PER",
+    "start": 2118,
+    "end": 2124,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «МедиаПро»",
+    "type": "ORG",
+    "start": 2194,
+    "end": 2208,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7700012340",
+    "type": "RU_INN",
+    "start": 2213,
+    "end": 2223,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (495) 230-11-44",
+    "type": "RU_PHONE",
+    "start": 2245,
+    "end": 2263,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "info@mediapro.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 2276,
+    "end": 2292,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "166012345678",
+    "type": "RU_INN",
+    "start": 2375,
+    "end": 2387,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "321169000123456",
+    "type": "RU_OGRN",
+    "start": 2397,
+    "end": 2412,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "+7 (927) 300-45-67",
+    "type": "RU_PHONE",
+    "start": 2418,
+    "end": 2436,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "a.kuznetsova.ip@yandex.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 2449,
+    "end": 2474,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "А.С. Кузнецова",
+    "type": "PER",
+    "start": 2497,
+    "end": 2511,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]

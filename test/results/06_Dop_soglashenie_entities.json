@@ -1,0 +1,314 @@
+[
+  {
+    "text": "ДОПОЛНИТЕЛЬНОЕ",
+    "type": "ORG",
+    "start": 0,
+    "end": 14,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "№ 123/2023",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 83,
+    "end": 93,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "11.07.2023",
+    "type": "RU_DATE",
+    "start": 97,
+    "end": 107,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "Нижний Новгород",
+    "type": "LOC",
+    "start": 111,
+    "end": 126,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "05 мая 2025",
+    "type": "RU_DATE",
+    "start": 227,
+    "end": 238,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Авто-Лайн»",
+    "type": "ORG",
+    "start": 284,
+    "end": 294,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5260123456",
+    "type": "RU_INN",
+    "start": 300,
+    "end": 310,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "1125260001234",
+    "type": "RU_OGRN",
+    "start": 317,
+    "end": 330,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Нижний Новгород",
+    "type": "LOC",
+    "start": 350,
+    "end": 365,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Нижневолжская набережная",
+    "type": "LOC",
+    "start": 371,
+    "end": 395,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Павлова Игоря Викторовича",
+    "type": "PER",
+    "start": 469,
+    "end": 494,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общество с ограниченной ответственностью «",
+    "type": "ORG",
+    "start": 515,
+    "end": 557,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Строй-Инвест» (ИНН 5262098765",
+    "type": "ORG",
+    "start": 557,
+    "end": 586,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "1095262012345",
+    "type": "RU_OGRN",
+    "start": 593,
+    "end": 606,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Нижний Новгород",
+    "type": "LOC",
+    "start": 626,
+    "end": 641,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Родионова",
+    "type": "LOC",
+    "start": 647,
+    "end": 656,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Белозёровой Юлии Андреевны",
+    "type": "PER",
+    "start": 743,
+    "end": 769,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "10.01.2025",
+    "type": "RU_DATE",
+    "start": 812,
+    "end": 822,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "Дополнительное соглашение № 2",
+    "type": "ORG",
+    "start": 866,
+    "end": 895,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "№ 123/2023",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 949,
+    "end": 959,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "11.07.2023",
+    "type": "RU_DATE",
+    "start": 963,
+    "end": 973,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "01 июня 2025",
+    "type": "RU_DATE",
+    "start": 1017,
+    "end": 1029,
+    "score": 0.7,
+    "layer": "regex"
+  },
+  {
+    "text": "№ 123/2023",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 1112,
+    "end": 1122,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Нижегородской области",
+    "type": "LOC",
+    "start": 1258,
+    "end": 1279,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "40702810500000334455",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 1686,
+    "end": 1706,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "type": "ORG",
+    "start": 1709,
+    "end": 1730,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "042202603",
+    "type": "RU_BIK",
+    "start": 1736,
+    "end": 1745,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Тихонов Алексей Сергеевич",
+    "type": "PER",
+    "start": 1893,
+    "end": 1918,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (831) 245-67-89",
+    "type": "RU_PHONE",
+    "start": 1925,
+    "end": 1943,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "a.tikhonov@stroy-invest.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1956,
+    "end": 1982,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Сидорова Ольга Николаевна",
+    "type": "PER",
+    "start": 2055,
+    "end": 2080,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (915) 777-22-33",
+    "type": "RU_PHONE",
+    "start": 2087,
+    "end": 2105,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "№ 123/2023",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 2234,
+    "end": 2244,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "11.07.2023",
+    "type": "RU_DATE",
+    "start": 2248,
+    "end": 2258,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "ООО «Авто-Лайн»",
+    "type": "ORG",
+    "start": 2300,
+    "end": 2315,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5260123456",
+    "type": "RU_INN",
+    "start": 2320,
+    "end": 2330,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Строй-Инвест»",
+    "type": "ORG",
+    "start": 2397,
+    "end": 2415,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5262098765",
+    "type": "RU_INN",
+    "start": 2420,
+    "end": 2430,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Ю.А. Белозёрова",
+    "type": "PER",
+    "start": 2488,
+    "end": 2503,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]

@@ -1,0 +1,338 @@
+[
+  {
+    "text": "№ НДА-2025/042",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 55,
+    "end": 69,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Москва",
+    "type": "LOC",
+    "start": 73,
+    "end": 79,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "15 января 2025",
+    "type": "RU_DATE",
+    "start": 192,
+    "end": 206,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "7707083893",
+    "type": "RU_INN",
+    "start": 272,
+    "end": 282,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1027701234560",
+    "type": "RU_OGRN",
+    "start": 289,
+    "end": 302,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Москва",
+    "type": "LOC",
+    "start": 322,
+    "end": 328,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Мясницкая",
+    "type": "LOC",
+    "start": 334,
+    "end": 343,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Иванова Сергея Петровича",
+    "type": "PER",
+    "start": 447,
+    "end": 471,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общество с ограниченной ответственностью «",
+    "type": "ORG",
+    "start": 526,
+    "end": 568,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Индустрия Консалт»",
+    "type": "ORG",
+    "start": 568,
+    "end": 586,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5012345672",
+    "type": "RU_INN",
+    "start": 592,
+    "end": 602,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1025010987650",
+    "type": "RU_OGRN",
+    "start": 609,
+    "end": 622,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Московская область",
+    "type": "LOC",
+    "start": 639,
+    "end": 657,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Люберцы",
+    "type": "LOC",
+    "start": 662,
+    "end": 669,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Красная",
+    "type": "LOC",
+    "start": 675,
+    "end": 682,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Петровой Елены Александровны",
+    "type": "PER",
+    "start": 753,
+    "end": 781,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Получающей",
+    "type": "LOC",
+    "start": 970,
+    "end": 980,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Ромашка-Групп»",
+    "type": "ORG",
+    "start": 1044,
+    "end": 1063,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Раскрывающей",
+    "type": "PER",
+    "start": 1300,
+    "end": 1312,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Иванов С.П.",
+    "type": "PER",
+    "start": 1323,
+    "end": 1334,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (495) 123-45-67",
+    "type": "RU_PHONE",
+    "start": 1341,
+    "end": 1359,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "s.ivanov@romashka-group.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1372,
+    "end": 1398,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Получающей",
+    "type": "PER",
+    "start": 1412,
+    "end": 1422,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Петрова Е.А.",
+    "type": "PER",
+    "start": 1433,
+    "end": 1445,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (925) 987-65-43",
+    "type": "RU_PHONE",
+    "start": 1452,
+    "end": 1470,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "petrova@industry-consult.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1483,
+    "end": 1510,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Получающая",
+    "type": "ORG",
+    "start": 1803,
+    "end": 1813,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Сторон\nРаскрывающая",
+    "type": "PER",
+    "start": 1953,
+    "end": 1972,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Ромашка-Групп»",
+    "type": "ORG",
+    "start": 1982,
+    "end": 2001,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7707083893",
+    "type": "RU_INN",
+    "start": 2006,
+    "end": 2016,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "40702810400000123456",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2036,
+    "end": 2056,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "type": "ORG",
+    "start": 2059,
+    "end": 2080,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "30101810400000000225",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2085,
+    "end": 2105,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "044525225",
+    "type": "RU_BIK",
+    "start": 2111,
+    "end": 2120,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Иванов С.П.\nПолучающая",
+    "type": "PER",
+    "start": 2161,
+    "end": 2183,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Индустрия Консалт»",
+    "type": "ORG",
+    "start": 2193,
+    "end": 2216,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5012345672",
+    "type": "RU_INN",
+    "start": 2221,
+    "end": 2231,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "40702810900000789012",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2251,
+    "end": 2271,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Банке ВТБ (ПАО)",
+    "type": "ORG",
+    "start": 2274,
+    "end": 2289,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "30101810700000000187",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2294,
+    "end": 2314,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "044525187",
+    "type": "RU_BIK",
+    "start": 2320,
+    "end": 2329,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Петрова Е.А.",
+    "type": "PER",
+    "start": 2358,
+    "end": 2370,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]

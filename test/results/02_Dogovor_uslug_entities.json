@@ -1,0 +1,354 @@
+[
+  {
+    "text": "№ ЮУ-2025-017",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 35,
+    "end": 48,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Санкт-Петербург",
+    "type": "LOC",
+    "start": 52,
+    "end": 67,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "03 февраля 2025",
+    "type": "RU_DATE",
+    "start": 166,
+    "end": 181,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "7721234569",
+    "type": "RU_INN",
+    "start": 245,
+    "end": 255,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1157723456780",
+    "type": "RU_OGRN",
+    "start": 262,
+    "end": 275,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Москва",
+    "type": "LOC",
+    "start": 307,
+    "end": 313,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Пресненская набережная",
+    "type": "LOC",
+    "start": 315,
+    "end": 337,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Михайловского",
+    "type": "LOC",
+    "start": 445,
+    "end": 458,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Александра Владимировича",
+    "type": "PER",
+    "start": 459,
+    "end": 483,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Михайловская Екатерина Валерьевна",
+    "type": "PER",
+    "start": 569,
+    "end": 602,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "505012345678",
+    "type": "RU_INN",
+    "start": 608,
+    "end": 620,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "320774600123456",
+    "type": "RU_OGRN",
+    "start": 629,
+    "end": 644,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Москва",
+    "type": "LOC",
+    "start": 685,
+    "end": 691,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Комсомольский проспект",
+    "type": "LOC",
+    "start": 693,
+    "end": 715,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "4510 123456",
+    "type": "RU_PASSPORT",
+    "start": 740,
+    "end": 751,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ОВД",
+    "type": "ORG",
+    "start": 759,
+    "end": 762,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Хамовники",
+    "type": "LOC",
+    "start": 770,
+    "end": 779,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Москвы",
+    "type": "LOC",
+    "start": 783,
+    "end": 789,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "15.06.2010",
+    "type": "RU_DATE",
+    "start": 790,
+    "end": 800,
+    "score": 0.95,
+    "layer": "regex"
+  },
+  {
+    "text": "Санкт-Петербург",
+    "type": "LOC",
+    "start": 1158,
+    "end": 1173,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Каменноостровский проспект",
+    "type": "LOC",
+    "start": 1175,
+    "end": 1201,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Договором",
+    "type": "PER",
+    "start": 1304,
+    "end": 1313,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Смирнова Татьяна Игоревна",
+    "type": "PER",
+    "start": 1387,
+    "end": 1412,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "t.smirnova@quant-legal.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1425,
+    "end": 1450,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (812) 555-33-22",
+    "type": "RU_PHONE",
+    "start": 1457,
+    "end": 1475,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "10.02.2025",
+    "type": "RU_DATE",
+    "start": 1852,
+    "end": 1862,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "15.03.2025",
+    "type": "RU_DATE",
+    "start": 1918,
+    "end": 1928,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "Реквизиты Сторон",
+    "type": "PER",
+    "start": 1933,
+    "end": 1949,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Квант Лигал»",
+    "type": "ORG",
+    "start": 1963,
+    "end": 1980,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7721234569",
+    "type": "RU_INN",
+    "start": 1985,
+    "end": 1995,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "40702810300001234567",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2016,
+    "end": 2036,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "АО «Альфа-Банк»",
+    "type": "ORG",
+    "start": 2039,
+    "end": 2054,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "30101810200000000593",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2059,
+    "end": 2079,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "044525593",
+    "type": "RU_BIK",
+    "start": 2085,
+    "end": 2094,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (495) 780-15-40",
+    "type": "RU_PHONE",
+    "start": 2115,
+    "end": 2133,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "contact@quant-legal.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 2145,
+    "end": 2167,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "505012345678",
+    "type": "RU_INN",
+    "start": 2260,
+    "end": 2272,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "320774600123456",
+    "type": "RU_OGRN",
+    "start": 2282,
+    "end": 2297,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "40802810900000555777",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2302,
+    "end": 2322,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ПАО «Банк ВТБ»",
+    "type": "ORG",
+    "start": 2325,
+    "end": 2339,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "30101810700000000187",
+    "type": "RU_BANK_ACCOUNT",
+    "start": 2344,
+    "end": 2364,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "044525187",
+    "type": "RU_BIK",
+    "start": 2370,
+    "end": 2379,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (903) 111-22-33",
+    "type": "RU_PHONE",
+    "start": 2386,
+    "end": 2404,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "e.mikhailovskaya@mail.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 2416,
+    "end": 2440,
+    "score": 1.0,
+    "layer": "regex"
+  }
+]

@@ -1,0 +1,258 @@
+[
+  {
+    "text": "ПОЛИТИКА",
+    "type": "ORG",
+    "start": 0,
+    "end": 8,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ОБРАБОТКИ",
+    "type": "ORG",
+    "start": 9,
+    "end": 18,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ПЕРСОНАЛЬНЫХ",
+    "type": "ORG",
+    "start": 19,
+    "end": 31,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ДАННЫХ",
+    "type": "ORG",
+    "start": 32,
+    "end": 38,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Финсервис Плюс»",
+    "type": "ORG",
+    "start": 39,
+    "end": 59,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Финсервис Плюс»",
+    "type": "ORG",
+    "start": 103,
+    "end": 123,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "28.04.2025",
+    "type": "RU_DATE",
+    "start": 127,
+    "end": 137,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "Политика",
+    "type": "PER",
+    "start": 180,
+    "end": 188,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Финсервис Плюс",
+    "type": "ORG",
+    "start": 244,
+    "end": 258,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "6500111126",
+    "type": "RU_INN",
+    "start": 265,
+    "end": 275,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1165025000234",
+    "type": "RU_OGRN",
+    "start": 282,
+    "end": 295,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Южно-Сахалинск",
+    "type": "LOC",
+    "start": 315,
+    "end": 329,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Федерального закона",
+    "type": "ORG",
+    "start": 413,
+    "end": 432,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "27.07.2006",
+    "type": "RU_DATE",
+    "start": 436,
+    "end": 446,
+    "score": 0.95,
+    "layer": "regex"
+  },
+  {
+    "text": "Политика",
+    "type": "PER",
+    "start": 496,
+    "end": 504,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Оператора",
+    "type": "PER",
+    "start": 558,
+    "end": 567,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "https://finservice-plus.ru/pdn",
+    "type": "ORG",
+    "start": 578,
+    "end": 608,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Оператором",
+    "type": "PER",
+    "start": 671,
+    "end": 681,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Финсервис Плюс»",
+    "type": "ORG",
+    "start": 799,
+    "end": 819,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Волков Дмитрий Игоревич",
+    "type": "PER",
+    "start": 829,
+    "end": 852,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "15.01.2024",
+    "type": "RU_DATE",
+    "start": 959,
+    "end": 969,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "dpo@finservice-plus.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1058,
+    "end": 1080,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (962) 400-11-22",
+    "type": "RU_PHONE",
+    "start": 1150,
+    "end": 1168,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Оператора",
+    "type": "PER",
+    "start": 1367,
+    "end": 1376,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Оператора",
+    "type": "PER",
+    "start": 1471,
+    "end": 1480,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Оператором",
+    "type": "LOC",
+    "start": 1856,
+    "end": 1866,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Федеральным законом № 152-ФЗ",
+    "type": "ORG",
+    "start": 1960,
+    "end": 1988,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Южно-Сахалинск",
+    "type": "LOC",
+    "start": 2426,
+    "end": 2440,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Волкова Д.И.",
+    "type": "PER",
+    "start": 2481,
+    "end": 2493,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "dpo@finservice-plus.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 2521,
+    "end": 2543,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Финсервис Плюс»",
+    "type": "ORG",
+    "start": 2628,
+    "end": 2648,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "А.В. Родионов",
+    "type": "PER",
+    "start": 2668,
+    "end": 2681,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]

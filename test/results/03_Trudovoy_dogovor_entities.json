@@ -1,0 +1,362 @@
+[
+  {
+    "text": "№ ТД-058/2025",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 17,
+    "end": 30,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 34,
+    "end": 46,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "10 марта 2025",
+    "type": "RU_DATE",
+    "start": 149,
+    "end": 162,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "7744555664",
+    "type": "RU_INN",
+    "start": 204,
+    "end": 214,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1087740001117",
+    "type": "RU_OGRN",
+    "start": 221,
+    "end": 234,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 254,
+    "end": 266,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Малышева",
+    "type": "LOC",
+    "start": 272,
+    "end": 280,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Козловой Ирины Михайловны",
+    "type": "PER",
+    "start": 369,
+    "end": 394,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "12.01.2025",
+    "type": "RU_DATE",
+    "start": 437,
+    "end": 447,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "Смирнов Алексей Петрович",
+    "type": "PER",
+    "start": 472,
+    "end": 496,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "6515 345678",
+    "type": "RU_PASSPORT",
+    "start": 506,
+    "end": 517,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "ОУФМС",
+    "type": "ORG",
+    "start": 525,
+    "end": 530,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "России",
+    "type": "LOC",
+    "start": 531,
+    "end": 537,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Свердловской области",
+    "type": "LOC",
+    "start": 541,
+    "end": 561,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Октябрьском районе",
+    "type": "LOC",
+    "start": 564,
+    "end": 582,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбурга",
+    "type": "LOC",
+    "start": 586,
+    "end": 599,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "23.08.2015",
+    "type": "RU_DATE",
+    "start": 600,
+    "end": 610,
+    "score": 0.95,
+    "layer": "regex"
+  },
+  {
+    "text": "112-233-445 95",
+    "type": "RU_SNILS",
+    "start": 645,
+    "end": 659,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "665801234567",
+    "type": "RU_INN",
+    "start": 665,
+    "end": 677,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 717,
+    "end": 729,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Восточная",
+    "type": "LOC",
+    "start": 735,
+    "end": 744,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Трудовой",
+    "type": "PER",
+    "start": 835,
+    "end": 843,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Отдел системной разработки",
+    "type": "ORG",
+    "start": 969,
+    "end": 995,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 1014,
+    "end": 1026,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Малышева",
+    "type": "LOC",
+    "start": 1032,
+    "end": 1040,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "17 марта 2025",
+    "type": "RU_DATE",
+    "start": 1144,
+    "end": 1157,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Работника",
+    "type": "PER",
+    "start": 1561,
+    "end": 1570,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Работника\nМобильный",
+    "type": "PER",
+    "start": 1634,
+    "end": 1653,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (912) 345-67-89",
+    "type": "RU_PHONE",
+    "start": 1663,
+    "end": 1681,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "a.smirnov@tehnoprom.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1752,
+    "end": 1774,
+    "score": 0.7,
+    "layer": "regex"
+  },
+  {
+    "text": "alex.smirnov1987@gmail.com",
+    "type": "EMAIL_ADDRESS",
+    "start": 1828,
+    "end": 1854,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Смирнова Мария Владимировна",
+    "type": "PER",
+    "start": 1895,
+    "end": 1922,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (922) 876-54-32",
+    "type": "RU_PHONE",
+    "start": 1929,
+    "end": 1947,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Сторон\nРаботодатель",
+    "type": "PER",
+    "start": 1972,
+    "end": 1991,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "АО «Технопром»",
+    "type": "ORG",
+    "start": 1993,
+    "end": 2007,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7744555664",
+    "type": "RU_INN",
+    "start": 2012,
+    "end": 2022,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1087740001117",
+    "type": "RU_OGRN",
+    "start": 2043,
+    "end": 2056,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 2075,
+    "end": 2087,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Малышева",
+    "type": "LOC",
+    "start": 2093,
+    "end": 2101,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (343) 311-22-33",
+    "type": "RU_PHONE",
+    "start": 2124,
+    "end": 2142,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексей Петрович\nПаспорт",
+    "type": "PER",
+    "start": 2215,
+    "end": 2239,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "6515 345678",
+    "type": "RU_PASSPORT",
+    "start": 2240,
+    "end": 2251,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Екатеринбург",
+    "type": "LOC",
+    "start": 2282,
+    "end": 2294,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Восточная",
+    "type": "LOC",
+    "start": 2300,
+    "end": 2309,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "А.П. Смирнов",
+    "type": "PER",
+    "start": 2353,
+    "end": 2365,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]

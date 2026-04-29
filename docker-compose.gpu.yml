@@ -1,0 +1,316 @@
+# =============================================================================
+# CLEARGATE Docker Compose — GPU profile (v0.4.0)
+#
+# Target hardware: Linux server with one or more NVIDIA GPUs >= 24 GB VRAM.
+# Tested target: Ubuntu 22.04 / 24.04 + RTX 4090 48 GB.
+#
+# Stack:
+#   vllm           — Qwen 3 32B AWQ via vLLM (GPU)
+#   bge-embedder   — BGE-M3 via Text Embeddings Inference (GPU)
+#   backend        — FastAPI orchestrator (CPU; talks to vllm + bge)
+#   frontend       — Next.js static export served by `serve` (CPU)
+#   nginx          — TLS terminator + reverse proxy
+#   ollama         — kept available as fallback if vLLM is down (optional, --profile ollama)
+#
+# Usage:
+#   # Production (recommended):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#       --profile gpu up -d
+#
+#   # Diagnostics:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#       --profile gpu logs -f vllm
+#
+#   # Restart only the LLM after a model change (other services keep running):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#       --profile gpu up -d --force-recreate vllm
+#
+# Why a SEPARATE compose file (not extending pilot):
+#   Pilot (docker-compose.pilot.yml) targets CPU-only Windows Server with
+#   Ollama. GPU profile is a clean break: different inference engine, new
+#   service (embedder), TLS by default, named volumes for data persistence.
+#   Trying to overlay both onto the same base produces a fragile mess.
+#
+# Variables (set in .env):
+#   CLEARGATE_DOMAIN         — public DNS name, e.g. cleargate.epam.ru
+#   CLEARGATE_TLS_MODE       — "letsencrypt" | "corp_ca" | "selfsigned"
+#   VLLM_MODEL               — HF repo id, default Qwen/Qwen3-32B-AWQ
+#   VLLM_MAX_MODEL_LEN       — context window, default 16384
+#   VLLM_GPU_UTIL            — VRAM fraction for vLLM, default 0.85
+#   EMBEDDER_MODEL           — HF repo id, default BAAI/bge-m3
+#   HF_TOKEN                 — optional, speeds up + raises rate limits
+#   LDAP_URL, LDAP_BIND_DN, LDAP_BIND_PASSWORD, LDAP_BASE_DN — for AD auth
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # vLLM — primary LLM inference engine.
+  #
+  # Why vLLM and not Ollama:
+  #   - PagedAttention + continuous batching: 5-10x throughput under
+  #     concurrent load (multiple lawyers anonymizing in parallel)
+  #   - Prefix caching: identical prompt prefixes are reused across requests,
+  #     same idea as Ollama's KV cache but more sophisticated
+  #   - OpenAI-compatible /v1 API: standard, easy to swap inference engines
+  #   - Production-grade: this is what serves production deployments at scale
+  # ---------------------------------------------------------------------------
+  vllm:
+    image: vllm/vllm-openai:v0.7.3
+    container_name: cleargate-vllm
+    profiles:
+      - gpu
+    restart: unless-stopped
+    runtime: nvidia
+    # vLLM uses PyTorch shared memory between processes; default 64MB shm
+    # is way too small and causes silent hangs on multi-GPU and large-model
+    # workloads. 32G is the documented safe value.
+    shm_size: 32gb
+    ports:
+      # Internal-only: backend talks to it via service-name DNS. Exposed
+      # for direct curl debugging from the host.
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - cleargate-models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN-}
+      # Tell vLLM to reuse the prefix cache across requests. Already on
+      # by default in v0.7+, declared explicitly so future image bumps
+      # don't surprise us.
+      - VLLM_USE_V1=1
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}
+      # AWQ already includes quantization config in the model files; we
+      # just declare the loader format. This produces ~22 GB on a 32B
+      # model, leaving comfortable headroom on a 48 GB card.
+      - --quantization
+      - awq_marlin
+      # 16K context covers ~30-40 pages of Russian text — enough for
+      # any legal document we've seen so far. Bigger contexts blow the
+      # KV cache budget quickly even on big GPUs.
+      - --max-model-len
+      - "${VLLM_MAX_MODEL_LEN:-16384}"
+      - --gpu-memory-utilization
+      - "${VLLM_GPU_UTIL:-0.85}"
+      # Continuous batching: the headline feature. Multiple incoming
+      # requests are interleaved at the token level, so two concurrent
+      # users see nearly identical latency to one.
+      - --enable-prefix-caching
+      # Tag the served model so the OpenAI-compat client can address it
+      # by a fixed name regardless of how vLLM internally names the model.
+      - --served-model-name
+      - cleargate-llm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      # vLLM cold-load of a 32B AWQ model takes 60-120s; healthcheck
+      # patient enough to not flap during boot.
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    networks:
+      - cleargate-net
+
+  # ---------------------------------------------------------------------------
+  # bge-embedder — BGE-M3 multilingual embedder via HuggingFace TEI.
+  #
+  # Used by the new Layer-3 retrieval step:
+  #   For every ambiguous candidate from layers 1-2, we embed a small
+  #   window of surrounding text and the candidate, search for similar
+  #   spans elsewhere in the document, and pass only those focused
+  #   contexts to the LLM verifier. Cuts the LLM prompt from "whole
+  #   document + all candidates" to "few hundred tokens per candidate"
+  #   and lets us scale to documents we couldn't fit before.
+  #
+  # ~2 GB VRAM, runs comfortably alongside the 22 GB Qwen on a 48 GB card.
+  # ---------------------------------------------------------------------------
+  bge-embedder:
+    image: ghcr.io/huggingface/text-embeddings-inference:1.5
+    container_name: cleargate-bge
+    profiles:
+      - gpu
+    restart: unless-stopped
+    runtime: nvidia
+    ports:
+      - "127.0.0.1:8002:80"
+    volumes:
+      - cleargate-models:/data
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN-}
+    command:
+      - --model-id
+      - ${EMBEDDER_MODEL:-BAAI/bge-m3}
+      # Pre-batch up to 32 texts per forward pass. The backend's
+      # retrieval step naturally batches several candidates at once
+      # so this isn't theoretical — it really matters.
+      - --max-batch-tokens
+      - "16384"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cleargate-net
+
+  # ---------------------------------------------------------------------------
+  # backend — overrides the base service for GPU deployment.
+  #
+  # Compared to pilot:
+  #   - DROPS the bind-mount of ./backend/app:/app/app:ro that pilot used
+  #     for live-reload. On the GPU server we bake the code into the image
+  #     so there's no host-side dependency.
+  #   - ADDS named volume cleargate-data:/app/data so users.db, sessions.db,
+  #     and the cookie key SURVIVE container recreation. THIS FIXES THE
+  #     long-standing pilot bug where users were lost on every redeploy.
+  #   - Points OLLAMA_HOST at the vLLM container's OpenAI endpoint instead
+  #     of an actual Ollama instance. The same OLLAMA_HOST env var is
+  #     reused so the backend code doesn't need conditional logic per
+  #     deployment — it's just an OpenAI-compat URL either way.
+  # ---------------------------------------------------------------------------
+  backend:
+    profiles:
+      - gpu
+    # Drop GPU reservation inherited from base (backend itself stays on CPU
+    # — only vllm and bge-embedder need GPUs).
+    deploy:
+      resources:
+        reservations:
+          devices: !reset null
+          memory: 4G
+        limits:
+          memory: 8G
+    # Override the bind-mount from base with: only the persistent data
+    # volume. Code lives inside the image.
+    volumes: !override
+      - cleargate-data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - CLEARGATE_PROFILE=gpu
+      - BACKEND_WORKERS=2
+      # Point at the vLLM OpenAI endpoint via service-name DNS.
+      # The /v1 suffix is the OpenAI-compat path under vLLM.
+      - OLLAMA_HOST=http://vllm:8000/v1
+      - OLLAMA_MODEL=cleargate-llm
+      - SPACY_MODEL=ru_core_news_lg
+      - GLINER_MODEL=urchade/gliner_medium-v2.1
+      - EMBEDDER_URL=http://bge-embedder:80
+      # Tighter CORS in GPU profile — only the public domain.
+      - BACKEND_CORS_ORIGINS=https://${CLEARGATE_DOMAIN:-cleargate.local}
+      # AD/LDAP — read by app/services/auth_ldap.py (added in Phase 3).
+      # Empty values disable LDAP and fall back to local password auth.
+      - LDAP_URL=${LDAP_URL-}
+      - LDAP_BIND_DN=${LDAP_BIND_DN-}
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD-}
+      - LDAP_BASE_DN=${LDAP_BASE_DN-}
+      - LDAP_ADMIN_GROUP_DN=${LDAP_ADMIN_GROUP_DN-}
+      - LDAP_USER_GROUP_DN=${LDAP_USER_GROUP_DN-}
+    depends_on:
+      vllm:
+        condition: service_healthy
+      bge-embedder:
+        condition: service_healthy
+    networks:
+      - cleargate-net
+
+  # ---------------------------------------------------------------------------
+  # frontend — same Next.js static-export image as pilot.
+  # ---------------------------------------------------------------------------
+  frontend:
+    profiles:
+      - gpu
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+      # Empty NEXT_PUBLIC_* → relative URLs → nginx routes everything
+      # through same origin, no CORS round-trips.
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_WS_URL: ""
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - cleargate-net
+
+  # ---------------------------------------------------------------------------
+  # nginx — TLS terminator + reverse proxy.
+  #
+  # Three TLS modes via CLEARGATE_TLS_MODE:
+  #   letsencrypt  — uses certbot's auto-renewed certs from /etc/letsencrypt
+  #   corp_ca      — uses pre-mounted certs from /opt/cleargate/certs
+  #   selfsigned   — generated by install-gpu.sh on first start (dev only)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cleargate-nginx
+    profiles:
+      - gpu
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.gpu.conf:/etc/nginx/templates/default.conf.template:ro
+      # Cert mounts — at least one of these must be populated.
+      # install-gpu.sh sets up the right one based on CLEARGATE_TLS_MODE.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /opt/cleargate/certs:/etc/cleargate-certs:ro
+    environment:
+      - CLEARGATE_DOMAIN=${CLEARGATE_DOMAIN:-cleargate.local}
+      - CLEARGATE_TLS_MODE=${CLEARGATE_TLS_MODE:-selfsigned}
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - cleargate-net
+
+# =============================================================================
+# Volumes — persistence
+# =============================================================================
+volumes:
+  # User database, session database, encryption keys, audit log.
+  # Survives `docker compose down` and `docker compose up --force-recreate`.
+  # Backed up by scripts/cleargate-backup.sh (cron'd via systemd timer).
+  cleargate-data:
+    driver: local
+    name: cleargate-data
+
+  # HuggingFace cache for vLLM and bge-embedder. ~30-40 GB after both
+  # models load. Separate volume so we never accidentally wipe it during
+  # data restore.
+  cleargate-models:
+    driver: local
+    name: cleargate-models

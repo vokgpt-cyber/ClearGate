@@ -1,0 +1,674 @@
+[
+  {
+    "text": "№ 3/2025",
+    "type": "RU_CONTRACT_NUMBER",
+    "start": 9,
+    "end": 17,
+    "score": 0.5,
+    "layer": "ner"
+  },
+  {
+    "text": "СтартАп Технолоджис",
+    "type": "ORG",
+    "start": 98,
+    "end": 117,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирск",
+    "type": "LOC",
+    "start": 123,
+    "end": 134,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "18 мая 2025",
+    "type": "RU_DATE",
+    "start": 224,
+    "end": 235,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирск",
+    "type": "LOC",
+    "start": 269,
+    "end": 280,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Красный проспект",
+    "type": "LOC",
+    "start": 282,
+    "end": 298,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Обществе",
+    "type": "PER",
+    "start": 453,
+    "end": 461,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «СтартАп Технолоджис» (ИНН 5406123456,",
+    "type": "ORG",
+    "start": 463,
+    "end": 505,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "1155406098765",
+    "type": "RU_OGRN",
+    "start": 511,
+    "end": 524,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Новосибирск",
+    "type": "LOC",
+    "start": 544,
+    "end": 555,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Красный проспект",
+    "type": "LOC",
+    "start": 557,
+    "end": 573,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (383) 200-10-20",
+    "type": "RU_PHONE",
+    "start": 597,
+    "end": 615,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "corp@startup-tech.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 628,
+    "end": 648,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеев Михаил Владимирович",
+    "type": "PER",
+    "start": 742,
+    "end": 770,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5013 456789",
+    "type": "RU_PASSPORT",
+    "start": 780,
+    "end": 791,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "УФМС",
+    "type": "ORG",
+    "start": 799,
+    "end": 803,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "России",
+    "type": "LOC",
+    "start": 804,
+    "end": 810,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирской области",
+    "type": "LOC",
+    "start": 817,
+    "end": 838,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "17.04.2012",
+    "type": "RU_DATE",
+    "start": 839,
+    "end": 849,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "334-455-667 84",
+    "type": "RU_SNILS",
+    "start": 857,
+    "end": 871,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (913) 100-22-33",
+    "type": "RU_PHONE",
+    "start": 902,
+    "end": 920,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "alekseev@startup-tech.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 933,
+    "end": 957,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Павел Сергеевич",
+    "type": "PER",
+    "start": 974,
+    "end": 989,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5014 789012",
+    "type": "RU_PASSPORT",
+    "start": 999,
+    "end": 1010,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "УФМС",
+    "type": "ORG",
+    "start": 1018,
+    "end": 1022,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "России",
+    "type": "LOC",
+    "start": 1023,
+    "end": 1029,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирской области",
+    "type": "LOC",
+    "start": 1036,
+    "end": 1057,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Центральном районе",
+    "type": "LOC",
+    "start": 1060,
+    "end": 1078,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирска",
+    "type": "LOC",
+    "start": 1082,
+    "end": 1094,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "03.11.2013",
+    "type": "RU_DATE",
+    "start": 1095,
+    "end": 1105,
+    "score": 0.95,
+    "layer": "regex"
+  },
+  {
+    "text": "445-556-667 14",
+    "type": "RU_SNILS",
+    "start": 1116,
+    "end": 1130,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирск",
+    "type": "LOC",
+    "start": 1177,
+    "end": 1188,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Кирова",
+    "type": "LOC",
+    "start": 1194,
+    "end": 1200,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (923) 555-44-66",
+    "type": "RU_PHONE",
+    "start": 1223,
+    "end": 1241,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Анастасия Юрьевна",
+    "type": "PER",
+    "start": 1255,
+    "end": 1272,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5015 111222",
+    "type": "RU_PASSPORT",
+    "start": 1282,
+    "end": 1293,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "556-667-778 29",
+    "type": "RU_SNILS",
+    "start": 1301,
+    "end": 1315,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "orlova.a@yandex.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1341,
+    "end": 1359,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (952) 820-11-44",
+    "type": "RU_PHONE",
+    "start": 1366,
+    "end": 1384,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Сергей Петрович",
+    "type": "PER",
+    "start": 1398,
+    "end": 1413,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Ромашка-Групп»",
+    "type": "ORG",
+    "start": 1429,
+    "end": 1448,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "7707083893",
+    "type": "RU_INN",
+    "start": 1454,
+    "end": 1464,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "15.01.2025",
+    "type": "RU_DATE",
+    "start": 1498,
+    "end": 1508,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "4518 667788",
+    "type": "RU_PASSPORT",
+    "start": 1518,
+    "end": 1529,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Петрова Елена Александровна",
+    "type": "PER",
+    "start": 1546,
+    "end": 1573,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «Индустрия Консалт»",
+    "type": "ORG",
+    "start": 1589,
+    "end": 1612,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5012345672",
+    "type": "RU_INN",
+    "start": 1621,
+    "end": 1631,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "20.02.2025",
+    "type": "RU_DATE",
+    "start": 1662,
+    "end": 1672,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "+7 (925) 987-65-43",
+    "type": "RU_PHONE",
+    "start": 1691,
+    "end": 1709,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "petrova@industry-consult.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 1722,
+    "end": 1749,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "СОБРАНИЯ",
+    "type": "ORG",
+    "start": 1763,
+    "end": 1771,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Орлова А.Ю.",
+    "type": "PER",
+    "start": 1773,
+    "end": 1784,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "СОБРАНИЯ",
+    "type": "ORG",
+    "start": 1798,
+    "end": 1806,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеев М.В.",
+    "type": "PER",
+    "start": 1808,
+    "end": 1821,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общества за 2024 год",
+    "type": "ORG",
+    "start": 1930,
+    "end": 1950,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "5407987654",
+    "type": "RU_INN",
+    "start": 2141,
+    "end": 2151,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "1185407012345",
+    "type": "RU_OGRN",
+    "start": 2158,
+    "end": 2171,
+    "score": 0.65,
+    "layer": "ner"
+  },
+  {
+    "text": "Алексеева М.В.",
+    "type": "PER",
+    "start": 2215,
+    "end": 2229,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общества за 2024 год",
+    "type": "ORG",
+    "start": 2265,
+    "end": 2285,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ПОСТАНОВИЛИ",
+    "type": "ORG",
+    "start": 2422,
+    "end": 2433,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «СтартАп Технолоджис»",
+    "type": "ORG",
+    "start": 2478,
+    "end": 2503,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ТРЕТЬЕМУ",
+    "type": "ORG",
+    "start": 2521,
+    "end": 2529,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Григорьева П.С.",
+    "type": "PER",
+    "start": 2548,
+    "end": 2563,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общества сроком на 3 (три)",
+    "type": "ORG",
+    "start": 2610,
+    "end": 2636,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеева Михаила Владимировича",
+    "type": "PER",
+    "start": 2642,
+    "end": 2673,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ПОСТАНОВИЛИ",
+    "type": "ORG",
+    "start": 2736,
+    "end": 2747,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ООО «СтартАп Технолоджис»",
+    "type": "ORG",
+    "start": 2780,
+    "end": 2805,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеева М.В.",
+    "type": "PER",
+    "start": 2806,
+    "end": 2820,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "19 мая 2025",
+    "type": "RU_DATE",
+    "start": 2840,
+    "end": 2851,
+    "score": 0.7,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексееву М.В.",
+    "type": "PER",
+    "start": 2867,
+    "end": 2881,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "25.05.2025",
+    "type": "RU_DATE",
+    "start": 2892,
+    "end": 2902,
+    "score": 0.6,
+    "layer": "ner"
+  },
+  {
+    "text": "ЕГРЮЛ",
+    "type": "ORG",
+    "start": 2944,
+    "end": 2949,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Новосибирской области",
+    "type": "LOC",
+    "start": 2966,
+    "end": 2987,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ЧЕТВЁРТОМУ",
+    "type": "ORG",
+    "start": 2993,
+    "end": 3003,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеева М.В.",
+    "type": "PER",
+    "start": 3022,
+    "end": 3036,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Сибирские Венчурные Инвестиции",
+    "type": "ORG",
+    "start": 3083,
+    "end": 3113,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Лебедев Артём Олегович",
+    "type": "PER",
+    "start": 3138,
+    "end": 3160,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "+7 (383) 244-88-99",
+    "type": "RU_PHONE",
+    "start": 3167,
+    "end": 3185,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "a.lebedev@sib-vc.ru",
+    "type": "EMAIL_ADDRESS",
+    "start": 3198,
+    "end": 3217,
+    "score": 1.0,
+    "layer": "regex"
+  },
+  {
+    "text": "Алексеев, Григорьев, Орлова, Петрова",
+    "type": "PER",
+    "start": 3313,
+    "end": 3349,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "ПОСТАНОВИЛИ",
+    "type": "ORG",
+    "start": 3397,
+    "end": 3408,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "Общества",
+    "type": "ORG",
+    "start": 3535,
+    "end": 3543,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "М.В. Алексеев",
+    "type": "PER",
+    "start": 3615,
+    "end": 3628,
+    "score": 0.85,
+    "layer": "regex"
+  },
+  {
+    "text": "А.Ю. Орлова",
+    "type": "PER",
+    "start": 3673,
+    "end": 3684,
+    "score": 0.85,
+    "layer": "regex"
+  }
+]
