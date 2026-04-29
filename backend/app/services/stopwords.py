@@ -3,6 +3,7 @@
 Legal documents contain many terms that look like entities to spaCy/GLiNER
 but are actually generic legal terminology. These lists are applied as a
 post-processing step after all NER layers, before adding to EntityRegistry.
+Expanded in v0.3.0 with FORM_FIELD_STOPWORDS to filter field labels.
 """
 
 from __future__ import annotations
@@ -49,6 +50,43 @@ POSITION_STOPWORDS: set[str] = {
     "операционный директор",
 }
 
+# Form-field labels — words that label the field rather than name a person/
+# org/place. NER models love these; they're never sensitive PII themselves.
+# Match only as standalone single tokens (exact match after lowercase+strip),
+# never as substrings — "Адрес поставки" the address is real, "Адрес:" alone
+# is just a label.
+FORM_FIELD_STOPWORDS: set[str] = {
+    # Personal-data labels
+    "имя", "фамилия", "отчество", "фио",
+    "ф.и.о.", "ф.и.о", "ф/и/о",
+    "имени", "фамилии", "отчества",
+    # Identifier-field labels (NOT the IDs themselves)
+    "паспорт", "паспорта", "снилс", "инн", "огрн", "огрнип",
+    "кпп", "окпо", "октмо", "оквэд", "бик",
+    # Contact-field labels
+    "телефон", "телефона", "тел", "тел.", "т.",
+    "email", "e-mail", "почта", "электронная почта",
+    "факс", "сайт", "url",
+    # Address-field labels
+    "адрес", "адреса", "адресу", "адресом",
+    "место", "места", "местонахождение", "местонахождения",
+    "юридический адрес", "фактический адрес", "почтовый адрес",
+    "город", "город:", "область", "район", "улица", "ул.",
+    "дом", "д.", "корпус", "корп.", "кв.", "квартира", "офис",
+    "индекс",
+    # Date-field labels
+    "дата", "даты", "дате", "датой",
+    "дата рождения", "место рождения",
+    # Signature-block labels
+    "подпись", "подписи", "роспись",
+    "расшифровка", "расшифровки", "расшифровка подписи",
+    "должность", "должности",
+    "м.п.", "мп",
+    # Document-meta labels
+    "номер", "№", "n", "no",
+    "от", "до",
+}
+
 # False ORG detections
 ORG_STOPWORDS: set[str] = {
     "бик", "инн", "огрн", "огрнип", "кпп", "окпо", "октмо", "оквэд",
@@ -78,10 +116,15 @@ def is_stopword(text: str, entity_type: str) -> bool:
 
     Uses exact matching, stem matching, and short-text filtering.
     """
-    normalized = text.strip().lower()
+    normalized = text.strip().rstrip(":;,.!?-").strip().lower()
 
     # Very short entities (1-2 chars) are almost always false positives
     if len(normalized) <= 2 and entity_type in ("PER", "ORG", "LOC"):
+        return True
+
+    # Form-field labels — never sensitive PII themselves. Filter regardless
+    # of which entity_type the NER model assigned to them.
+    if normalized in FORM_FIELD_STOPWORDS:
         return True
 
     # Exact match in global stopword lists

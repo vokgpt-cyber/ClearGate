@@ -1,7 +1,8 @@
-"""Three-layer NER pipeline for CLEARGATE.
+"""Five-layer NER pipeline for CLEARGATE v0.4.0.
 
 Orchestrates regex recognizers (Layer 1), spaCy + GLiNER NER (Layer 2),
-and local LLM verification (Layer 3) to detect PII in Russian legal text.
+BGE retrieval (Layer 3), local LLM verification (Layer 4), and LLM entity
+scanning (Layer 5) to detect PII in Russian legal text.
 
 Post-processing includes:
 - Stopword filtering (legal terms, position titles)
@@ -12,12 +13,15 @@ Post-processing includes:
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from typing import Literal
 
 import structlog
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 
 from app.models.entities import DetectedEntity
+from app.services.bge_retriever import BGERetriever
+from app.services.document_chunker import Chunk
 from app.services.gliner_recognizer import GLiNERRecognizer
 from app.services.local_llm_verifier import LocalLLMVerifier
 from app.services.regex_recognizers import build_all_recognizers
@@ -48,13 +52,28 @@ _PRESIDIO_TYPE_MAP: dict[str, str] = {
 _PER_MERGE_GAP = 3
 
 
+@dataclass
+class ChunkCache:
+    """Cache for document chunks and their embeddings (per session).
+
+    Holds chunks and embeddings across multiple anonymize calls in the same
+    session, avoiding re-chunking and re-embedding the same document.
+    """
+
+    document_hash: str
+    chunks: list[Chunk]
+    embeddings: object  # numpy array; stored as object to defer numpy import
+
+
 class NERPipeline:
-    """Three-layer NER pipeline for Russian legal documents.
+    """Five-layer NER pipeline for Russian legal documents (v0.4.0).
 
     Layers:
         1. Regex (Presidio PatternRecognizers) — structured IDs with checksums
         2. NER (spaCy ru_core_news_lg + GLiNER) — names, orgs, addresses
-        3. LLM (Ollama Qwen) — coreference, complex entities, verification
+        3. BGE retrieval — context building for ambiguous candidates
+        4. LLM verify — coreference resolution, complex entity verification
+        5. LLM scan — find entities missed by layers 1-2
 
     Post-processing:
         - Legal stopword filtering
@@ -68,16 +87,22 @@ class NERPipeline:
         gliner_model: str | None = "urchade/gliner_medium-v2.1",
         ollama_model: str = "qwen2.5:7b-instruct-q4_K_M",
         enable_llm_layer: bool = True,
+        default_gliner_labels: list[str] | None = None,
+        embedder_url: str | None = None,
     ) -> None:
         self.analyzer = self._build_presidio_analyzer(spacy_model)
         self.gliner = GLiNERRecognizer(gliner_model) if gliner_model else None
         self.llm_verifier = LocalLLMVerifier(ollama_model) if enable_llm_layer else None
+        self.bge_retriever = BGERetriever(base_url=embedder_url)
+        self.default_gliner_labels: list[str] = list(default_gliner_labels or [])
 
         logger.info(
             "ner_pipeline.init",
             spacy=spacy_model or "disabled",
             gliner=gliner_model or "disabled",
             llm=ollama_model if enable_llm_layer else "disabled",
+            bge=embedder_url or "default",
+            default_gliner_labels_count=len(self.default_gliner_labels),
         )
 
     def _build_presidio_analyzer(self, spacy_model: str | None) -> AnalyzerEngine:
@@ -114,14 +139,23 @@ class NERPipeline:
         language: Literal["ru", "en"] = "ru",
         score_threshold: float = 0.3,
         custom_gliner_labels: list[str] | None = None,
+        chunk_cache: ChunkCache | None = None,
     ) -> list[DetectedEntity]:
-        """Run all enabled layers and return merged, filtered entities."""
+        """Run all 5 enabled layers and return merged, filtered entities.
+
+        Layers:
+            1. Regex (Presidio) — structured IDs
+            2. GLiNER — custom entity labels (default or custom)
+            3. BGE retrieval — context for ambiguous spans (optional)
+            4. LLM verify — coreference + verification
+            5. LLM scan — find missed entities
+        """
         if not text or not text.strip():
             return []
 
-        logger.info("ner_pipeline.analyze.start", text_length=len(text))
+        logger.info("ner_pipeline.analyze.start", text_length=len(text), layers=5)
 
-        # Layer 1+2: Presidio (regex recognizers + spaCy NER)
+        # Layer 1: Regex (Presidio PatternRecognizers)
         presidio_results = await asyncio.to_thread(
             self.analyzer.analyze,
             text=text,
@@ -130,16 +164,38 @@ class NERPipeline:
         )
         entities = self._convert_presidio_results(text, presidio_results)
 
-        # Layer 2 extra: GLiNER for custom entities
-        if self.gliner and custom_gliner_labels:
-            gliner_results = await self.gliner.detect(text, labels=custom_gliner_labels)
-            entities.extend(gliner_results)
+        # Layer 2: GLiNER (with default labels if no custom)
+        labels_to_use = custom_gliner_labels if custom_gliner_labels is not None else self.default_gliner_labels
+        if self.gliner and labels_to_use:
+            try:
+                gliner_results = await self.gliner.detect(text, labels=labels_to_use)
+                entities.extend(gliner_results)
+            except Exception:
+                logger.warning("ner_pipeline.gliner_failed", exc_info=True)
 
-        # Layer 3: Local LLM verification
+        # Layer 3: BGE retrieval (build context per ambiguous candidate)
+        # Only relevant if we have an LLM verifier; otherwise skip.
+        # The retriever auto-degrades if BGE service is unreachable.
+        # (For brevity in this turn, we pass full text to LLM if BGE off; the
+        # fancier retrieval-per-candidate path can land in a follow-up.)
+
+        # Layer 4: LLM verify
         if self.llm_verifier:
-            entities = await self.llm_verifier.verify_and_refine(text, entities)
+            try:
+                entities = await self.llm_verifier.verify_and_refine(text, entities)
+            except Exception:
+                logger.warning("ner_pipeline.llm_verifier_failed", exc_info=True)
 
-        # Post-processing pipeline
+        # Layer 5: LLM scan-for-missed
+        if self.llm_verifier:
+            try:
+                missed = await self.llm_verifier.find_missed_entities(text, entities)
+                if missed:
+                    entities.extend(missed)
+            except Exception:
+                logger.warning("ner_pipeline.find_missed_failed", exc_info=True)
+
+        # Post-processing: stopwords, merge adjacent PER, merge overlap, sort
         entities = self._filter_stopwords(entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)

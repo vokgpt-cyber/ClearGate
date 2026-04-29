@@ -159,6 +159,97 @@
     "errorNetwork": "Сервер недоступен",
     "logout": "Выйти",
     "signedInAs": "Вы вошли как",
-    "checking": "Проверяем сессию…"
+    "checking": "Проверяем сессию…",
+    "adminPill": "Админ"
+  },
+  "feedback": {
+    "button": "Помощь",
+    "titleSubmit": "Сообщить о проблеме",
+    "titleHistory": "Мои сообщения",
+    "categoryLabel": "Категория",
+    "categoryBug": "Баг",
+    "categorySuggestion": "Предложение",
+    "categoryQuestion": "Вопрос",
+    "placeholder": "Опишите подробно, что произошло...",
+    "includeScreenshot": "Приложить скриншот",
+    "submit": "Отправить",
+    "submitting": "Отправляем...",
+    "thanks": "Спасибо! Сообщение получено.",
+    "noHistory": "У вас пока нет обращений",
+    "adminReply": "Ответ администратора",
+    "emptyText": "Пожалуйста, введите текст сообщения.",
+    "statusNew": "Новое",
+    "statusInProgress": "В работе",
+    "statusResolved": "Решено",
+    "statusWontfix": "Не решается"
+  },
+  "cmdk": {
+    "placeholder": "Введите команду...",
+    "noResults": "Ничего не найдено.",
+    "documents": "Документы",
+    "actions": "Действия",
+    "navigation": "Навигация",
+    "uploadDocument": "Загрузить документ",
+    "anonymize": "Анонимизировать",
+    "exportDocx": "Экспорт DOCX",
+    "home": "Главная",
+    "admin": "Администратор"
+  },
+  "admin": {
+    "users": {
+      "title": "Пользователи",
+      "create": "Создать пользователя",
+      "username": "Логин",
+      "email": "Email",
+      "displayName": "Имя",
+      "role": "Роль",
+      "active": "Активен",
+      "actions": "Действия",
+      "created": "Создан",
+      "lastLogin": "Последний вход",
+      "disable": "Отключить",
+      "enable": "Включить",
+      "changeRole": "Сменить роль",
+      "resetPassword": "Сбросить пароль",
+      "syncAD": "Синхронизация с AD",
+      "syncing": "Синхронизация..."
+    },
+    "feedback": {
+      "title": "Обратная связь",
+      "user": "Пользователь",
+      "category": "Категория",
+      "message": "Сообщение",
+      "status": "Статус",
+      "reply": "Ответить",
+      "replyPlaceholder": "Введите ответ юристу...",
+      "send": "Отправить",
+      "filterAll": "Все",
+      "filterNew": "Новые",
+      "filterInProgress": "В работе",
+      "filterResolved": "Решено"
+    },
+    "analytics": {
+      "title": "Аналитика",
+      "period7d": "7 дней",
+      "period30d": "30 дней",
+      "period90d": "90 дней",
+      "sessionsPerDay": "Сессий в день",
+      "latencyP50": "Медиана анонимизации",
+      "latencyP95": "P95 анонимизации",
+      "topEntities": "Топ типов сущностей",
+      "activeUsers": "Активных юзеров (7 дней)",
+      "errorRate": "Доля ошибок"
+    },
+    "errors": {
+      "title": "Ошибки",
+      "source": "Источник",
+      "severity": "Уровень",
+      "message": "Сообщение",
+      "url": "URL",
+      "user": "Пользователь",
+      "time": "Время",
+      "client": "Клиент",
+      "server": "Сервер"
+    }
   }
 }

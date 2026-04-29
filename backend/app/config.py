@@ -44,6 +44,23 @@ class Settings(BaseSettings):
     ollama_host: str = "http://ollama:11434"
     ollama_model: str = "qwen2.5:7b-instruct-q4_K_M"
 
+    # Layer-2 NER models. Resolved from env vars SPACY_MODEL and GLINER_MODEL
+    # (pydantic-settings auto-uppercases the field name). Defaults are the
+    # large/medium-quality choices baked into the backend image.
+    spacy_model: str = "ru_core_news_lg"
+    gliner_model: str = "urchade/gliner_medium-v2.1"
+
+    # Default zero-shot labels GLiNER searches for when a session does not
+    # supply its own custom_entities list. Mix of English and Russian-
+    # specific legal terms. CSV-encoded so a single env var can override.
+    cleargate_default_gliner_labels: str = (
+        "person,organization,location,address,"
+        "должность,сумма контракта,наименование суда,кодовое название проекта"
+    )
+
+    # BGE-M3 embedder URL (Phase 2 retrieval).
+    embedder_url: str = "http://bge-embedder:80"
+
     # Kill switch for the LLM verification layer. On CPU-only pilot boxes
     # LLM verification adds 30-60 s per request; IT can disable it without
     # touching code by setting CLEARGATE_DISABLE_LLM_LAYER=true in .env.
@@ -66,6 +83,17 @@ class Settings(BaseSettings):
     # to anyone inspecting browser devtools.
     cleargate_auth_cookie_name: str = "cg_session"
 
+    # LDAP/AD authentication (v0.4.0 Phase 3). If LDAP_URL is empty, auth
+    # falls back to local password-only mode. Production GPU deployment fills
+    # these via .env; pilot leaves them blank.
+    ldap_url: str = ""                # e.g. "ldaps://ad.epam.ru:636"
+    ldap_bind_dn: str = ""            # service account DN for directory queries
+    ldap_bind_password: str = ""      # service account password
+    ldap_base_dn: str = ""            # base DN for user searches
+    ldap_admin_group_dn: str = ""     # group DN that maps to admin role
+    ldap_user_group_dn: str = ""      # group DN that maps to lawyer role
+    ldap_timeout_seconds: int = 5     # connect timeout, prevents hangs
+
     # Version (not from env -- hardcoded to match pyproject.toml)
     version: str = "0.1.0-alpha"
 
@@ -74,6 +102,16 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
         return [o.strip() for o in self.backend_cors_origins.split(",") if o.strip()]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def default_gliner_labels_list(self) -> list[str]:
+        """Parse default GLiNER labels from CSV string."""
+        return [
+            label.strip()
+            for label in self.cleargate_default_gliner_labels.split(",")
+            if label.strip()
+        ]
 
 
 settings = Settings()

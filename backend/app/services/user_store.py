@@ -23,7 +23,7 @@ UTC = timezone.utc
 
 logger = structlog.get_logger(__name__)
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS users (
@@ -54,6 +54,11 @@ class UserRecord:
         "is_active",
         "created_at",
         "updated_at",
+        "role",
+        "email",
+        "display_name",
+        "ldap_dn",
+        "last_login_at",
     )
 
     def __init__(
@@ -64,6 +69,11 @@ class UserRecord:
         is_active: bool,
         created_at: datetime,
         updated_at: datetime,
+        role: str = "lawyer",
+        email: str | None = None,
+        display_name: str | None = None,
+        ldap_dn: str | None = None,
+        last_login_at: datetime | None = None,
     ) -> None:
         self.user_id = user_id
         self.username = username
@@ -71,6 +81,11 @@ class UserRecord:
         self.is_active = is_active
         self.created_at = created_at
         self.updated_at = updated_at
+        self.role = role
+        self.email = email
+        self.display_name = display_name
+        self.ldap_dn = ldap_dn
+        self.last_login_at = last_login_at
 
     def to_public_dict(self) -> dict[str, Any]:
         """Dict safe to return over HTTP — never includes the password hash."""
@@ -79,6 +94,10 @@ class UserRecord:
             "username": self.username,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat(),
+            "role": self.role,
+            "email": self.email,
+            "display_name": self.display_name,
+            "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
         }
 
 
@@ -108,6 +127,23 @@ class UserStore:
         )
         self._conn.commit()
 
+        # Migration v2: add new columns for LDAP and roles
+        new_columns = [
+            ("role", "TEXT NOT NULL DEFAULT 'lawyer'"),
+            ("email", "TEXT"),
+            ("display_name", "TEXT"),
+            ("ldap_dn", "TEXT"),
+            ("last_login_at", "TEXT"),
+        ]
+        for col_name, col_def in new_columns:
+            try:
+                cur.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
+                logger.info("user_store.migration_v2.column_added", column=col_name)
+            except sqlite3.OperationalError:
+                # Column already exists (idempotent)
+                pass
+        self._conn.commit()
+
     # ------------------------------------------------------------------
     # Writes
     # ------------------------------------------------------------------
@@ -118,6 +154,10 @@ class UserStore:
         password_hash: str,
         user_id: str | None = None,
         is_active: bool = True,
+        role: str = "lawyer",
+        email: str | None = None,
+        display_name: str | None = None,
+        ldap_dn: str | None = None,
     ) -> UserRecord:
         """Insert a new user.  Raises sqlite3.IntegrityError on duplicate username."""
         uid = user_id or str(uuid.uuid4())
@@ -128,16 +168,16 @@ class UserStore:
                 """
                 INSERT INTO users (
                     user_id, username, password_hash, is_active,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    created_at, updated_at, role, email, display_name, ldap_dn
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (uid, username, password_hash, int(is_active), now_iso, now_iso),
+                (uid, username, password_hash, int(is_active), now_iso, now_iso, role, email, display_name, ldap_dn),
             )
             self._conn.commit()
         except sqlite3.IntegrityError:
             self._conn.rollback()
             raise
-        logger.info("user_store.created", user_id=uid, username=username)
+        logger.info("user_store.created", user_id=uid, username=username, role=role)
         return UserRecord(
             user_id=uid,
             username=username,
@@ -145,6 +185,10 @@ class UserStore:
             is_active=is_active,
             created_at=now,
             updated_at=now,
+            role=role,
+            email=email,
+            display_name=display_name,
+            ldap_dn=ldap_dn,
         )
 
     def update_password(self, user_id: str, new_password_hash: str) -> bool:
@@ -190,6 +234,101 @@ class UserStore:
             logger.info("user_store.deleted", user_id=user_id)
         return ok
 
+    def set_role(self, user_id: str, role: str) -> bool:
+        """Update a user's role.  Returns True iff the user existed."""
+        now_iso = datetime.now(UTC).isoformat()
+        cur = self._conn.execute(
+            """
+            UPDATE users
+               SET role = ?, updated_at = ?
+             WHERE user_id = ?
+            """,
+            (role, now_iso, user_id),
+        )
+        self._conn.commit()
+        ok = cur.rowcount > 0
+        if ok:
+            logger.info("user_store.role_updated", user_id=user_id, role=role)
+        return ok
+
+    def record_login(self, user_id: str) -> None:
+        """Update the last_login_at timestamp for a user."""
+        now_iso = datetime.now(UTC).isoformat()
+        self._conn.execute(
+            "UPDATE users SET last_login_at = ? WHERE user_id = ?",
+            (now_iso, user_id),
+        )
+        self._conn.commit()
+        logger.info("user_store.login_recorded", user_id=user_id)
+
+    def get_or_create_from_ldap(
+        self,
+        ldap_dn: str,
+        username: str,
+        email: str | None = None,
+        display_name: str | None = None,
+        role: str = "lawyer",
+    ) -> UserRecord:
+        """Get or create a user from LDAP credentials.
+
+        If the user exists (matched by ldap_dn), update role/email/display_name
+        and touch last_login_at. Otherwise create the user with password_hash
+        set to "!ldap-only" (an impossible hash sentinel).
+
+        Returns the UserRecord in either case.
+        """
+        # Try to find by ldap_dn
+        cur = self._conn.execute(
+            "SELECT user_id FROM users WHERE ldap_dn = ?",
+            (ldap_dn,),
+        )
+        row = cur.fetchone()
+
+        now_iso = datetime.now(UTC).isoformat()
+
+        if row:
+            # Update existing user
+            user_id = row[0]
+            self._conn.execute(
+                """
+                UPDATE users
+                   SET role = ?, email = ?, display_name = ?, last_login_at = ?, updated_at = ?
+                 WHERE user_id = ?
+                """,
+                (role, email, display_name, now_iso, now_iso, user_id),
+            )
+            self._conn.commit()
+            logger.info("user_store.ldap_user_updated", user_id=user_id, ldap_dn=ldap_dn)
+            return self.get_by_id(user_id)  # type: ignore[return-value]
+        else:
+            # Create new user
+            uid = str(uuid.uuid4())
+            password_hash = "!ldap-only"
+            self._conn.execute(
+                """
+                INSERT INTO users (
+                    user_id, username, password_hash, is_active,
+                    created_at, updated_at, role, email, display_name, ldap_dn, last_login_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (uid, username, password_hash, 1, now_iso, now_iso, role, email, display_name, ldap_dn, now_iso),
+            )
+            self._conn.commit()
+            logger.info("user_store.ldap_user_created", user_id=uid, ldap_dn=ldap_dn)
+            return UserRecord(
+                user_id=uid,
+                username=username,
+                password_hash=password_hash,
+                is_active=True,
+                created_at=datetime.fromisoformat(now_iso).replace(tzinfo=UTC),
+                updated_at=datetime.fromisoformat(now_iso).replace(tzinfo=UTC),
+                role=role,
+                email=email,
+                display_name=display_name,
+                ldap_dn=ldap_dn,
+                last_login_at=datetime.fromisoformat(now_iso).replace(tzinfo=UTC),
+            )
+
     # ------------------------------------------------------------------
     # Reads
     # ------------------------------------------------------------------
@@ -213,7 +352,14 @@ class UserStore:
         return self._row_to_record(cur, row)
 
     def list_users(self) -> list[UserRecord]:
-        """Return all users ordered by creation time."""
+        """Return all active users ordered by creation time."""
+        cur = self._conn.execute(
+            "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at ASC"
+        )
+        return [self._row_to_record(cur, row) for row in cur.fetchall()]
+
+    def list_all(self) -> list[UserRecord]:
+        """Return all users (incl. disabled) ordered by creation time."""
         cur = self._conn.execute(
             "SELECT * FROM users ORDER BY created_at ASC"
         )
@@ -244,6 +390,13 @@ class UserStore:
             created = created.replace(tzinfo=UTC)
         if updated.tzinfo is None:
             updated = updated.replace(tzinfo=UTC)
+
+        last_login = None
+        if data.get("last_login_at"):
+            last_login = datetime.fromisoformat(data["last_login_at"])
+            if last_login.tzinfo is None:
+                last_login = last_login.replace(tzinfo=UTC)
+
         return UserRecord(
             user_id=data["user_id"],
             username=data["username"],
@@ -251,4 +404,9 @@ class UserStore:
             is_active=bool(data["is_active"]),
             created_at=created,
             updated_at=updated,
+            role=data.get("role", "lawyer"),
+            email=data.get("email"),
+            display_name=data.get("display_name"),
+            ldap_dn=data.get("ldap_dn"),
+            last_login_at=last_login,
         )

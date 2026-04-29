@@ -86,10 +86,17 @@ export function rawDocumentUrl(sessionId: string): string {
   return `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/raw`;
 }
 
-export async function createSession(locale = 'ru'): Promise<{ session_id: string }> {
+export async function createSession(
+  locale = 'ru',
+  options: { enableLlmLayer?: boolean } = {},
+): Promise<{ session_id: string }> {
+  // v0.4.0: Deep Scan (Layer 4+5 LLM verification) is always enabled by default.
+  // The page.tsx caller passes { enableLlmLayer: true } explicitly to make it
+  // visible at the call site that the heavier pipeline is intentional.
+  const enable_llm_layer = options.enableLlmLayer ?? true;
   return request('/api/sessions', {
     method: 'POST',
-    body: JSON.stringify({ locale, enable_llm_layer: false }),
+    body: JSON.stringify({ locale, enable_llm_layer }),
   });
 }
 
@@ -453,4 +460,134 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     throw new Error(`API error ${response.status}: ${body}`);
   }
   return (await response.json()) as AuthUser;
+}
+
+// =================== Feedback (Phase 6) ===================
+
+export interface FeedbackItem {
+  id: string;
+  category: 'bug' | 'suggestion' | 'question';
+  text: string;
+  status: 'new' | 'in_progress' | 'resolved' | 'wontfix';
+  created_at: string;
+  admin_reply: string | null;
+  admin_reply_at: string | null;
+}
+
+export async function submitFeedback(input: {
+  text: string;
+  category: FeedbackItem['category'];
+  current_url?: string;
+  screenshot?: string;
+}): Promise<{ id: string }> {
+  return request('/api/feedback', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listMyFeedback(): Promise<FeedbackItem[]> {
+  return request('/api/feedback/mine');
+}
+
+// =================== Admin (Phase 6) ===================
+
+export interface AdminUserItem {
+  user_id: string;
+  username: string;
+  email: string | null;
+  display_name: string | null;
+  role: 'admin' | 'lawyer';
+  is_active: boolean;
+  ldap_dn: string | null;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export async function adminListUsers(): Promise<AdminUserItem[]> {
+  return request('/api/admin/users');
+}
+
+export async function adminCreateUser(input: {
+  username: string;
+  password: string;
+  email?: string;
+  display_name?: string;
+  role?: 'admin' | 'lawyer';
+}): Promise<AdminUserItem> {
+  return request('/api/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function adminUpdateUser(
+  user_id: string,
+  patch: {
+    is_active?: boolean;
+    role?: 'admin' | 'lawyer';
+    email?: string;
+    display_name?: string;
+    new_password?: string;
+  },
+): Promise<AdminUserItem> {
+  return request(`/api/admin/users/${user_id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export interface AdminFeedbackItem extends FeedbackItem {
+  user_id: string;
+  username: string;
+}
+
+export async function adminListFeedback(
+  status?: FeedbackItem['status'],
+): Promise<AdminFeedbackItem[]> {
+  const qs = status ? `?status=${status}` : '';
+  return request(`/api/admin/feedback${qs}`);
+}
+
+export async function adminReplyFeedback(
+  id: string,
+  reply: string,
+  status: FeedbackItem['status'],
+): Promise<AdminFeedbackItem> {
+  return request(`/api/admin/feedback/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ admin_reply: reply, status }),
+  });
+}
+
+export interface AnalyticsSummary {
+  sessions_per_day: Array<{ date: string; count: number }>;
+  anonymize_p50_ms: number;
+  anonymize_p95_ms: number;
+  top_entity_types: Array<{ entity_type: string; count: number }>;
+  active_users_7d: number;
+  error_rate: number;
+}
+
+export async function adminGetAnalytics(
+  days: number = 30,
+): Promise<AnalyticsSummary> {
+  return request(`/api/admin/analytics?days=${days}`);
+}
+
+export interface AdminErrorItem {
+  id: string;
+  source: 'client' | 'server';
+  severity: string;
+  message: string;
+  url: string | null;
+  user_id: string | null;
+  username: string | null;
+  created_at: string;
+}
+
+export async function adminListErrors(
+  limit: number = 100,
+): Promise<AdminErrorItem[]> {
+  return request(`/api/admin/errors?limit=${limit}`);
 }

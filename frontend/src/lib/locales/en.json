@@ -159,6 +159,97 @@
     "errorNetwork": "Could not reach the server",
     "logout": "Sign out",
     "signedInAs": "Signed in as",
-    "checking": "Checking session…"
+    "checking": "Checking session…",
+    "adminPill": "Admin"
+  },
+  "feedback": {
+    "button": "Help",
+    "titleSubmit": "Report an issue",
+    "titleHistory": "My feedback",
+    "categoryLabel": "Category",
+    "categoryBug": "Bug",
+    "categorySuggestion": "Suggestion",
+    "categoryQuestion": "Question",
+    "placeholder": "Describe what happened...",
+    "includeScreenshot": "Include screenshot",
+    "submit": "Send",
+    "submitting": "Sending...",
+    "thanks": "Thanks! We received your message.",
+    "noHistory": "You haven't sent any feedback yet",
+    "adminReply": "Admin reply",
+    "emptyText": "Please enter some text.",
+    "statusNew": "New",
+    "statusInProgress": "In progress",
+    "statusResolved": "Resolved",
+    "statusWontfix": "Won't fix"
+  },
+  "cmdk": {
+    "placeholder": "Type a command...",
+    "noResults": "No results found.",
+    "documents": "Documents",
+    "actions": "Actions",
+    "navigation": "Navigation",
+    "uploadDocument": "Upload document",
+    "anonymize": "Anonymize",
+    "exportDocx": "Export DOCX",
+    "home": "Home",
+    "admin": "Admin"
+  },
+  "admin": {
+    "users": {
+      "title": "Users",
+      "create": "Create user",
+      "username": "Username",
+      "email": "Email",
+      "displayName": "Display name",
+      "role": "Role",
+      "active": "Active",
+      "actions": "Actions",
+      "created": "Created",
+      "lastLogin": "Last login",
+      "disable": "Disable",
+      "enable": "Enable",
+      "changeRole": "Change role",
+      "resetPassword": "Reset password",
+      "syncAD": "Sync with AD",
+      "syncing": "Syncing..."
+    },
+    "feedback": {
+      "title": "Feedback",
+      "user": "User",
+      "category": "Category",
+      "message": "Message",
+      "status": "Status",
+      "reply": "Reply",
+      "replyPlaceholder": "Write your reply...",
+      "send": "Send",
+      "filterAll": "All",
+      "filterNew": "New",
+      "filterInProgress": "In progress",
+      "filterResolved": "Resolved"
+    },
+    "analytics": {
+      "title": "Analytics",
+      "period7d": "7 days",
+      "period30d": "30 days",
+      "period90d": "90 days",
+      "sessionsPerDay": "Sessions per day",
+      "latencyP50": "Anonymization median",
+      "latencyP95": "Anonymization P95",
+      "topEntities": "Top entity types",
+      "activeUsers": "Active users (7d)",
+      "errorRate": "Error rate"
+    },
+    "errors": {
+      "title": "Errors",
+      "source": "Source",
+      "severity": "Severity",
+      "message": "Message",
+      "url": "URL",
+      "user": "User",
+      "time": "Time",
+      "client": "Client",
+      "server": "Server"
+    }
   }
 }

@@ -11,8 +11,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import anonymize, auth as auth_router, documents, health, llm_ws, sessions
+from app.middleware.telemetry import TelemetryMiddleware
+from app.routers import admin as admin_router, anonymize, auth as auth_router, client_errors, documents, health, llm_ws, sessions, feedback
+from app.services.audit_log import AuditLog
 from app.services.auth import init_auth_service, resolve_signing_secret
+from app.services.auth_ldap import get_ldap_provider
+from app.services.error_store import ErrorStore
+from app.services.feedback_store import FeedbackStore
 from app.services.session_store import SessionStore
 from app.services.session_manager import SessionManager
 from app.services.user_store import UserStore
@@ -48,6 +53,42 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         max_age_seconds=settings.cleargate_auth_session_ttl_minutes * 60,
     )
 
+    # v0.4.0 Phase 3: LDAP provider (None if LDAP_URL not configured).
+    ldap_provider = get_ldap_provider(
+        url=settings.ldap_url,
+        bind_dn=settings.ldap_bind_dn,
+        bind_password=settings.ldap_bind_password,
+        base_dn=settings.ldap_base_dn,
+        admin_group_dn=settings.ldap_admin_group_dn,
+        user_group_dn=settings.ldap_user_group_dn,
+        timeout_seconds=settings.ldap_timeout_seconds,
+    )
+
+    # v0.4.0 Phase 3: hash-chained audit log.
+    audit_log = AuditLog(db_path=store_dir / "audit.db", file_dir=store_dir / "audit-logs")
+
+    # v0.4.0 Phase 6: feedback + error stores.
+    feedback_store = FeedbackStore(db_path=store_dir / "feedback.db")
+    error_store = ErrorStore(db_path=store_dir / "errors.db")
+
+    # Wire dependency overrides for the new routers.
+    from app.routers.feedback import get_feedback_store_from_request
+    from app.routers.client_errors import get_error_store_from_request
+    from app.routers.admin import (
+        get_user_store_from_request as get_admin_user_store,
+        get_feedback_store_from_request as get_admin_feedback_store,
+        get_error_store_from_request as get_admin_error_store,
+        get_audit_log_from_request,
+        get_ldap_provider_from_request,
+    )
+    app.dependency_overrides[get_feedback_store_from_request] = lambda: feedback_store
+    app.dependency_overrides[get_error_store_from_request] = lambda: error_store
+    app.dependency_overrides[get_admin_user_store] = lambda: user_store
+    app.dependency_overrides[get_admin_feedback_store] = lambda: feedback_store
+    app.dependency_overrides[get_admin_error_store] = lambda: error_store
+    app.dependency_overrides[get_audit_log_from_request] = lambda: audit_log
+    app.dependency_overrides[get_ldap_provider_from_request] = lambda: ldap_provider
+
     # Wire the UserStore dependency into the auth router without
     # leaking it into module-level state (keeps tests tractable).
     app.dependency_overrides[auth_router.get_user_store_from_request] = lambda: user_store
@@ -71,6 +112,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     yield
     # Shutdown: close stores
+    error_store.close()
+    feedback_store.close()
+    audit_log.close()
     if sm.store is not None:
         sm.store.close()
     user_store.close()
@@ -84,6 +128,8 @@ app = FastAPI(
     version=settings.version,
     lifespan=lifespan,
 )
+
+app.add_middleware(TelemetryMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -102,3 +148,6 @@ app.include_router(sessions.router)
 app.include_router(documents.router)
 app.include_router(anonymize.router)
 app.include_router(llm_ws.router)
+app.include_router(feedback.router)
+app.include_router(client_errors.router)
+app.include_router(admin_router.router)

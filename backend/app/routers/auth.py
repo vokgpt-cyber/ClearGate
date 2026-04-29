@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.services.auth import AuthService, get_auth_service
+from app.services.auth_ldap import LDAPProvider
 from app.services.user_store import UserRecord, UserStore
 
 logger = structlog.get_logger(__name__)
@@ -38,6 +39,15 @@ def get_user_store_from_request() -> UserStore:
     raise RuntimeError(
         "UserStore dependency not wired up; check main.py lifespan initialisation"
     )
+
+
+def get_ldap_provider_from_request() -> LDAPProvider | None:
+    """Dependency stub -- overridden in main.py via app.dependency_overrides.
+
+    Returns None if LDAP is not configured, otherwise returns the configured
+    LDAPProvider instance. main.py sets this during startup if settings.ldap_url is set.
+    """
+    return None
 
 
 # ----------------------------------------------------------------------
@@ -161,46 +171,64 @@ async def login(
     response: Response,
     users: Annotated[UserStore, Depends(get_user_store_from_request)],
     auth: Annotated[AuthService, Depends(get_auth_service)],
+    ldap: Annotated[LDAPProvider | None, Depends(get_ldap_provider_from_request)],
 ) -> LoginResponse:
-    """Verify credentials, issue a signed session cookie, return the public user."""
-    # Look up by username first so we always burn ~one Argon2 verify cost
-    # on the failure path too (makes username enumeration via timing much
-    # harder, though not impossible over a slow network).
-    rec = users.get_by_username(request.username)
-    if rec is None or not rec.is_active:
-        # Dummy verify to equalise timing on unknown-user vs bad-password.
-        auth.verify_password(
-            request.password,
-            "$argon2id$v=19$m=65536,t=2,p=1$"
-            "ZGVhZGJlZWZkZWFkYmVlZg$"  # fixed 16-byte dummy salt
-            "Ym9ndXNib2d1c2JvZ3Vzbm90YXJlYWxoYXNoMTIzNDU2Nzg",
-        )
-        logger.info("auth.login.failed", username=request.username, reason="no_such_user_or_inactive")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-        )
+    """Verify credentials (LDAP-first, then local), issue a signed session cookie."""
+    # Step 1: try LDAP first if configured.
+    user_record = None
+    if ldap is not None:
+        ldap_result = await ldap.authenticate(request.username, request.password)
+        if ldap_result is not None:
+            # LDAP succeeded; sync into local user store.
+            user_record = users.get_or_create_from_ldap(
+                ldap_dn=ldap_result.dn,
+                username=ldap_result.username,
+                email=ldap_result.email,
+                display_name=ldap_result.display_name,
+                role=ldap_result.role,
+            )
 
-    if not auth.verify_password(request.password, rec.password_hash):
-        logger.info("auth.login.failed", user_id=rec.user_id, reason="bad_password")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-        )
+    # Step 2: fall back to local password if LDAP didn't authenticate.
+    if user_record is None:
+        local = users.get_by_username(request.username)
+        if local is None or not local.is_active:
+            # Dummy verify to equalise timing on unknown-user vs bad-password.
+            auth.verify_password(
+                request.password,
+                "$argon2id$v=19$m=65536,t=2,p=1$"
+                "ZGVhZGJlZWZkZWFkYmVlZg$"  # fixed 16-byte dummy salt
+                "Ym9ndXNib2d1c2JvZ3Vzbm90YXJlYWxoYXNoMTIzNDU2Nzg",
+            )
+            logger.info("auth.login.failed", username=request.username, reason="no_such_user_or_inactive")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+            )
 
-    # Transparently upgrade the hash if our Argon2 parameters have changed.
-    if auth.needs_rehash(rec.password_hash):
-        try:
-            new_hash = auth.hash_password(request.password)
-            users.update_password(rec.user_id, new_hash)
-        except Exception:
-            # Non-fatal -- a failed rehash shouldn't block login.
-            logger.warning("auth.login.rehash_failed", user_id=rec.user_id, exc_info=True)
+        if not auth.verify_password(request.password, local.password_hash):
+            logger.info("auth.login.failed", user_id=local.user_id, reason="bad_password")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+            )
 
-    token = auth.issue_session_token(rec.user_id)
+        # Transparently upgrade the hash if our Argon2 parameters have changed.
+        if auth.needs_rehash(local.password_hash):
+            try:
+                new_hash = auth.hash_password(request.password)
+                users.update_password(local.user_id, new_hash)
+            except Exception:
+                # Non-fatal -- a failed rehash shouldn't block login.
+                logger.warning("auth.login.rehash_failed", user_id=local.user_id, exc_info=True)
+
+        user_record = local
+
+    # Record login + issue cookie.
+    users.record_login(user_record.user_id)
+    token = auth.issue_session_token(user_record.user_id)
     _set_session_cookie(response, token, auth.max_age_seconds)
-    logger.info("auth.login.ok", user_id=rec.user_id, username=rec.username)
-    return LoginResponse(user=UserPublic.from_record(rec))
+    logger.info("auth.login.ok", user_id=user_record.user_id, username=user_record.username)
+    return LoginResponse(user=UserPublic.from_record(user_record))
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

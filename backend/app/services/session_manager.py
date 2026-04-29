@@ -23,7 +23,7 @@ from threading import Lock
 import structlog
 
 from app.services.entity_registry import EntityRegistry
-from app.services.ner_pipeline import NERPipeline
+from app.services.ner_pipeline import ChunkCache, NERPipeline
 from app.services.session_store import SessionStore
 
 UTC = timezone.utc
@@ -44,20 +44,24 @@ class Session:
         custom_entities: list[str],
         master_key: bytes,
         user_id: str,
-        spacy_model: str | None = "ru_core_news_sm",
+        spacy_model: str | None = None,
         created_at: datetime | None = None,
     ) -> None:
+        from app.config import settings
+
         self.session_id = session_id
         self.user_id = user_id
         self.locale = locale
         self.enable_llm_layer = enable_llm_layer
         self.custom_entities = custom_entities
-        self.spacy_model = spacy_model or "ru_core_news_sm"
+        self.spacy_model = spacy_model or settings.spacy_model
         self.created_at = created_at or datetime.now(UTC)
         self.pipeline = NERPipeline(
             spacy_model=self.spacy_model,
-            gliner_model=None,
+            gliner_model=settings.gliner_model,
+            ollama_model=settings.ollama_model,
             enable_llm_layer=enable_llm_layer,
+            default_gliner_labels=settings.default_gliner_labels_list,
         )
         self.registry = EntityRegistry(
             master_key=master_key,
@@ -69,6 +73,8 @@ class Session:
         self.response_docx_bytes: bytes | None = None
         self.response_docx_filename: str | None = None
         self.deanonymized_docx_bytes: bytes | None = None
+        # v0.4.0 Phase 2: cache chunks + embeddings across /anonymize calls
+        self.chunk_cache: ChunkCache | None = None
 
 
 class SessionManager:
@@ -122,29 +128,17 @@ class SessionManager:
         user_id: str,
         session_id: str | None = None,
         locale: str = "ru",
-        enable_llm_layer: bool = False,
+        enable_llm_layer: bool = True,
         custom_entities: list[str] | None = None,
-        spacy_model: str | None = "ru_core_news_sm",
+        spacy_model: str | None = None,
     ) -> Session:
         """Create a new anonymization session owned by ``user_id``.
 
-        If ``CLEARGATE_DISABLE_LLM_LAYER=true`` is set in the environment,
-        the slow LLM verification layer is force-disabled here even when
-        the caller asked for LLM verification. This lets IT turn off the
-        slow CPU-bound layer on a pilot box without a code change.
+        v0.4.0: Always enables LLM layer (Deep Scan, all 5 layers).
+        No kill switch.
         """
         if not user_id:
             raise ValueError("create_session requires a non-empty user_id")
-
-        # Late import to avoid a circular module-load order at startup.
-        from app.config import settings
-
-        if settings.cleargate_disable_llm_layer and enable_llm_layer:
-            logger.info(
-                "session.llm_layer_disabled_by_env",
-                reason="CLEARGATE_DISABLE_LLM_LAYER=true",
-            )
-            enable_llm_layer = False
 
         if session_id is None:
             session_id = secrets.token_urlsafe(16)
@@ -152,7 +146,7 @@ class SessionManager:
             session_id=session_id,
             user_id=user_id,
             locale=locale,
-            enable_llm_layer=enable_llm_layer,
+            enable_llm_layer=True,  # v0.4.0: always enabled
             custom_entities=custom_entities or [],
             master_key=self._master_key,
             spacy_model=spacy_model,
@@ -162,6 +156,7 @@ class SessionManager:
         logger.info(
             "session.created",
             session_id=session_id, user_id=user_id, locale=locale,
+            deep_scan_enabled=True,
         )
         return session
 
@@ -314,7 +309,7 @@ class SessionManager:
             enable_llm_layer=bool(data.get("enable_llm_layer", 0)),
             custom_entities=custom_entities,
             master_key=self._master_key,
-            spacy_model=data.get("spacy_model", "ru_core_news_sm"),
+            spacy_model=None,
             created_at=created_at,
         )
         registry_blob = data.get("registry_blob")

@@ -188,10 +188,12 @@ def cmd_create_user(args: argparse.Namespace) -> int:
             print(f"error: {e}", file=sys.stderr)
             return 1
         try:
+            role = "admin" if args.admin else "lawyer"
             rec = store.create_user(
                 username=args.username,
                 password_hash=password_hash,
                 is_active=not args.inactive,
+                role=role,
             )
         except sqlite3.IntegrityError:
             # Race: someone else created the same username between the
@@ -201,7 +203,7 @@ def cmd_create_user(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        print(f"created user '{rec.username}'  id={rec.user_id}  active={rec.is_active}")
+        print(f"created user '{rec.username}'  id={rec.user_id}  active={rec.is_active}  role={rec.role}")
         return 0
     finally:
         store.close()
@@ -311,6 +313,21 @@ def cmd_delete_user(args: argparse.Namespace) -> int:
         store.close()
 
 
+def cmd_set_role(args: argparse.Namespace) -> int:
+    db_path = _resolve_db_path(args.db)
+    store = _open_store(db_path)
+    try:
+        user = store.get_by_username(args.username)
+        if user is None:
+            print(f"error: user '{args.username}' not found", file=sys.stderr)
+            return 1
+        store.set_role(user.user_id, args.role)
+        print(f"set role for '{user.username}' to '{args.role}'")
+        return 0
+    finally:
+        store.close()
+
+
 def cmd_seed(args: argparse.Namespace) -> int:
     """Idempotent seeding helper used by the pilot installer.
 
@@ -397,6 +414,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Create the user disabled (cannot log in until set-active).",
     )
+    sp.add_argument(
+        "--admin",
+        action="store_true",
+        help="Make this user an admin (role='admin' instead of 'lawyer').",
+    )
     _add_password_flags(sp)
     sp.set_defaults(func=cmd_create_user)
 
@@ -419,6 +441,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Disable the user (default is to enable).",
     )
     sp.set_defaults(func=cmd_set_active)
+
+    # set-role
+    sp = sub.add_parser("set-role", help="Change a user's role.")
+    sp.add_argument("--username", required=True, help="Username to modify.")
+    sp.add_argument(
+        "--role",
+        required=True,
+        choices=["admin", "lawyer"],
+        help="New role for the user.",
+    )
+    sp.set_defaults(func=cmd_set_role)
 
     # delete-user
     sp = sub.add_parser("delete-user", help="Permanently remove a user.")

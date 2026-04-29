@@ -23,9 +23,12 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
+import { CommandPalette } from '@/components/CommandPalette';
+import { FeedbackWidget } from '@/components/FeedbackWidget';
 import { createSession, listSessions, uploadDocx } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocale } from '@/hooks/useLocale';
+import type { InteractiveEntity } from '@/lib/entity-overlay';
 
 interface LoadedDoc {
   sessionId: string;
@@ -53,6 +56,14 @@ export default function Home() {
   const [isPicking, setIsPicking] = useState(false);
   const [isWorking, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [entityCache, setEntityCache] = useState<Record<string, InteractiveEntity[]>>({});
+
+  const handleAnonymizationComplete = useCallback(
+    (sessionId: string, entities: InteractiveEntity[]) => {
+      setEntityCache((prev) => ({ ...prev, [sessionId]: entities }));
+    },
+    [],
+  );
 
   // Restore persisted sessions from the backend on mount — but only
   // once the auth check has confirmed the user is signed in. Firing
@@ -86,7 +97,7 @@ export default function Home() {
     setWorking(true);
     setError(null);
     try {
-      const session = await createSession();
+      const session = await createSession('ru', { enableLlmLayer: true });
       await uploadDocx(session.session_id, file);
       const doc: LoadedDoc = {
         sessionId: session.session_id,
@@ -158,6 +169,8 @@ export default function Home() {
               documentId={activeDoc.sessionId}
               documentName={activeDoc.name}
               onClose={handleClose}
+              initialEntities={entityCache[activeDoc.sessionId] ?? []}
+              onAnonymizationComplete={handleAnonymizationComplete}
             />
           ) : (
             <EmptyState
@@ -168,6 +181,11 @@ export default function Home() {
           )}
         </div>
       </div>
+      <CommandPalette
+        sessions={sidebarSessions}
+        onOpenDocument={handleNewDocument}
+      />
+      <FeedbackWidget />
     </div>
   );
 }

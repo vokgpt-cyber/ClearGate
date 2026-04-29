@@ -149,13 +149,26 @@ export function applyEntities(
     // wrong span. Better to skip than to mislead the user.
     const rangeText = range.toString();
     if (!textsMatch(rangeText, entity.text)) {
-      skipped++;
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[Cleargate] entity text mismatch — skipping',
-        { expected: entity.text, got: rangeText, start: entity.start, end: entity.end },
-      );
-      continue;
+      // Try to recover from small offset drift (typically ±1-2 chars caused by
+      // docx-preview re-render variance). Search the anchor map's plain-text
+      // for entity.text in a tight window around the expected start.
+      const refit = refitOffsetsByText(liveMap, entity);
+      if (refit) {
+        const refittedRange = liveMap.toRange(refit.start, refit.end);
+        if (refittedRange && textsMatch(refittedRange.toString(), entity.text)) {
+          range = refittedRange;
+        } else {
+          skipped++;
+          // eslint-disable-next-line no-console
+          console.warn('[Cleargate] entity text mismatch — skipping', { expected: entity.text, got: rangeText });
+          continue;
+        }
+      } else {
+        skipped++;
+        // eslint-disable-next-line no-console
+        console.warn('[Cleargate] entity text mismatch — skipping', { expected: entity.text, got: rangeText });
+        continue;
+      }
     }
 
     let marks: HTMLElement[] = [];
@@ -219,6 +232,37 @@ function textsMatch(domText: string, backendText: string): boolean {
   const normalize = (s: string) =>
     s.replace(/\s+/g, ' ').replace(/[\u00a0\u200b-\u200d\ufeff]/g, '').trim();
   return normalize(domText) === normalize(backendText);
+}
+
+const REFIT_WINDOW = 24;
+
+/**
+ * Try to recover from small offset drift. Search anchorMap.plainText for
+ * entity.text within \u00b1REFIT_WINDOW chars of expected start. Returns null
+ * if no unambiguous match found.
+ */
+function refitOffsetsByText(
+  map: DocxAnchorMap,
+  entity: OverlayEntity,
+): { start: number; end: number } | null {
+  const haystack = map.plainText;
+  const needle = entity.text;
+  if (!needle || haystack.length === 0) return null;
+
+  const windowStart = Math.max(0, entity.start - REFIT_WINDOW);
+  const windowEnd = Math.min(haystack.length, entity.start + REFIT_WINDOW + needle.length);
+
+  let foundAt = -1;
+  let cursor = windowStart;
+  while (cursor <= windowEnd - needle.length) {
+    const idx = haystack.indexOf(needle, cursor);
+    if (idx === -1 || idx > windowEnd - needle.length) break;
+    if (foundAt !== -1) return null; // ambiguous, bail
+    foundAt = idx;
+    cursor = idx + 1;
+  }
+  if (foundAt === -1) return null;
+  return { start: foundAt, end: foundAt + needle.length };
 }
 
 /**

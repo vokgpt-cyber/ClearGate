@@ -51,6 +51,11 @@ dependencies = [
     "argon2-cffi>=23.1.0",
     "itsdangerous>=2.2.0",
 
+    # Phase 2 & Phase 3 additions (v0.4.0 GPU release)
+    "tiktoken>=0.7.0",
+    "numpy>=1.26.0",
+    "ldap3>=2.9.1",
+
     # Utilities
     "python-Levenshtein>=0.26.0",
     "structlog>=24.4.0",

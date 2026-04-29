@@ -1,8 +1,11 @@
-"""Local LLM verification layer for the NER pipeline.
+"""Local LLM verification layer for the NER pipeline (v0.4.0).
 
-Uses Ollama (Qwen 2.5) to verify entity candidates from layers 1-2,
-resolve coreferences, and find entities missed by regex and NER.
-This is Layer 3 — the slowest but most context-aware layer.
+Uses OpenAI-compatible async client (works with Ollama and vLLM) for:
+- Layer 4: verify entity candidates from layers 1-3
+- Layer 5: find entities missed by regex and NER (via new find_missed_entities method)
+
+Supports both Ollama and vLLM backends through the OpenAI SDK abstraction.
+This is Layers 4-5 — the slowest but most context-aware layers.
 """
 
 from __future__ import annotations
@@ -18,13 +21,15 @@ from app.models.entities import DetectedEntity
 logger = structlog.get_logger(__name__)
 
 # Cold-start retry knobs — on `docker compose up` the backend often races
-# ollama. Rather than fail the very first verification call, wait for the
+# ollama/vLLM. Rather than fail the very first verification call, wait for the
 # server to come up. Only the first attempt retries; steady-state latency
 # is unaffected.
 _FIRST_CALL_RETRIES = 6
 _FIRST_CALL_BACKOFF_SECONDS = 5.0
+_LLM_CALL_TIMEOUT_SECONDS = 90
 
-VERIFICATION_PROMPT = """Ты эксперт по обработке юридических текстов на русском языке. Тебе дан текст и список кандидатов в чувствительные сущности, найденных автоматически.
+# Static prompt prefix for KV cache hits (Layer 4)
+_PROMPT_PREFIX = """Ты эксперт по обработке юридических текстов на русском языке. Тебе дан текст и список кандидатов в чувствительные сущности, найденных автоматически.
 
 Твоя задача:
 1. Проверь каждого кандидата — действительно ли это чувствительная сущность (ФИО, организация, адрес, ИНН, и т.п.)
@@ -32,33 +37,56 @@ VERIFICATION_PROMPT = """Ты эксперт по обработке юриди�
 3. Удали ложные срабатывания
 
 Верни строго JSON:
-{{
+{
   "verified": [
-    {{"text": "...", "entity_type": "PER|ORG|LOC|ADDR|MON|DATE|POSITION", "start": N, "end": N, "score": 0.0-1.0}}
+    {"text": "...", "entity_type": "PER|ORG|LOC|ADDR|MON|DATE|POSITION", "start": N, "end": N, "score": 0.0-1.0}
   ],
   "added": [
-    {{"text": "...", "entity_type": "...", "start": N, "end": N, "score": 0.0-1.0}}
+    {"text": "...", "entity_type": "...", "start": N, "end": N, "score": 0.0-1.0}
   ],
   "removed_indices": []
-}}
+}
 
-ТЕКСТ:
+=== ВХОДНЫЕ ДАННЫЕ ===
+"""
+
+# Prompt prefix for Layer 5 (find missed entities)
+_PROMPT_PREFIX_FIND_MISSED = """Ты эксперт по обработке юридических текстов на русском языке. Тебе дан текст и список уже найденных чувствительных сущностей.
+
+Твоя задача:
+1. Внимательно прочитай весь текст
+2. Найди ВСЕ чувствительные сущности, которые НЕ в списке найденных (ФИО, организации, адреса, должности, номера дел, реквизиты, даты важных событий)
+3. Особое внимание на кореференции ("он", "она", "компания", "истец", "ответчик") и неполные упоминания
+
+Верни строго JSON БЕЗ дополнительных пояснений:
+{
+  "added": [
+    {"text": "...", "entity_type": "PER|ORG|LOC|ADDR|MON|DATE|POSITION|RU_CASE_NUMBER", "start": N, "end": N, "score": 0.7-1.0}
+  ]
+}
+
+=== ВХОДНЫЕ ДАННЫЕ ===
+"""
+
+_FIND_MISSED_PAYLOAD_TEMPLATE = """ТЕКСТ:
 {text}
 
-КАНДИДАТЫ:
-{candidates}"""
+УЖЕ НАЙДЕННЫЕ:
+{known_entities}"""
 
 _MAX_TEXT_LEN = 8000  # Cap text length for 7B model context window
 
 
 class LocalLLMVerifier:
-    """Verifies and refines NER results using a local LLM via Ollama.
+    """Verifies and refines NER results using a local LLM via OpenAI-compat API.
+
+    Supports both Ollama and vLLM backends through the OpenAI SDK.
 
     Args:
-        model: Ollama model name (e.g., "qwen2.5:7b-instruct-q4_K_M").
-        host: Explicit Ollama HTTP host (e.g., "http://ollama:11434").
+        model: Model name (e.g., "qwen2.5:7b-instruct-q4_K_M").
+        base_url: Explicit HTTP base URL (e.g., "http://ollama:11434" or "http://vllm:8000").
             If not given, falls back to the OLLAMA_HOST env var, then to
-            http://localhost:11434.
+            http://localhost:11434/v1. The URL is normalized to include /v1.
 
     The verifier is optional — the pipeline works without it (degraded mode).
     """
@@ -66,24 +94,27 @@ class LocalLLMVerifier:
     def __init__(
         self,
         model: str = "qwen2.5:7b-instruct-q4_K_M",
-        host: str | None = None,
+        base_url: str | None = None,
     ) -> None:
         self.model = model
-        # Resolve and freeze the host once. We pass it explicitly to the
-        # AsyncClient (instead of relying on the OLLAMA_HOST env var) so
-        # that the value we *log* matches the value the client actually
-        # talks to — IT can compare the two during diagnosis.
-        self.host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        # Resolve and normalize the base_url once. We pass it explicitly to the
+        # AsyncOpenAI client (instead of relying on env vars) so that the value
+        # we *log* matches what the client actually talks to.
+        raw_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        # Normalize: strip trailing slash, ensure /v1 suffix
+        self.base_url = raw_url.rstrip("/")
+        if not self.base_url.endswith("/v1"):
+            self.base_url = f"{self.base_url}/v1"
         self._client: object | None = None
         self._first_call_done = False
-        logger.info("llm_verifier.configured", host=self.host, model=self.model)
+        logger.info("llm_verifier.configured", base_url=self.base_url, model=self.model)
 
     def _get_client(self) -> object:
-        """Lazy-init Ollama async client."""
+        """Lazy-init OpenAI async client for local LLM."""
         if self._client is None:
-            import ollama
+            from openai import AsyncOpenAI
 
-            self._client = ollama.AsyncClient(host=self.host)
+            self._client = AsyncOpenAI(base_url=self.base_url, api_key="cleargate-local-not-used")
         return self._client
 
     async def verify_and_refine(
@@ -91,11 +122,11 @@ class LocalLLMVerifier:
         text: str,
         candidates: list[DetectedEntity],
     ) -> list[DetectedEntity]:
-        """Send candidates to local LLM for verification.
+        """Send candidates to local LLM for verification (Layer 4).
 
         Args:
             text: Original text.
-            candidates: Entity candidates from layers 1-2.
+            candidates: Entity candidates from layers 1-3.
 
         Returns:
             Refined list of entities (verified + newly found by LLM).
@@ -109,19 +140,19 @@ class LocalLLMVerifier:
             for c in candidates
         ]
 
-        prompt = VERIFICATION_PROMPT.format(
-            text=text[:_MAX_TEXT_LEN],
-            candidates=json.dumps(candidate_data, ensure_ascii=False, indent=2),
-        )
+        prompt = _PROMPT_PREFIX + f"""ТЕКСТ:
+{text[:_MAX_TEXT_LEN]}
+
+КАНДИДАТЫ:
+{json.dumps(candidate_data, ensure_ascii=False, indent=2)}"""
 
         try:
-            response = await self._generate_with_retry(prompt)
-
-            result = json.loads(response["response"])
+            response_text = await self._generate_with_retry(prompt)
+            result = json.loads(response_text)
             verified = self._parse_llm_results(result, candidates)
 
             logger.info(
-                "llm_verifier.done",
+                "llm_verifier.verify.done",
                 original_count=len(candidates),
                 verified_count=len(verified),
             )
@@ -129,34 +160,39 @@ class LocalLLMVerifier:
 
         except Exception:
             logger.warning(
-                "llm_verifier.failed",
+                "llm_verifier.verify.failed",
                 candidate_count=len(candidates),
-                host=self.host,
+                base_url=self.base_url,
                 model=self.model,
                 exc_info=True,
             )
             return candidates  # graceful degradation
 
-    async def _generate_with_retry(self, prompt: str) -> dict:
-        """Call ollama.generate(), retrying the very first call.
+    async def _generate_with_retry(self, prompt: str) -> str:
+        """Call OpenAI-compat chat API, retrying the very first call.
 
         Subsequent calls go through immediately. Only the cold-start case
-        (where ollama is still warming up after `docker compose up`) gets
-        the retry treatment, so steady-state latency is unaffected.
+        (where ollama/vLLM is still warming up) gets the retry treatment,
+        so steady-state latency is unaffected.
+
+        Returns the JSON response text (not parsed).
         """
         client = self._get_client()
         attempts = 1 if self._first_call_done else _FIRST_CALL_RETRIES
         last_exc: Exception | None = None
+
         for attempt in range(1, attempts + 1):
             try:
-                response = await client.generate(  # type: ignore[union-attr]
+                completion = await client.chat.completions.create(  # type: ignore[union-attr]
                     model=self.model,
-                    prompt=prompt,
-                    format="json",
-                    options={"temperature": 0.0},
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                    max_tokens=1024,
+                    extra_body={"keep_alive": "24h", "options": {"num_ctx": 3072, "num_predict": 1024}},
                 )
                 self._first_call_done = True
-                return response
+                return completion.choices[0].message.content or ""
             except Exception as exc:
                 last_exc = exc
                 if attempt >= attempts:
@@ -165,13 +201,87 @@ class LocalLLMVerifier:
                     "llm_verifier.retry",
                     attempt=attempt,
                     of=attempts,
-                    host=self.host,
+                    base_url=self.base_url,
                     model=self.model,
                     error=str(exc),
                 )
                 await asyncio.sleep(_FIRST_CALL_BACKOFF_SECONDS)
+
         assert last_exc is not None
         raise last_exc
+
+    async def find_missed_entities(
+        self,
+        text: str,
+        known_entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Find entities missed by layers 1-4 (Layer 5).
+
+        Args:
+            text: Original text.
+            known_entities: Entities already found by prior layers.
+
+        Returns:
+            List of newly discovered DetectedEntity objects (empty on error).
+        """
+        known_entities_str = json.dumps(
+            [
+                {"text": e.text, "entity_type": e.entity_type, "start": e.start, "end": e.end}
+                for e in known_entities
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+
+        prompt = (
+            _PROMPT_PREFIX_FIND_MISSED
+            + _FIND_MISSED_PAYLOAD_TEMPLATE.format(
+                text=text[:_MAX_TEXT_LEN],
+                known_entities=known_entities_str,
+            )
+        )
+
+        try:
+            response_text = await asyncio.wait_for(
+                self._generate_with_retry(prompt),
+                timeout=_LLM_CALL_TIMEOUT_SECONDS,
+            )
+            result = json.loads(response_text)
+            missed: list[DetectedEntity] = []
+
+            for item in result.get("added", []):
+                try:
+                    missed.append(
+                        DetectedEntity(
+                            text=item["text"],
+                            entity_type=item.get("entity_type", "UNKNOWN"),
+                            start=item.get("start", 0),
+                            end=item.get("end", 0),
+                            score=min(float(item.get("score", 0.8)), 1.0),
+                            source_layer="llm-scan",
+                        )
+                    )
+                except (KeyError, ValueError, TypeError):
+                    continue
+
+            logger.info("llm_verifier.find_missed.done", count=len(missed))
+            return missed
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "llm_verifier.find_missed.timeout",
+                base_url=self.base_url,
+                model=self.model,
+            )
+            return []
+        except Exception:
+            logger.warning(
+                "llm_verifier.find_missed.failed",
+                base_url=self.base_url,
+                model=self.model,
+                exc_info=True,
+            )
+            return []
 
     def _parse_llm_results(
         self,
@@ -194,7 +304,7 @@ class LocalLLMVerifier:
                         source_layer="llm",
                     )
                 )
-            except (KeyError, ValueError):
+            except (KeyError, ValueError, TypeError):
                 continue
 
         # Newly added entities from LLM
@@ -210,7 +320,7 @@ class LocalLLMVerifier:
                         source_layer="llm",
                     )
                 )
-            except (KeyError, ValueError):
+            except (KeyError, ValueError, TypeError):
                 continue
 
         # If LLM returned nothing useful, keep originals
