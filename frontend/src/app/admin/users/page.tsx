@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/useLocale';
 import {
   getUsers,
   createUser,
@@ -12,7 +12,7 @@ import {
 } from '@/lib/api';
 
 export default function UsersPage() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +145,7 @@ interface CreateUserModalProps {
 }
 
 function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [formData, setFormData] = useState<CreateUserPayload>({
     username: '',
     password: '',
@@ -158,7 +158,7 @@ function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev: CreateUserPayload) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

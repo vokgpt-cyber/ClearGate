@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/useLocale';
 import Link from 'next/link';
 import { ReactNode, useEffect } from 'react';
 
@@ -13,7 +13,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t } = useLocale();
 
   // Protect admin routes
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 }
 
 function Sidebar() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const pathname = usePathname();
 
   const isActive = (path: string) => pathname.startsWith(path);

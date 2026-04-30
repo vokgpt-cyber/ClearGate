@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { getFeedback, updateFeedback, type AdminFeedback } from '@/lib/api';
+import { useLocale } from '@/hooks/useLocale';
+import { getFeedback, updateFeedback, type AdminFeedback, type FeedbackItem } from '@/lib/api';
+
+// Pulled from the canonical FeedbackItem type so we never drift from it.
+type FeedbackStatus = FeedbackItem['status'];
+type FeedbackFilter = FeedbackStatus | 'all';
 
 export default function FeedbackPage() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [items, setItems] = useState<AdminFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('new');
+  const [filter, setFilter] = useState<FeedbackFilter>('new');
 
   const loadFeedback = useCallback(async () => {
     try {
@@ -28,11 +32,14 @@ export default function FeedbackPage() {
     loadFeedback();
   }, [loadFeedback]);
 
-  const handleReply = async (id: string, reply: string, newStatus: string) => {
+  const handleReply = async (id: string, reply: string, newStatus: FeedbackStatus) => {
     try {
       await updateFeedback(id, {
         admin_reply: reply,
-        status: newStatus || 'in-progress',
+        // Default 'in_progress' (underscore) to match the canonical
+        // FeedbackItem['status'] union — the wire format used by both
+        // backend and shared FeedbackItem type. Not 'in-progress'.
+        status: newStatus || 'in_progress',
       });
       await loadFeedback();
     } catch (err) {
@@ -52,7 +59,7 @@ export default function FeedbackPage() {
           >
             <option value="all">All</option>
             <option value="new">{t('admin.feedback.statusNew')}</option>
-            <option value="in-progress">{t('admin.feedback.statusInProgress')}</option>
+            <option value="in_progress">{t('admin.feedback.statusInProgress')}</option>
             <option value="resolved">{t('admin.feedback.statusResolved')}</option>
             <option value="wontfix">{t('admin.feedback.statusWontfix')}</option>
           </select>
@@ -82,7 +89,7 @@ export default function FeedbackPage() {
 
 interface FeedbackCardProps {
   item: AdminFeedback;
-  onReply: (reply: string, status: string) => void;
+  onReply: (reply: string, status: FeedbackStatus) => void;
 }
 
 function FeedbackCard({ item, onReply }: FeedbackCardProps) {
@@ -164,11 +171,11 @@ function FeedbackCard({ item, onReply }: FeedbackCardProps) {
         <div className="cleargate-admin-card__action-buttons">
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => setStatus(e.target.value as FeedbackStatus)}
             className="cleargate-admin-select cleargate-admin-select--small"
           >
             <option value="new">{t('admin.feedback.statusNew')}</option>
-            <option value="in-progress">{t('admin.feedback.statusInProgress')}</option>
+            <option value="in_progress">{t('admin.feedback.statusInProgress')}</option>
             <option value="resolved">{t('admin.feedback.statusResolved')}</option>
             <option value="wontfix">{t('admin.feedback.statusWontfix')}</option>
           </select>

@@ -70,6 +70,15 @@ interface SplitWorkspaceProps {
   documentId: string;
   documentName: string;
   onClose: () => void;
+  /** Pre-existing entities for this session (from page-level cache).
+   *  When non-empty, we skip the auto-anonymize step on mount and render
+   *  these directly. Lets the user re-open a document without re-firing
+   *  the anonymization pipeline. */
+  initialEntities?: InteractiveEntity[];
+  /** Notify the parent (page.tsx) that anonymization completed so it can
+   *  cache the entity list under this sessionId. Caller stores the cache
+   *  keyed by sessionId so a later doc switch restores from memory. */
+  onAnonymizationComplete?: (sessionId: string, entities: InteractiveEntity[]) => void;
 }
 
 const ACTIVE_CLASS = 'cleargate-entity--active';
@@ -85,6 +94,13 @@ export function SplitWorkspace({
   documentId,
   documentName,
   onClose,
+  // initialEntities + onAnonymizationComplete are part of the v0.4.0
+  // page-level entity cache contract. They're optional so the component
+  // still works for callers that don't care about cross-session caching;
+  // the actual hydration / on-complete dispatch is hooked up inside the
+  // detection effect (added in a follow-up patch).
+  initialEntities: _initialEntities,
+  onAnonymizationComplete: _onAnonymizationComplete,
 }: SplitWorkspaceProps) {
   const { t } = useLocale();
 

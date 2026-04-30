@@ -53,7 +53,7 @@ export function CommandPalette({ sessions, onOpenDocument }: CommandPaletteProps
 
   return (
     <div className="cleargate-cmdk-overlay" onClick={() => setOpen(false)}>
-      <Command className="cleargate-cmdk-dialog" onClick={(e) => e.stopPropagation()}>
+      <Command className="cleargate-cmdk-dialog" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
         <Command.Input
           placeholder={t('cmdk.placeholder') || 'Type a command...'}
           className="cleargate-cmdk-input"

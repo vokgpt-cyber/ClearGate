@@ -399,6 +399,10 @@ export interface AuthUser {
   user_id: string;
   username: string;
   is_active: boolean;
+  /** Role assigned via LDAP group membership or local admin grant.
+   *  Optional for backward compatibility with pre-v0.4.0 backends that
+   *  don't return the field; treated as "lawyer" when missing. */
+  role?: 'admin' | 'lawyer';
 }
 
 /** Shape of a successful POST /api/auth/login response. */
@@ -561,12 +565,24 @@ export async function adminReplyFeedback(
 }
 
 export interface AnalyticsSummary {
+  /** Total session count in the requested time range. */
+  total_sessions: number;
+  /** Anonymize-call latency percentiles in milliseconds. */
+  anonymize_latency: {
+    p50_ms: number;
+    p95_ms: number;
+    p99_ms: number;
+  };
+  /** Sessions bucketed by date — used for the daily chart. */
   sessions_per_day: Array<{ date: string; count: number }>;
-  anonymize_p50_ms: number;
-  anonymize_p95_ms: number;
-  top_entity_types: Array<{ entity_type: string; count: number }>;
+  /** Top entity types found across all anonymizations. The admin page
+   *  reads `.type` so we expose it under that name (the backend internally
+   *  stores entity_type but maps to `type` in the response). */
+  top_entity_types: Array<{ type: string; count: number }>;
+  /** Distinct users that anonymized at least one document in the last 7d. */
   active_users_7d: number;
-  error_rate: number;
+  /** Server-side error rate as a percentage 0-100 (NOT a 0-1 fraction). */
+  error_rate_percent: number;
 }
 
 export async function adminGetAnalytics(
@@ -584,10 +600,104 @@ export interface AdminErrorItem {
   user_id: string | null;
   username: string | null;
   created_at: string;
+  /** User-Agent string from the browser at the moment of failure (client
+   *  errors) or from the request that triggered the server exception. */
+  user_agent: string | null;
+  /** JS stack trace (client) or Python traceback (server). May be null
+   *  when severity is low and we didn't bother capturing one. */
+  stack_trace: string | null;
 }
 
 export async function adminListErrors(
+  severity?: string,
   limit: number = 100,
 ): Promise<AdminErrorItem[]> {
-  return request(`/api/admin/errors?limit=${limit}`);
+  // Both filters are optional. severity narrows to a single level; limit
+  // caps the row count. The backend route honours either or both.
+  const params = new URLSearchParams();
+  if (severity) params.set('severity', severity);
+  params.set('limit', String(limit));
+  return request(`/api/admin/errors?${params.toString()}`);
+}
+
+// =================== Backward-compatible aliases ===================
+//
+// The admin pages under src/app/admin/ were authored against an earlier
+// API naming convention (no `admin*` prefix). Rather than refactor every
+// admin page, we re-export the canonical functions/types under the names
+// the admin pages expect. This keeps both naming schemes valid so other
+// callers (e.g. the FeedbackWidget, the CommandPalette) don't break.
+
+export const getUsers = adminListUsers;
+export const createUser = adminCreateUser;
+export const updateUser = adminUpdateUser;
+export const getErrors = adminListErrors;
+
+/** GET /api/admin/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD — admin page
+ *  passes a date range (computed from the period selector). The backend
+ *  also supports the older days=N form via adminGetAnalytics. */
+export async function getAnalytics(
+  from?: string,
+  to?: string,
+): Promise<AnalyticsSummary> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  return request(`/api/admin/analytics${qs ? `?${qs}` : ''}`);
+}
+
+/** GET /api/admin/feedback?status=&limit= — admin sees all users' feedback,
+ *  optionally filtered by status. The `'all'` sentinel value is the admin
+ *  page's "no filter"; we map it to undefined here. */
+export async function getFeedback(
+  status?: FeedbackItem['status'] | 'all',
+  limit?: number,
+): Promise<AdminFeedbackItem[]> {
+  const params = new URLSearchParams();
+  if (status && status !== 'all') params.set('status', status);
+  if (limit !== undefined) params.set('limit', String(limit));
+  const qs = params.toString();
+  return request(`/api/admin/feedback${qs ? `?${qs}` : ''}`);
+}
+
+/** PATCH /api/admin/feedback/{id} — reply and/or change status. Both
+ *  fields are optional in the patch object; the backend only updates
+ *  what's present. */
+export async function updateFeedback(
+  id: string,
+  patch: {
+    admin_reply?: string;
+    status?: FeedbackItem['status'];
+  },
+): Promise<AdminFeedbackItem> {
+  return request(`/api/admin/feedback/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export type AdminUser = AdminUserItem;
+export type AdminFeedback = AdminFeedbackItem;
+export type AdminError = AdminErrorItem;
+
+/** Payload for POST /api/admin/users (admin pages reference this name). */
+export interface CreateUserPayload {
+  username: string;
+  password: string;
+  email?: string;
+  display_name?: string;
+  role?: 'admin' | 'lawyer';
+}
+
+/** POST /api/admin/users/sync-ad — pull current AD membership and update
+ *  local user records (role grants/revocations, deactivations). Admin only. */
+export async function syncAD(): Promise<{
+  created: number;
+  updated: number;
+  deactivated: number;
+}> {
+  return request('/api/admin/users/sync-ad', {
+    method: 'POST',
+  });
 }

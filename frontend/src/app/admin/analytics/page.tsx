@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/useLocale';
 import { getAnalytics, type AnalyticsSummary } from '@/lib/api';
 
 export default function AnalyticsPage() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [range, setRange] = useState('30');
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(false);

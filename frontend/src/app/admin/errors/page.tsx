@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/useLocale';
 import { getErrors, type AdminError } from '@/lib/api';
 
 export default function ErrorsPage() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [items, setItems] = useState<AdminError[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function ErrorsPage() {
       const filtered =
         sourceFilter === ''
           ? data
-          : data.filter((e) => e.source === sourceFilter);
+          : data.filter((e: AdminError) => e.source === sourceFilter);
       setItems(filtered);
       setError(null);
     } catch (err) {
@@ -105,7 +105,7 @@ interface ErrorRowProps {
 }
 
 function ErrorRow({ item, isExpanded, onToggle }: ErrorRowProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
 
   const getSeverityClass = (severity: string) => {
     switch (severity) {
