@@ -1,0 +1,130 @@
+[
+  {
+    "text": "НДА-2025/042",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "Москва",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "15 января 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "ООО «Ромашка-Групп»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Ромашка-Групп",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7707083893",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1027701234560",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "генерального директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Иванова Сергея Петровича",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Индустрия Консалт»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Индустрия Консалт",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5012345672",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1025010987650",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "140002, Московская область, г. Люберцы, ул. Красная, д. 1",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Петровой Елены Александровны",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванов С.П.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (495) 123-45-67",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "s.ivanov@romashka-group.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Петрова Е.А.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (925) 987-65-43",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "petrova@industry-consult.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "1 000 000 (один миллион) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "40702810400000123456",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525225",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "Генеральный директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "40702810900000789012",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "Банке ВТБ (ПАО)",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525187",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "Директор",
+    "entity_type": "POSITION"
+  }
+]

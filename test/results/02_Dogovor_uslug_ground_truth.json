@@ -1,0 +1,146 @@
+[
+  {
+    "text": "ЮУ-2025-017",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "Санкт-Петербург",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "03 февраля 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "ООО «Квант Лигал»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Квант Лигал",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7721234569",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1157723456780",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "123112, г. Москва, Пресненская набережная, д. 12, этаж 45, помещение I, ком. 12",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "управляющего партнёра",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Михайловского Александра Владимировича",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Михайловская Екатерина Валерьевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "505012345678",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "119146, г. Москва, Комсомольский проспект, д. 42, кв. 18",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "4510 123456",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "15.06.2010",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "197022, г. Санкт-Петербург, Каменноостровский проспект, д. 58, лит. А",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "старший юрист",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Смирнова Татьяна Игоревна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "t.smirnova@quant-legal.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "+7 (812) 555-33-22",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "850 000 (восемьсот пятьдесят тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "10.02.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "15.03.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "40702810300001234567",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "АО «Альфа-Банк»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525593",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "+7 (495) 780-15-40",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "contact@quant-legal.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "А.В. Михайловский",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ИП Михайловская Е.В.",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "40802810900000555777",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "ПАО «Банк ВТБ»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525187",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "+7 (903) 111-22-33",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "e.mikhailovskaya@mail.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Е.В. Михайловская",
+    "entity_type": "PER"
+  }
+]

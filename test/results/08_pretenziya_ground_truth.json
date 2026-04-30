@@ -1,0 +1,158 @@
+[
+  {
+    "text": "ООО «СтройМонтаж-СПб»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "СтройМонтаж-СПб",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Генеральному директору",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Васильеву Андрею Николаевичу",
+    "entity_type": "PER"
+  },
+  {
+    "text": "190121, г. Санкт-Петербург, наб. реки Мойки, д. 78, лит. А, оф. 412",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "a.vasilev@stroymontazh-spb.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "ООО «ПромЭнерго-Урал»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "ПромЭнерго-Урал",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "620000, г. Екатеринбург, ул. Ленина, д. 24, оф. 901",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "6671023456",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1146671012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "+7 (343) 222-44-66",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "ПЭ-2025/047",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "12 февраля 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "Андрей Николаевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "4 850 000 (четыре миллиона восемьсот пятьдесят тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "25 марта 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "28 апреля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "485 000 (четыреста восемьдесят пять тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "30 мая 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "1 940 000 (один миллион девятьсот сорок тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "15 мая 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "40702810700000334455",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "АО «Райффайзенбанк»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525700",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "Арбитражный суд Свердловской области",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Свердловской области",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "начальник юридического отдела",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Соколова Марина Владимировна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (912) 555-77-99",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "m.sokolova@promenergo-ural.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "18.02.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "Генеральный директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "А.С. Никифоров",
+    "entity_type": "PER"
+  },
+  {
+    "text": "30 апреля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "юрисконсульт",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Лебедева Ольга Геннадьевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (343) 222-44-67",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "o.lebedeva@promenergo-ural.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  }
+]

@@ -1,0 +1,118 @@
+[
+  {
+    "text": "ТД-058/2025",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "Екатеринбург",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "10 марта 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "АО «Технопром»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Технопром",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7744555664",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1087740001117",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "620014, г. Екатеринбург, ул. Малышева, д. 51, оф. 1204",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "директора по персоналу",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Козловой Ирины Михайловны",
+    "entity_type": "PER"
+  },
+  {
+    "text": "12.01.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "Смирнов Алексей Петрович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "6515 345678",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "23.08.2015",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "112-233-445 95",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "665801234567",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "620100, г. Екатеринбург, ул. Восточная, д. 28, кв. 47",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "ведущего инженера-разработчика",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "17 марта 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "240 000 (двести сорок тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "+7 (912) 345-67-89",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.smirnov@tehnoprom.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "alex.smirnov1987@gmail.com",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Смирнова Мария Владимировна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (922) 876-54-32",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "+7 (343) 311-22-33",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Директор по персоналу",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "И.М. Козлова",
+    "entity_type": "PER"
+  },
+  {
+    "text": "А.П. Смирнов",
+    "entity_type": "PER"
+  }
+]

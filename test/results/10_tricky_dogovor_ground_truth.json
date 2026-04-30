@@ -1,0 +1,234 @@
+[
+  {
+    "text": "КУ-2026/094",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "Москва",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "10 апреля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "ООО «НПО Прогресс»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "НПО Прогресс",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7728345678",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1107746234567",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "117218, г. Москва, Нахимовский проспект, д. 32, оф. 405",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "ПАО «Прогресс-Холдинг»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Прогресс-Холдинг",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7728100200",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1037739012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "генерального директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Иванова Сергея Ивановича",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванов Сергей Иванович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванов С.И.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "С.И. Иванов",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Юридическая фирма ИвановЪ и Партнёры»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Юридическая фирма ИвановЪ и Партнёры",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7707912345",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1187746098765",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "125009, г. Москва, Тверская ул., д. 22, корп. 1",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "управляющего партнёра",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Ивановой Ирины Сергеевны",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванова Ирина Сергеевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванова И.С.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "И.С. Иванова",
+    "entity_type": "PER"
+  },
+  {
+    "text": "старший юрист",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Иванов Дмитрий Алексеевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Иванов Д.А.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "4517 № 678901",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "567-890-123 45",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "d.ivanov@ivanov-partners.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "+7 (903) 411-22-33",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "финансовый директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Семёнов Алексей Петрович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Семёнов А.П.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (495) 200-30-40",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.semenov@progress-npo.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "01.04.2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "3 600 000 (три миллиона шестьсот тысяч) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "20 апреля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "1 200 000",
+    "entity_type": "MON"
+  },
+  {
+    "text": "30 июня 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "30 сентября 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "40702810800000123987",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Сбербанк России",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "044525225",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "Арбитражном суде г. Москвы",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "i.ivanova@ivanov-partners.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "+7 (916) 700-12-34",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "+7 (903) 800-55-66",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "+7 (495) 970-11-22",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "secretariat@progress-npo.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "office@ivanov-partners.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Генеральный директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Управляющий партнёр",
+    "entity_type": "POSITION"
+  }
+]

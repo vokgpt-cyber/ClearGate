@@ -1,0 +1,230 @@
+[
+  {
+    "text": "Новосибирск",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "18 мая 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "630099, г. Новосибирск, Красный проспект, д. 37, оф. 1512",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "ООО «СтартАп Технолоджис»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "СтартАп Технолоджис",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5406123456",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1155406098765",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "+7 (383) 200-10-20",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "corp@startup-tech.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Алексеев Михаил Владимирович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "5013 456789",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "17.04.2012",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "334-455-667 84",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "+7 (913) 100-22-33",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "alekseev@startup-tech.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Григорьев Павел Сергеевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "5014 789012",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "03.11.2013",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "445-556-667 14",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "630102, г. Новосибирск, ул. Кирова, д. 44, кв. 102",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "+7 (923) 555-44-66",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Орлова Анастасия Юрьевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "5015 111222",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "556-667-778 29",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "orlova.a@yandex.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "+7 (952) 820-11-44",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Иванов Сергей Петрович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Ромашка-Групп»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7707083893",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "15.01.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "4518 667788",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "Петрова Елена Александровна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Индустрия Консалт»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5012345672",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "20.02.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "+7 (925) 987-65-43",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "petrova@industry-consult.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Орлова А.Ю.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Алексеев М.В.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "фондом «Сибирские Венчурные Инвестиции»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Сибирские Венчурные Инвестиции",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5407987654",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1185407012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "Алексеева М.В.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "148 500 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "22 300 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "Григорьева П.С.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "19 мая 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "25.05.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "МИФНС № 16 по Новосибирской области",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Новосибирской области",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "Лебедев Артём Олегович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (383) 244-88-99",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.lebedev@sib-vc.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "50 000 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "М.В. Алексеев",
+    "entity_type": "PER"
+  },
+  {
+    "text": "А.Ю. Орлова",
+    "entity_type": "PER"
+  }
+]

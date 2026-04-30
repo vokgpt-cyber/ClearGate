@@ -1,0 +1,498 @@
+[
+  {
+    "text": "Москва",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "27 апреля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "125009, г. Москва, ул. Тверская, д. 16, стр. 1",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "ПАО «АгроИнвест-Холдинг»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "АгроИнвест-Холдинг",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7704567891",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1057746012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "119991, г. Москва, Ленинский проспект, д. 6, стр. 7",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "+7 (495) 660-55-44",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "ir@agroinvest-holding.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Корпоративный секретарь",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Андреева Светлана Викторовна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (495) 660-55-46",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "s.andreeva@agroinvest-holding.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Председатель Совета директоров",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Морозов Виктор Александрович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Морозов В.А.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "4517 № 234567",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "12 марта 2017",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "145-678-901 23",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "770401234567",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "+7 (903) 700-12-34",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "v.morozov@agroinvest-holding.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "независимый директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Зайцева Анна Дмитриевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Зайцева А.Д.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "4516 № 998877",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "05.07.2016",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "771812345678",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "+7 (916) 200-33-77",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.zaitseva@independent-board.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Соколов Игорь Леонидович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Соколов И.Л.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Финансовая Группа Восток-Капитал»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Финансовая Группа Восток-Капитал",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7708876543",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1097746098765",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "15.01.2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "+7 (985) 144-22-11",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "sokolov@vostok-capital.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Романова Татьяна Викторовна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Романова Т.В.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7707083893",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "+7 (495) 500-55-50",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "t.romanova@sberbank.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Кузнецов Денис Александрович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Кузнецов Д.А.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "200-300-400 51",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "4519 № 112233",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "d.kuznetsov@board-experts.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Фёдорова Мария Сергеевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Фёдорова М.С.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "главный бухгалтер",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "770401112233",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "+7 (495) 660-55-50",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Никольский Артём Владимирович",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Краснодар",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "+7 (861) 333-22-11",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "nikolsky@krasnodar-agro.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Дюбуа Жан-Пьер",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Париж",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "jp.dubois@boardadvisory.fr",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Генеральный директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Громов Сергей Николаевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Громов С.Н.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Финансовый директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Михайлова Елена Анатольевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Михайлова Е.А.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "АО «КПМГ-Аудит»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7702018525",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "Васнецова Юлия Игоревна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (495) 937-44-55",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "j.vasnetsova@kpmg.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "ПАО «Банк ВТБ»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Банк ВТБ",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7702070139",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1027739609391",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "1 200 000 000 (один миллиард двести миллионов) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "ООО «АгроТехника-Юг»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "АгроТехника-Юг",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "6164098765",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1146164012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "Ростов-на-Дону",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "380 000 000 (триста восемьдесят миллионов) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "14.04.2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "18 750 000 000",
+    "entity_type": "MON"
+  },
+  {
+    "text": "2 380 000 000",
+    "entity_type": "MON"
+  },
+  {
+    "text": "4 120 000 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "714 000 000",
+    "entity_type": "MON"
+  },
+  {
+    "text": "952 000 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "833 000 000 рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "22 июня 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "25 июля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "40702810400000777888",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "044525187",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "Воронежской области",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "АО «Альфа-Банк»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7728168971",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "30 мая 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "344000, г. Ростов-на-Дону, пр. Ворошиловский, д. 56, оф. 1201",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "Дюбуа Ж.-П.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Деловые Решения»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7710098765",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "20.04.2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "31 июля 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "МИФНС № 26 по Ростовской области",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Ростовской области",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "25 000 000 (двадцать пять миллионов) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "12 000 000 (двенадцать миллионов) рублей",
+    "entity_type": "MON"
+  },
+  {
+    "text": "ООО «Делойт энд Туш СНГ»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7705641550",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "15 июня 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "25 июня 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "02 июня 2026",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "В.А. Морозов",
+    "entity_type": "PER"
+  },
+  {
+    "text": "С.В. Андреева",
+    "entity_type": "PER"
+  },
+  {
+    "text": "А.Д. Зайцева",
+    "entity_type": "PER"
+  },
+  {
+    "text": "И.Л. Соколов",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Т.В. Романова",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Д.А. Кузнецов",
+    "entity_type": "PER"
+  },
+  {
+    "text": "М.С. Фёдорова",
+    "entity_type": "PER"
+  },
+  {
+    "text": "А.В. Никольский",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Ж.-П. Дюбуа",
+    "entity_type": "PER"
+  }
+]

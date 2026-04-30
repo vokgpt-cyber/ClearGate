@@ -159,8 +159,18 @@ class CleargateClient:
         r.raise_for_status()
 
     async def upload_docx(self, session_id: str, path: Path) -> dict:
+        # Format-aware MIME picker so the backend's DocumentProcessor receives
+        # a sensible Content-Type. The endpoint determines parser purely from
+        # the filename suffix, but a correct MIME helps proxy/inspector logs
+        # and is required by some intermediate middleware.
+        suffix = path.suffix.lower()
+        mime = {
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".pdf": "application/pdf",
+            ".txt": "text/plain; charset=utf-8",
+        }.get(suffix, "application/octet-stream")
         with path.open("rb") as fh:
-            files = {"file": (path.name, fh, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+            files = {"file": (path.name, fh, mime)}
             r = await self._client.post(
                 f"/api/documents/upload?session_id={session_id}",
                 files=files,
@@ -227,11 +237,17 @@ def compare_against_ground_truth(
 
     per_type_breakdown[entity_type] = {"tp": int, "fp": int, "fn": int}
     """
+    # Tolerate both field naming conventions: hand-curated GTs use
+    # "entity_type", while older pipeline-output _entities.json files use
+    # "type". Same applies to the detected_entities side for back-compat.
+    def _et(d: dict) -> str:
+        return d.get("entity_type") or d.get("type") or ""
+
     detected_set: set[tuple[str, str]] = {
-        (normalise_entity_text(e["text"]), e["entity_type"]) for e in detected_entities
+        (normalise_entity_text(e["text"]), _et(e)) for e in detected_entities
     }
     truth_set: set[tuple[str, str]] = {
-        (normalise_entity_text(e["text"]), e["entity_type"]) for e in ground_truth
+        (normalise_entity_text(e["text"]), _et(e)) for e in ground_truth
     }
 
     tp_set = detected_set & truth_set
@@ -255,18 +271,30 @@ def compare_against_ground_truth(
 
 
 def discover_test_pairs(test_dir: Path) -> list[tuple[Path, Path | None]]:
-    """Return [(docx_path, ground_truth_json_path | None), ...] from test/.
+    """Return [(doc_path, ground_truth_json_path | None), ...] from test/.
 
-    Ground-truth JSON is expected at test/results/<docname>_entities.json;
-    if missing, the doc is still benchmarked for latency but precision/recall
-    are skipped for it (won't affect the aggregate).
+    Discovers .docx, .pdf, .txt fixtures (Cleargate's three supported
+    upload formats). Ground-truth JSON is preferred at
+    ``test/results/<docname>_ground_truth.json`` (hand-curated, gold
+    standard) and falls back to ``<docname>_entities.json`` (older
+    pipeline self-output, kept for back-compat). Documents without GT
+    are still benchmarked for latency but skipped for precision/recall.
     """
     pairs: list[tuple[Path, Path | None]] = []
-    for docx in sorted(test_dir.glob("*.docx")):
-        stem = docx.stem  # e.g. "01_NDA"
-        gt = test_dir / "results" / f"{stem}_entities.json"
-        pairs.append((docx, gt if gt.exists() else None))
-    return pairs
+    seen_stems: set[str] = set()
+    for ext in ("*.docx", "*.pdf", "*.txt"):
+        for doc in sorted(test_dir.glob(ext)):
+            stem = doc.stem  # e.g. "01_NDA"
+            if stem in seen_stems:
+                # Avoid double-counting if a doc exists in two formats.
+                continue
+            seen_stems.add(stem)
+            results_dir = test_dir / "results"
+            gt_new = results_dir / f"{stem}_ground_truth.json"
+            gt_old = results_dir / f"{stem}_entities.json"
+            gt = gt_new if gt_new.exists() else (gt_old if gt_old.exists() else None)
+            pairs.append((doc, gt))
+    return sorted(pairs, key=lambda p: p[0].name)
 
 
 # ---------------------------------------------------------------------------
@@ -415,8 +443,14 @@ async def main_async(args: argparse.Namespace) -> int:
     )
 
     # ---- Output ----
+    # When --tag is given (e.g. model name), embed it in the default
+    # filename so successive model runs in compare mode don't overwrite
+    # each other. Sanitised so any model string with slashes/colons works.
+    tag = getattr(args, "tag", None) or ""
+    safe_tag = "".join(c if c.isalnum() or c in "-._" else "_" for c in tag)
+    suffix = f"-{safe_tag}" if safe_tag else ""
     output = Path(args.output) if args.output else (
-        DEFAULT_OUTPUT_DIR / f"bench-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        DEFAULT_OUTPUT_DIR / f"bench-{time.strftime('%Y%m%d-%H%M%S')}{suffix}.json"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8") as fh:
@@ -425,7 +459,7 @@ async def main_async(args: argparse.Namespace) -> int:
 
     md_path = output.with_suffix(".md")
     with md_path.open("w", encoding="utf-8") as fh:
-        fh.write(render_markdown_report(bench))
+        fh.write(render_markdown_report(bench, tag=tag or None))
     print(f"Markdown report written to: {md_path}")
 
     print("\n=== Summary ===")
@@ -449,11 +483,14 @@ async def main_async(args: argparse.Namespace) -> int:
     return 0
 
 
-def render_markdown_report(bench: BenchResult) -> str:
+def render_markdown_report(bench: BenchResult, tag: str | None = None) -> str:
     """Compact human-readable summary for sharing with stakeholders."""
     lines: list[str] = []
-    lines.append(f"# Cleargate v0.4.0 benchmark — {bench.run_at}")
+    title_tag = f" [{tag}]" if tag else ""
+    lines.append(f"# Cleargate v0.4.0 benchmark{title_tag} — {bench.run_at}")
     lines.append("")
+    if tag:
+        lines.append(f"**Run tag (model):** `{tag}`")
     lines.append(f"**Base URL:** {bench.base_url}")
     lines.append(f"**Documents:** {len(bench.docs)}")
     lines.append(f"**Total characters processed:** {bench.total_chars:,}")
@@ -504,6 +541,10 @@ def main() -> int:
                     help=f"Fail if precision drops below this (default: {DEFAULT_MIN_PRECISION})")
     ap.add_argument("--min-recall", type=float, default=DEFAULT_MIN_RECALL,
                     help=f"Fail if recall drops below this (default: {DEFAULT_MIN_RECALL})")
+    ap.add_argument("--tag", default=None,
+                    help="Optional run tag (e.g. model name) — appears in the "
+                         "output filename and the markdown report header. "
+                         "Used by bench-models.bat to keep per-model runs apart.")
     args = ap.parse_args()
     return asyncio.run(main_async(args))
 

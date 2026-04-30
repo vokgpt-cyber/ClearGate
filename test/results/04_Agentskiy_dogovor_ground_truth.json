@@ -1,0 +1,118 @@
+[
+  {
+    "text": "АГ-2025/011",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "Казань",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "22 апреля 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "ООО «МедиаПро»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "МедиаПро",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "7700012340",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1027701234560",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "115093, г. Москва, ул. Павловская, д. 6, стр. 2",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "генерального директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Волковой Натальи Сергеевны",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Кузнецова Анна Сергеевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "166012345678",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "9214 987654",
+    "entity_type": "RU_PASSPORT"
+  },
+  {
+    "text": "14.05.2014",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "223-344-556 39",
+    "entity_type": "RU_SNILS"
+  },
+  {
+    "text": "420012, Республика Татарстан, г. Казань, ул. Муштари, д. 9, кв. 56",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "руководитель направления развития",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Фёдоров Максим Андреевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (495) 230-11-44",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "m.fedorov@mediapro.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "40802810500000222333",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "ПАО «Ак Барс Банк»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "049205805",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "info@mediapro.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "Н.С. Волкова",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ИП Кузнецова А.С.",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "+7 (927) 300-45-67",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.kuznetsova.ip@yandex.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "А.С. Кузнецова",
+    "entity_type": "PER"
+  }
+]

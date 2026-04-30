@@ -1,0 +1,142 @@
+[
+  {
+    "text": "123/2023",
+    "entity_type": "RU_CONTRACT_NUMBER"
+  },
+  {
+    "text": "11.07.2023",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "Нижний Новгород",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "05 мая 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "ООО «Авто-Лайн»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Авто-Лайн",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5260123456",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1125260001234",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "603000, г. Нижний Новгород, ул. Нижневолжская набережная, д. 15, оф. 402",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Павлова Игоря Викторовича",
+    "entity_type": "PER"
+  },
+  {
+    "text": "ООО «Строй-Инвест»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Строй-Инвест",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "5262098765",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1095262012345",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "603950, г. Нижний Новгород, ул. Родионова, д. 165, корп. 13",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "коммерческого директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Белозёровой Юлии Андреевны",
+    "entity_type": "PER"
+  },
+  {
+    "text": "10.01.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "01 июня 2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "Нижегородской области",
+    "entity_type": "LOC"
+  },
+  {
+    "text": "40702810500000334455",
+    "entity_type": "RU_BANK_ACCOUNT"
+  },
+  {
+    "text": "ПАО «Сбербанк России»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "042202603",
+    "entity_type": "RU_BIK"
+  },
+  {
+    "text": "начальник отдела закупок",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Тихонов Алексей Сергеевич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (831) 245-67-89",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "a.tikhonov@stroy-invest.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "менеджер по работе с ключевыми клиентами",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Сидорова Ольга Николаевна",
+    "entity_type": "PER"
+  },
+  {
+    "text": "+7 (915) 777-22-33",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "И.В. Павлов",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Коммерческий директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "Ю.А. Белозёрова",
+    "entity_type": "PER"
+  }
+]

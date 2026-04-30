@@ -1,0 +1,66 @@
+[
+  {
+    "text": "ООО «Финсервис Плюс»",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "Финсервис Плюс",
+    "entity_type": "ORG"
+  },
+  {
+    "text": "28.04.2025",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "генерального директора",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "6500111126",
+    "entity_type": "RU_INN"
+  },
+  {
+    "text": "1165025000234",
+    "entity_type": "RU_OGRN"
+  },
+  {
+    "text": "693000, г. Южно-Сахалинск, проспект Мира, д. 111, оф. 304",
+    "entity_type": "ADDR"
+  },
+  {
+    "text": "Волков Дмитрий Игоревич",
+    "entity_type": "PER"
+  },
+  {
+    "text": "начальник отдела информационной безопасности",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "15.01.2024",
+    "entity_type": "RU_DATE"
+  },
+  {
+    "text": "+7 (4242) 55-77-99",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "dpo@finservice-plus.ru",
+    "entity_type": "EMAIL_ADDRESS"
+  },
+  {
+    "text": "+7 (962) 400-11-22",
+    "entity_type": "RU_PHONE"
+  },
+  {
+    "text": "Волкова Д.И.",
+    "entity_type": "PER"
+  },
+  {
+    "text": "Генеральный директор",
+    "entity_type": "POSITION"
+  },
+  {
+    "text": "А.В. Родионов",
+    "entity_type": "PER"
+  }
+]
