@@ -54,7 +54,7 @@ export default function FeedbackPage() {
         <div className="cleargate-admin-filters">
           <select
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => setFilter(e.target.value as FeedbackFilter)}
             className="cleargate-admin-select"
           >
             <option value="all">All</option>
@@ -93,7 +93,7 @@ interface FeedbackCardProps {
 }
 
 function FeedbackCard({ item, onReply }: FeedbackCardProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [reply, setReply] = useState('');
   const [replying, setReplying] = useState(false);
   const [status, setStatus] = useState(item.status);
