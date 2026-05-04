@@ -69,13 +69,13 @@ feat(local): add simple PC#2 deploy profile (host Ollama, no BGE/LDAP/TLS)
 2. Остановить: `.\scripts\stop-local.bat`
 3. Запустить полное сравнение моделей:
    ```powershell
-   $env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma3:27b"
+   $env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma4:26b"
    .\scripts\bench-models.bat
    ```
 4. Дождаться окончания (по 5-10 мин на модель × 2 модели + время на pull моделей при первом запуске = ~30-60 мин).
 5. Прислать `bench-results/comparison-*.md` мне в новый чат — разберу результаты, дам обоснованный вердикт по выбору модели для production.
 
-**Опционально:** если в Ollama есть свежая Gemma 4 (`ollama list | findstr gemma`), добавить её в MODELS — будет тройное сравнение.
+**Опционально:** для тройного сравнения добавить лёгкую Gemma 4: `gemma4:e4b` (~9.6 GB, ближе по размеру к Qwen 2.5 7B) или малую `gemma4:e2b` (~7.2 GB) — будет видно как качество масштабируется внутри семейства Gemma.
 
 ---
 
@@ -189,7 +189,7 @@ Get-ChildItem -Path "$env:APPDATA\Claude\local-agent-mode-sessions" -Recurse -Fi
 - Docker — иконка кита в трее зелёная?
 - Ollama — `curl http://localhost:11434/api/tags` возвращает JSON?
 - `qwen2.5:7b-instruct-q4_K_M` есть в `ollama list`? Если нет, скрипт сам пуллит, но это занимает 5-15 мин.
-- `gemma3:27b` есть? Аналогично.
+- `gemma4:26b` есть? Аналогично (это MoE-вариант ~18 GB).
 
 **Git pull спрашивает credentials:** Git Credential Manager откроет браузер один раз, подтвердишь GitHub-сессию, дальше работает молча.
 

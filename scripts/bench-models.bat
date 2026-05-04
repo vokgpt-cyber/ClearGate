@@ -19,7 +19,7 @@ REM Usage (defaults shown):
 REM   scripts\bench-models.bat
 REM
 REM Override the model list:
-REM   set MODELS=qwen2.5:7b-instruct-q4_K_M gemma3:27b qwen2.5:14b-instruct-q4_K_M
+REM   set MODELS=qwen2.5:7b-instruct-q4_K_M gemma4:26b qwen2.5:14b-instruct-q4_K_M
 REM   scripts\bench-models.bat
 REM
 REM Override admin password (default "admin"):
@@ -30,7 +30,7 @@ REM ============================================================================
 setlocal enabledelayedexpansion
 cd /d "%~dp0\.."
 
-if "%MODELS%"=="" set "MODELS=qwen2.5:7b-instruct-q4_K_M gemma3:27b"
+if "%MODELS%"=="" set "MODELS=qwen2.5:7b-instruct-q4_K_M gemma4:26b"
 if "%ADMIN_PASSWORD%"=="" set "ADMIN_PASSWORD=admin"
 
 set "BENCH_DIR=bench-results"

@@ -46,7 +46,7 @@ Ground truth размечен консервативно: КПП, ОГРНИП, 
 cd C:\path\to\Velum
 
 # Один прогон, явно выбирая модель:
-$env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma3:27b"
+$env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma4:26b"
 .\scripts\bench-models.bat
 ```
 

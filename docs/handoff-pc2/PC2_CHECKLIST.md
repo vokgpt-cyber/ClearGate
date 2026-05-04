@@ -18,8 +18,8 @@ ollama list
 
 Должны быть (или скачаются автоматом при запуске `bench-models.bat`):
 - [ ] `qwen2.5:7b-instruct-q4_K_M` — основная модель пилота, ~4.7 GB
-- [ ] `gemma3:27b` — для сравнения, ~16 GB (на RTX 3090 24GB влезет с запасом)
-- [ ] (опционально) `gemma:4b` или `gemma3:4b` если хочется тройного сравнения
+- [ ] `gemma4:26b` — Gemma 4 26B MoE для сравнения, ~18 GB (на RTX 3090 24GB влезет с запасом)
+- [ ] (опционально для тройного сравнения) `gemma4:e4b` (~9.6 GB, ближе по размеру к Qwen 7B) или `gemma4:e2b` (~7.2 GB, малая)
 
 Если каких-то нет — скрипт `bench-models.bat` сам делает `ollama pull`.
 
@@ -92,7 +92,7 @@ cd C:\Users\V\Documents\Claude\Projects\Velum
 Запустить полное сравнение моделей:
 ```powershell
 cd C:\Users\V\Documents\Claude\Projects\Velum
-$env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma3:27b"
+$env:MODELS = "qwen2.5:7b-instruct-q4_K_M gemma4:26b"
 .\scripts\bench-models.bat
 ```
 
