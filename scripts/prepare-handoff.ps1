@@ -45,25 +45,58 @@ Write-Host ""
 # -------------------------------------------------------------------------
 # Step 1: locate memory directory (auto-detect or use -MemoryDir override)
 # -------------------------------------------------------------------------
+# Claude Desktop is distributed as a Windows Store packaged app on most
+# installs, so the memory files live at:
+#   $env:LOCALAPPDATA\Packages\Claude_<id>\LocalCache\Roaming\Claude\
+#     local-agent-mode-sessions\<sessId>\<installId>\spaces\<spaceId>\memory
+# rather than the plain $env:APPDATA\Claude\... path that the chat system
+# prompt advertises (that path is a virtual shim that does not exist as a
+# regular folder, so Test-Path returns False on it).
+#
+# We probe the packaged path first (most installs), fall back to the plain
+# Roaming path (rare, e.g. side-loaded MSI builds), and finally allow an
+# explicit override via -MemoryDir.
+# -------------------------------------------------------------------------
 Write-Step "Locating memory directory..."
 if (-not $MemoryDir) {
-    $searchRoot = "$env:APPDATA\Claude\local-agent-mode-sessions"
-    if (-not (Test-Path $searchRoot)) {
-        Write-Fail "Claude Desktop sessions root not found at: $searchRoot"
+    $searchRoots = @()
+
+    # Packaged-app path (typical Microsoft Store install of Claude Desktop)
+    $pkgGlob = "$env:LOCALAPPDATA\Packages\Claude_*\LocalCache\Roaming\Claude\local-agent-mode-sessions"
+    Get-ChildItem -Path $pkgGlob -ErrorAction SilentlyContinue | ForEach-Object {
+        $searchRoots += $_.FullName
+    }
+
+    # Plain MSI/portable install path (older / side-loaded builds)
+    $plainRoot = "$env:APPDATA\Claude\local-agent-mode-sessions"
+    if (Test-Path $plainRoot) {
+        $searchRoots += $plainRoot
+    }
+
+    if ($searchRoots.Count -eq 0) {
+        Write-Fail "Claude Desktop sessions root not found in any known location."
+        Write-Host "        Tried (packaged): $pkgGlob"
+        Write-Host "        Tried (plain):    $plainRoot"
         Write-Host "        Pass -MemoryDir <path> explicitly if your install is non-standard."
         exit 1
     }
-    Write-Host "        Searching under $searchRoot ..."
-    $candidates = Get-ChildItem -Path $searchRoot -Recurse -Filter "MEMORY.md" -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -like "*\spaces\*\memory\MEMORY.md" } |
-        Where-Object {
-            $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-            $content -match "Cleargate|Velum|EPAM"
-        }
+
+    Write-Host "        Searching under $($searchRoots.Count) candidate root(s)..."
+    $candidates = @()
+    foreach ($root in $searchRoots) {
+        Get-ChildItem -Path $root -Recurse -Filter "MEMORY.md" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*\spaces\*\memory\MEMORY.md" } |
+            Where-Object {
+                $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
+                $content -match "Cleargate|Velum|EPAM"
+            } | ForEach-Object { $candidates += $_ }
+    }
+
     if (-not $candidates -or $candidates.Count -eq 0) {
         Write-Fail "Could not auto-detect a Cleargate memory dir."
-        Write-Host "        Pass -MemoryDir explicitly. Common pattern:"
-        Write-Host "        $env:APPDATA\Claude\local-agent-mode-sessions\<sessId>\<installId>\spaces\<spaceId>\memory"
+        Write-Host "        Pass -MemoryDir explicitly. Typical packaged-app path:"
+        Write-Host "        $env:LOCALAPPDATA\Packages\Claude_<id>\LocalCache\Roaming\Claude\"
+        Write-Host "          local-agent-mode-sessions\<sessId>\<installId>\spaces\<spaceId>\memory"
         exit 1
     }
     if ($candidates.Count -gt 1) {
