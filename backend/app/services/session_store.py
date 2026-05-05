@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 # Sprint B.3 bumped this from 1 -> 2 to add the `user_id` column.
 # The schema upgrade is strictly additive (nullable column + index), so
 # we can auto-migrate on startup without a separate migration tool.
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     custom_entities TEXT NOT NULL DEFAULT '[]',
     enable_llm_layer INTEGER NOT NULL DEFAULT 0,
     spacy_model     TEXT DEFAULT 'ru_core_news_sm',
+    source_format   TEXT,
+    source_filename TEXT,
     registry_blob   BLOB,
     docx_bytes      BLOB,
     docx_filename   TEXT,
@@ -113,6 +115,19 @@ class SessionStore:
                         to_version=3,
                         column=col_name,
                     )
+        if current < 4:
+            for col_name, col_def in (
+                ("source_format", "TEXT"),
+                ("source_filename", "TEXT"),
+            ):
+                if col_name not in existing_cols:
+                    cur.execute(f"ALTER TABLE sessions ADD COLUMN {col_name} {col_def}")
+                    logger.info(
+                        "session_store.migrated_column",
+                        from_version=current,
+                        to_version=4,
+                        column=col_name,
+                    )
 
         cur.execute(_CREATE_USER_INDEX)
 
@@ -131,6 +146,8 @@ class SessionStore:
         enable_llm_layer: bool,
         spacy_model: str | None,
         registry_blob: bytes | None,
+        source_format: str | None = None,
+        source_filename: str | None = None,
         docx_bytes: bytes | None = None,
         docx_filename: str | None = None,
         response_docx_bytes: bytes | None = None,
@@ -152,12 +169,14 @@ class SessionStore:
             """
             INSERT INTO sessions (
                 session_id, user_id, locale, created_at, custom_entities,
-                enable_llm_layer, spacy_model, registry_blob,
+                enable_llm_layer, spacy_model, source_format, source_filename, registry_blob,
                 docx_bytes, docx_filename,
                 response_docx_bytes, response_docx_filename,
                 deanonymized_docx_bytes, anonymized_text, entities_json, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(session_id) DO UPDATE SET
+                source_format = excluded.source_format,
+                source_filename = excluded.source_filename,
                 registry_blob = excluded.registry_blob,
                 docx_bytes = excluded.docx_bytes,
                 docx_filename = excluded.docx_filename,
@@ -171,7 +190,8 @@ class SessionStore:
             (
                 session_id, user_id, locale, created_at.isoformat(),
                 json.dumps(custom_entities), int(enable_llm_layer),
-                spacy_model, registry_blob, docx_bytes, docx_filename,
+                spacy_model, source_format, source_filename, registry_blob,
+                docx_bytes, docx_filename,
                 response_docx_bytes, response_docx_filename,
                 deanonymized_docx_bytes, anonymized_text, entities_json, now,
             ),
@@ -182,6 +202,8 @@ class SessionStore:
                 session_id=session_id,
                 user_id=user_id,
                 locale=locale,
+                source_format=source_format,
+                source_filename=source_filename,
                 docx_bytes=docx_bytes,
                 docx_filename=docx_filename,
                 response_docx_bytes=response_docx_bytes,
@@ -280,6 +302,7 @@ class SessionStore:
         base_cols = (
             "session_id, user_id, locale, created_at, custom_entities, "
             "enable_llm_layer, spacy_model, docx_filename, "
+            "source_format, source_filename, "
             "response_docx_filename, anonymized_text, entities_json, updated_at"
         )
         if user_id is None:
@@ -357,6 +380,8 @@ class SessionStore:
         session_id: str,
         user_id: str,
         locale: str,
+        source_format: str | None,
+        source_filename: str | None,
         docx_bytes: bytes | None,
         docx_filename: str | None,
         response_docx_bytes: bytes | None,
@@ -371,6 +396,8 @@ class SessionStore:
             "session_id": session_id,
             "user_id": user_id,
             "locale": locale,
+            "source_format": source_format,
+            "source_filename": source_filename,
             "docx_filename": docx_filename,
             "response_docx_filename": response_docx_filename,
             "updated_at": datetime.now(UTC).isoformat(),

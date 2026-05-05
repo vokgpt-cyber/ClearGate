@@ -28,10 +28,10 @@
   "empty": {
     "eyebrow": "CLEARGATE · Anonymization",
     "title": "Open a document to anonymize",
-    "lede": "Drag a DOCX file here or pick one manually. The document never leaves your computer.",
+    "lede": "Drag a DOCX, PDF, or TXT file here or pick one manually. The document never leaves your computer.",
     "pick": "Choose a document",
     "working": "Opening…",
-    "hint": "Supported format: DOCX. Maximum size: 50 MB."
+    "hint": "Supported formats: DOCX, PDF, and TXT. Maximum size: 50 MB."
   },
   "workspace": {
     "close": "Close document",
@@ -73,7 +73,11 @@
     "deepScanHint": "Run an extra local LLM-verifier pass over the current markup",
     "deepScanError": "Check failed",
     "deepScanDone": "Checked",
-    "deepScanNoChanges": "Checked: no changes"
+    "deepScanNoChanges": "Checked: no changes",
+    "deepScanSuggestions": "Suggestions",
+    "deepScanReview": "Deep check found suggestions",
+    "deepScanApply": "Apply",
+    "deepScanDismiss": "Dismiss"
   },
   "legend": {
     "title": "Entities",

@@ -1719,6 +1719,42 @@ h1, h2, h3, h4 {
   white-space: nowrap;
 }
 
+.cleargate-workspace__deep-suggestions {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-elevated));
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.cleargate-workspace__deep-suggestions-apply,
+.cleargate-workspace__deep-suggestions-dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cleargate-workspace__deep-suggestions-dismiss {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+}
+
+.cleargate-workspace__deep-suggestions-dismiss:hover {
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  color: var(--text-primary);
+}
+
 /* -- Compare-with-original toggle (Word-style Track Changes) -- */
 
 .cleargate-workspace__compare {

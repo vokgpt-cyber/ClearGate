@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from app.models.entities import DetectedEntity
+from app.routers.anonymize import _new_deep_scan_suggestions
 from app.services.ner_pipeline import NERPipeline
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures"
@@ -220,6 +221,44 @@ class TestPerMerging:
         if per_entities:
             # At minimum, should not have 3 separate PER entities for one name
             assert len(per_entities) <= 2
+
+class TestDeepScanQaMode:
+    """Deep Scan must propose additions, not rewrite existing markup."""
+
+    def test_deep_scan_suggestions_do_not_overlap_current_entities(self):
+        current = [
+            DetectedEntity(
+                text="4 500 000 CNY",
+                entity_type="MON",
+                start=20,
+                end=33,
+                score=0.95,
+                source_layer="regex",
+            )
+        ]
+        processed = [
+            *current,
+            DetectedEntity(
+                text="CNY",
+                entity_type="ORG",
+                start=30,
+                end=33,
+                score=0.8,
+                source_layer="llm-scan",
+            ),
+            DetectedEntity(
+                text="Tianjin Forward Polymers Co.",
+                entity_type="ORG",
+                start=45,
+                end=73,
+                score=0.86,
+                source_layer="llm-scan",
+            ),
+        ]
+
+        suggestions = _new_deep_scan_suggestions(current, processed)
+
+        assert [s.text for s in suggestions] == ["Tianjin Forward Polymers Co."]
 
 
 class TestContractNumber:

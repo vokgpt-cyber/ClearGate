@@ -5,6 +5,8 @@ The committed golden corpus is synthetic and safe for GitHub. It lives in:
 - `backend/tests/fixtures/golden/*.txt` — source legal-text snippets
 - `backend/tests/fixtures/golden/*.expected.json` — expected anonymization behavior
 - `backend/tests/services/test_golden_corpus.py` — executable regression checks
+- `backend/tests/services/test_document_processor_pdf.py` — synthetic PDF/TXT
+  ingestion checks, including DOCX preview generation
 
 Each expected JSON file can declare:
 

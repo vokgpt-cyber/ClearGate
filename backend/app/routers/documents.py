@@ -12,6 +12,7 @@ access returns 404 indistinguishably from a missing session.
 from __future__ import annotations
 
 from typing import Annotated
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, UploadFile, status
@@ -49,6 +50,13 @@ _DOCX_CONTENT_TYPE = (
 )
 
 
+def _download_stem(filename: str | None, fallback: str = "document") -> str:
+    if not filename:
+        return fallback
+    stem = Path(filename).stem
+    return stem or fallback
+
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile,
@@ -83,15 +91,27 @@ async def upload_document(
     result = processor.parse(content, format=suffix)
 
     document_id: str | None = None
-    if suffix == "docx" and session_id is not None:
+    if session_id is not None:
         session = sm.get_session(session_id, user_id=current_user.user_id)
         if session is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Session {session_id} not found or expired",
             )
-        session.docx_bytes = content
-        session.docx_filename = file.filename
+        render_bytes = result.render_docx_bytes
+        if render_bytes is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Document cannot be rendered as DOCX",
+            )
+        session.docx_bytes = render_bytes
+        session.docx_filename = (
+            file.filename
+            if suffix == "docx"
+            else f"{_download_stem(file.filename)}.docx"
+        )
+        session.source_format = suffix
+        session.source_filename = file.filename
         session.anonymized_text = None
         session.detected_entities.clear()
         document_id = session_id
@@ -100,6 +120,7 @@ async def upload_document(
             "document.attached_to_session",
             session_id=session_id,
             filename=file.filename,
+            source_format=suffix,
             bytes=len(content),
         )
 
@@ -228,8 +249,8 @@ async def export_anonymized(
             detail="Failed to export anonymized DOCX",
         ) from exc
 
-    original = session.docx_filename or "document.docx"
-    stem = original[:-5] if original.lower().endswith(".docx") else original
+    original = getattr(session, "source_filename", None) or session.docx_filename
+    stem = _download_stem(original)
     download_name = f"ANON_{stem}.docx"
 
     from urllib.parse import quote as _quote
@@ -285,8 +306,8 @@ async def get_response_raw(
             detail="No deanonymized document available for this session",
         )
 
-    filename = session.docx_filename or "document.docx"
-    stem = filename[:-5] if filename.lower().endswith(".docx") else filename
+    filename = getattr(session, "source_filename", None) or session.docx_filename
+    stem = _download_stem(filename)
     download_name = f"DEAN_{stem}.docx"
 
     ascii_fallback = (
@@ -489,8 +510,8 @@ async def export_deanonymized(
     session.deanonymized_docx_bytes = result.docx_bytes
     sm.save_session(session_id, user_id=current_user.user_id)
 
-    original = session.docx_filename or "document.docx"
-    stem = original[:-5] if original.lower().endswith(".docx") else original
+    original = getattr(session, "source_filename", None) or session.docx_filename
+    stem = _download_stem(original)
     download_name = f"DEAN_{stem}.docx"
 
     ascii_fallback = (

@@ -88,6 +88,18 @@ class AnonymizeResponse(BaseModel):
     stats: dict[str, int]
 
 
+class DeepScanResponse(AnonymizeResponse):
+    """Conservative deep-scan response.
+
+    The base anonymization result remains the current accepted workspace
+    state. ``suggestions`` contains additive candidates found by the local
+    LLM verifier; clients decide whether to apply them.
+    """
+
+    suggestions: list[DetectedEntity] = Field(default_factory=list)
+    suggestion_count: int = 0
+
+
 class DeanonymizeRequest(BaseModel):
     """Request to deanonymize text using session registry."""
 

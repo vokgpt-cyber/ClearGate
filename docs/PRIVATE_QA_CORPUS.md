@@ -44,3 +44,19 @@ Backup guidance:
 - Use encrypted archives or a trusted encrypted backup target.
 - Do not put real documents, session databases, mapping tables, or audit logs in Git.
 - Keep at least one offline backup before destructive cleanup of local sessions.
+
+Local backup helper:
+
+```powershell
+.\scripts\backup_data.ps1
+```
+
+If Windows PowerShell blocks local scripts, use:
+
+```powershell
+.\backup.bat
+```
+
+Use `-IncludeLogs` when support needs logs in the archive. The script creates
+a data ZIP and a Git bundle under `..\backups`. The ZIP is local and not
+encrypted, so move it only to trusted encrypted storage.

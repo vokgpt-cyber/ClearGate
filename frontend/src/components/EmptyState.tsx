@@ -28,7 +28,14 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
       setDragging(false);
       const file = e.dataTransfer.files?.[0];
       if (!file) return;
-      if (!file.name.toLowerCase().endsWith('.docx')) return;
+      const lowerName = file.name.toLowerCase();
+      if (
+        !lowerName.endsWith('.docx') &&
+        !lowerName.endsWith('.pdf') &&
+        !lowerName.endsWith('.txt')
+      ) {
+        return;
+      }
       onFile(file);
     },
     [onFile],
@@ -60,7 +67,7 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
         <input
           ref={inputRef}
           type="file"
-          accept=".docx"
+          accept=".docx,.pdf,.txt"
           style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files?.[0];

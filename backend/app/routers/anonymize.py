@@ -22,6 +22,7 @@ from app.models.api import (
     DeanonymizeRequest,
     DeanonymizeResponse,
     DeepScanRequest,
+    DeepScanResponse,
 )
 from app.models.entities import DetectedEntity
 from app.routers.auth import get_current_user
@@ -99,6 +100,36 @@ def _stats_for(entities: list[DetectedEntity]) -> dict[str, int]:
     return stats
 
 
+def _entity_signature(entity: DetectedEntity) -> tuple[int, int, str, str]:
+    return (entity.start, entity.end, entity.entity_type, entity.text)
+
+
+def _spans_overlap(left: DetectedEntity, right: DetectedEntity) -> bool:
+    return left.start < right.end and right.start < left.end
+
+
+def _new_deep_scan_suggestions(
+    current_entities: list[DetectedEntity],
+    processed_entities: list[DetectedEntity],
+) -> list[DetectedEntity]:
+    """Return LLM findings that are genuinely additive.
+
+    Deep Scan is a QA assistant in v0.9, not an authority that rewrites the
+    document. Anything already present, or overlapping an existing entity, is
+    excluded so the verifier cannot downgrade structured regex hits such as
+    contract numbers, dates, INNs, KPPs or amounts.
+    """
+    current_signatures = {_entity_signature(entity) for entity in current_entities}
+    suggestions: list[DetectedEntity] = []
+    for entity in processed_entities:
+        if _entity_signature(entity) in current_signatures:
+            continue
+        if any(_spans_overlap(entity, current) for current in current_entities):
+            continue
+        suggestions.append(entity)
+    return suggestions
+
+
 @router.post("/anonymize", response_model=AnonymizeResponse)
 async def anonymize(
     session_id: str,
@@ -144,14 +175,19 @@ async def anonymize(
     )
 
 
-@router.post("/deep-scan", response_model=AnonymizeResponse)
+@router.post("/deep-scan", response_model=DeepScanResponse)
 async def deep_scan(
     session_id: str,
     request: DeepScanRequest,
     current_user: Annotated[UserRecord, Depends(get_current_user)],
     sm: Annotated[SessionManager, Depends(get_session_manager)],
-) -> AnonymizeResponse:
-    """Run optional local LLM verification over the current detection result."""
+) -> DeepScanResponse:
+    """Run local LLM verification as a conservative QA pass.
+
+    v0.9 deliberately keeps Deep Scan additive. The endpoint preserves the
+    current workspace entities and returns LLM-found misses as suggestions.
+    The frontend can show them to the user and apply them explicitly.
+    """
     session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -164,10 +200,6 @@ async def deep_scan(
     )
 
     current_entities = request.entities or session.detected_entities
-    custom_entities = [
-        e for e in current_entities
-        if (e.metadata or {}).get("state") == "custom"
-    ]
     candidates = [
         e for e in current_entities
         if (e.metadata or {}).get("state") != "rejected"
@@ -177,22 +209,18 @@ async def deep_scan(
         model=settings.ollama_model,
         base_url=settings.ollama_host,
     )
-    refined = await verifier.verify_and_refine(request.text, candidates) if candidates else []
-    missed = await verifier.find_missed_entities(request.text, refined or candidates)
+    missed = await verifier.find_missed_entities(request.text, candidates)
 
     aligned: list[DetectedEntity] = []
-    # Deep scan is additive/conservative: keep the current non-rejected
-    # detection set so the LLM cannot silently drop structured regex hits
-    # such as contract numbers, dates, INN or amounts. Post-processing below
-    # still removes known false positives like document-type titles and role
-    # labels.
-    for entity in [*candidates, *refined, *missed, *custom_entities]:
+    for entity in missed:
         fixed = _align_entity_to_text(request.text, entity)
         if fixed is not None:
             aligned.append(fixed)
 
-    entities = session.pipeline.post_process(request.text, aligned)
-    entities = _prepare_response_entities(session, entities, previous=current_entities)
+    processed = session.pipeline.post_process(request.text, [*candidates, *aligned])
+    suggestions = _new_deep_scan_suggestions(candidates, processed)
+    entities = _prepare_response_entities(session, current_entities, previous=current_entities)
+    suggestions = _prepare_response_entities(session, suggestions)
     anonymized = session.registry.anonymize_text(request.text, entities)
     session.anonymized_text = anonymized
     session.detected_entities = entities
@@ -202,14 +230,17 @@ async def deep_scan(
         "deep_scan.done",
         session_id=session_id,
         entity_count=len(entities),
+        suggestion_count=len(suggestions),
         stats=stats,
     )
     sm.save_session(session_id, user_id=current_user.user_id)
 
-    return AnonymizeResponse(
+    return DeepScanResponse(
         anonymized_text=anonymized,
         entities=entities,
         stats=stats,
+        suggestions=suggestions,
+        suggestion_count=len(suggestions),
     )
 
 

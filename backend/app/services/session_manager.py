@@ -47,6 +47,8 @@ class Session:
         master_key: bytes,
         user_id: str,
         spacy_model: str | None = None,
+        source_format: str | None = None,
+        source_filename: str | None = None,
         created_at: datetime | None = None,
     ) -> None:
         from app.config import settings
@@ -57,6 +59,8 @@ class Session:
         self.enable_llm_layer = enable_llm_layer
         self.custom_entities = custom_entities
         self.spacy_model = spacy_model or settings.spacy_model
+        self.source_format = source_format
+        self.source_filename = source_filename
         self.created_at = created_at or datetime.now(UTC)
         self.pipeline = NERPipeline(
             spacy_model=self.spacy_model,
@@ -153,6 +157,8 @@ class SessionManager:
             custom_entities=custom_entities or [],
             master_key=self._master_key,
             spacy_model=spacy_model,
+            source_format=None,
+            source_filename=None,
         )
         self._sessions[session_id] = session
         self._persist(session)
@@ -209,6 +215,8 @@ class SessionManager:
             session.registry.clear()
             session.docx_bytes = None
             session.docx_filename = None
+            session.source_format = None
+            session.source_filename = None
             session.response_docx_bytes = None
             session.response_docx_filename = None
             session.deanonymized_docx_bytes = None
@@ -228,6 +236,9 @@ class SessionManager:
                 continue
             session.registry.clear()
             session.docx_bytes = None
+            session.docx_filename = None
+            session.source_format = None
+            session.source_filename = None
             session.response_docx_bytes = None
             session.deanonymized_docx_bytes = None
             session.detected_entities.clear()
@@ -263,7 +274,9 @@ class SessionManager:
                     "created_at": s.created_at.isoformat(),
                     "entity_count": s.registry.entity_count,
                     "has_document": s.docx_bytes is not None,
-                    "docx_filename": s.docx_filename,
+                    "docx_filename": s.source_filename or s.docx_filename,
+                    "source_format": s.source_format,
+                    "source_filename": s.source_filename,
                     "has_anonymization": bool(
                         s.anonymized_text and s.detected_entities
                     ),
@@ -284,7 +297,9 @@ class SessionManager:
                     mem_session.registry.entity_count if mem_session else 0
                 ),
                 "has_document": row.get("docx_filename") is not None,
-                "docx_filename": row.get("docx_filename"),
+                "docx_filename": row.get("source_filename") or row.get("docx_filename"),
+                "source_format": row.get("source_format"),
+                "source_filename": row.get("source_filename"),
                 "has_anonymization": bool(
                     row.get("anonymized_text") and row.get("entities_json")
                 ),
@@ -315,6 +330,8 @@ class SessionManager:
             custom_entities=session.custom_entities,
             enable_llm_layer=session.enable_llm_layer,
             spacy_model=session.spacy_model,
+            source_format=session.source_format,
+            source_filename=session.source_filename,
             registry_blob=registry_blob,
             docx_bytes=session.docx_bytes,
             docx_filename=session.docx_filename,
@@ -357,6 +374,8 @@ class SessionManager:
             custom_entities=custom_entities,
             master_key=self._master_key,
             spacy_model=None,
+            source_format=data.get("source_format"),
+            source_filename=data.get("source_filename"),
             created_at=created_at,
         )
         registry_blob = data.get("registry_blob")

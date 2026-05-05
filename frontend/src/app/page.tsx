@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
 import { CommandPalette } from '@/components/CommandPalette';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
-import { closeSession, createSession, listSessions, uploadDocx } from '@/lib/api';
+import { closeSession, createSession, listSessions, uploadDocument } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocale } from '@/hooks/useLocale';
 import type { InteractiveEntity } from '@/lib/entity-overlay';
@@ -98,7 +98,7 @@ export default function Home() {
     setError(null);
     try {
       const session = await createSession('ru');
-      await uploadDocx(session.session_id, file);
+      await uploadDocument(session.session_id, file);
       const doc: LoadedDoc = {
         sessionId: session.session_id,
         name: file.name,

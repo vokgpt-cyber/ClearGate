@@ -84,6 +84,33 @@ export async function uploadDocx(
   return response.json();
 }
 
+export async function uploadDocument(
+  sessionId: string,
+  file: File,
+): Promise<{
+  text: string;
+  format: string;
+  page_count: number | null;
+  char_count: number;
+  document_id: string | null;
+}> {
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith('.docx') && !lowerName.endsWith('.pdf') && !lowerName.endsWith('.txt')) {
+    throw new Error('Only .docx, .pdf, and .txt files are supported');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const url = `${API_URL}/api/documents/upload?session_id=${encodeURIComponent(sessionId)}`;
+  const response = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Upload failed (${response.status}): ${error}`);
+  }
+  return response.json();
+}
+
 /**
  * URL at which the raw DOCX bytes for a given session can be fetched.
  * Used by DocxViewer to stream the file into docx-preview.
@@ -119,7 +146,13 @@ export async function deepScanText(
   sessionId: string,
   text: string,
   entities: unknown[],
-): Promise<{ anonymized_text: string; entities: unknown[]; stats: Record<string, number> }> {
+): Promise<{
+  anonymized_text: string;
+  entities: unknown[];
+  stats: Record<string, number>;
+  suggestions?: unknown[];
+  suggestion_count?: number;
+}> {
   const cleanEntities = entities
     .filter((entity): entity is Record<string, unknown> => (
       typeof entity === 'object' && entity !== null

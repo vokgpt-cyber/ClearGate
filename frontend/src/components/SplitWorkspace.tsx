@@ -95,6 +95,7 @@ const SCALE_STEP = 0.1;
 type DeepScanSummary = {
   added: number;
   removed: number;
+  suggestions: number;
 };
 
 type CompareMutation =
@@ -244,6 +245,7 @@ export function SplitWorkspace({
   const [deepScanError, setDeepScanError] = useState<string | null>(null);
   const [deepScanProgress, setDeepScanProgress] = useState(0);
   const [deepScanSummary, setDeepScanSummary] = useState<DeepScanSummary | null>(null);
+  const [deepScanSuggestions, setDeepScanSuggestions] = useState<InteractiveEntity[]>([]);
   const restoreStartedRef = useRef(false);
 
   // Phase 1 round-trip: import response -> deanonymize -> export
@@ -458,6 +460,7 @@ export function SplitWorkspace({
     setDeepScanError(null);
     setDeepScanProgress(0);
     setDeepScanSummary(null);
+    setDeepScanSuggestions([]);
     if (zoomPillTimerRef.current !== null) {
       window.clearTimeout(zoomPillTimerRef.current);
       zoomPillTimerRef.current = null;
@@ -662,6 +665,7 @@ export function SplitWorkspace({
     setDeepScanBusy(true);
     setDeepScanError(null);
     setDeepScanSummary(null);
+    setDeepScanSuggestions([]);
     setDeepScanProgress(7);
     try {
       // eslint-disable-next-line no-console
@@ -671,22 +675,20 @@ export function SplitWorkspace({
         entities: entities.length,
       });
       const response = await deepScanText(documentId, plainText, entities);
-      const interactive = toInteractiveEntities(
-        (response.entities as OverlayEntity[]) ?? [],
+      const suggestions = toInteractiveEntities(
+        (response.suggestions as OverlayEntity[] | undefined) ?? [],
       );
-      const before = new Set(entities.map(entitySignature));
-      const after = new Set(interactive.map(entitySignature));
-      const added = [...after].filter((key) => !before.has(key)).length;
-      const removed = [...before].filter((key) => !after.has(key)).length;
-      setDeepScanSummary({ added, removed });
+      setDeepScanSuggestions(suggestions);
+      setDeepScanSummary({
+        added: 0,
+        removed: 0,
+        suggestions: response.suggestion_count ?? suggestions.length,
+      });
       setDeepScanProgress(100);
-      applyEntities(interactive);
-      onAnonymizationComplete?.(documentId, interactive);
       // eslint-disable-next-line no-console
       console.info('[Cleargate] deep scan response', {
         entities: response.entities?.length ?? 0,
-        added,
-        removed,
+        suggestions: suggestions.length,
       });
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 700);
@@ -734,11 +736,37 @@ export function SplitWorkspace({
 
   const deepScanSummaryLabel = useMemo(() => {
     if (!deepScanSummary) return null;
+    if (deepScanSummary.suggestions > 0) {
+      return `${t('workspace.deepScanSuggestions')}: ${deepScanSummary.suggestions}`;
+    }
     if (deepScanSummary.added === 0 && deepScanSummary.removed === 0) {
       return t('workspace.deepScanNoChanges');
     }
     return `${t('workspace.deepScanDone')}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
   }, [deepScanSummary, t]);
+
+  const applyDeepScanSuggestions = useCallback(() => {
+    if (deepScanSuggestions.length === 0) return;
+    const existing = new Set(entities.map(entitySignature));
+    const toAdd = deepScanSuggestions.filter(
+      (suggestion) => !existing.has(entitySignature(suggestion)),
+    );
+    if (toAdd.length === 0) {
+      setDeepScanSuggestions([]);
+      return;
+    }
+    const merged = [...entities, ...toAdd].sort((a, b) => a.start - b.start);
+    applyEntities(merged);
+    onAnonymizationComplete?.(documentId, merged);
+    setDeepScanSuggestions([]);
+    setDeepScanSummary({ added: toAdd.length, removed: 0, suggestions: 0 });
+  }, [
+    applyEntities,
+    deepScanSuggestions,
+    documentId,
+    entities,
+    onAnonymizationComplete,
+  ]);
 
   // ─── rerender on filter / state changes (NOT initial detection) ──
   //
@@ -1327,6 +1355,30 @@ export function SplitWorkspace({
             <span className="cleargate-workspace__deep-summary" role="status">
               {deepScanSummaryLabel}
             </span>
+          )}
+          {deepScanSuggestions.length > 0 && !deepScanBusy && (
+            <div className="cleargate-workspace__deep-suggestions" role="status">
+              <span>{t('workspace.deepScanReview')}</span>
+              <button
+                type="button"
+                className="cleargate-workspace__deep-suggestions-apply"
+                onClick={applyDeepScanSuggestions}
+              >
+                {t('workspace.deepScanApply')}
+              </button>
+              <button
+                type="button"
+                className="cleargate-workspace__deep-suggestions-dismiss"
+                onClick={() => {
+                  setDeepScanSuggestions([]);
+                  setDeepScanSummary(null);
+                }}
+                aria-label={t('workspace.deepScanDismiss')}
+                title={t('workspace.deepScanDismiss')}
+              >
+                x
+              </button>
+            </div>
           )}
           {/* Phase 1 round-trip: import response */}
           <button
