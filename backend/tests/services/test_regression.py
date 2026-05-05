@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from app.models.entities import DetectedEntity
 from app.services.ner_pipeline import NERPipeline
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures"
@@ -82,6 +83,129 @@ class TestStopwordFiltering:
         entities = await pipeline.analyze(text)
         org_with_bik = [e for e in entities if e.entity_type == "ORG" and "БИК" in e.text]
         assert len(org_with_bik) == 0
+
+    @pytest.mark.asyncio
+    async def test_between_label_not_org(self, pipeline):
+        text = "МЕЖДУ: АО «Норд-Хим» / ООО «Бизнес-Парк Сапфир»"
+        entities = await pipeline.analyze(text)
+        org_texts = {e.text.lower() for e in entities if e.entity_type == "ORG"}
+        assert "между" not in org_texts
+        assert "ао «норд-хим»" in org_texts
+        assert "ооо «бизнес-парк сапфир»" in org_texts
+
+    @pytest.mark.asyncio
+    async def test_contract_title_not_org(self, pipeline):
+        text = "ЛИЗИНГ\n№ ЛЗ-08-2025\nМЕЖДУ: АО «Норд-Хим» / АО «Финлизинг-Северо-Запад»"
+        entities = await pipeline.analyze(text)
+        org_texts = {e.text.lower() for e in entities if e.entity_type == "ORG"}
+        assert "лизинг" not in org_texts
+
+    def test_loan_title_not_org_after_post_process(self, pipeline):
+        title = "\u0417\u0410\u0401\u041c"
+        text = f"{title}\n\u2116 3-04-2024"
+        entities = [
+            DetectedEntity(
+                text=title,
+                entity_type="ORG",
+                start=0,
+                end=len(title),
+                score=0.92,
+                source_layer="llm",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
+    def test_slash_role_chain_not_position_after_post_process(self, pipeline):
+        role = (
+            "\u041f\u043e\u0441\u0442\u0430\u0432\u0449\u0438\u043a/"
+            "\u0423\u0441\u043b\u0443\u0433\u043e\u0434\u0430\u0442\u0435\u043b\u044c/"
+            "\u041f\u043e\u0434\u0440\u044f\u0434\u0447\u0438\u043a"
+        )
+        text = f"\u0414\u0430\u043b\u0435\u0435 -- {role}"
+        start = text.index(role)
+        entities = [
+            DetectedEntity(
+                text=role,
+                entity_type="POSITION",
+                start=start,
+                end=start + len(role),
+                score=0.9,
+                source_layer="llm-scan",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
+    def test_contract_number_survives_post_process(self, pipeline):
+        number = "\u2116 3-04-2024"
+        text = f"\u0414\u043e\u0433\u043e\u0432\u043e\u0440 \u0437\u0430\u0439\u043c\u0430 {number}"
+        start = text.index(number)
+        entities = [
+            DetectedEntity(
+                text=number,
+                entity_type="RU_CONTRACT_NUMBER",
+                start=start,
+                end=start + len(number),
+                score=0.95,
+                source_layer="regex",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities)[0].text == number
+
+    @pytest.mark.asyncio
+    async def test_distributor_contract_fragment(self, pipeline):
+        text = (
+            "ДИСТРИБУЦИЯ\n"
+            "№ Д-15-2024\n"
+            "от 28.05.2024\n"
+            "МЕЖДУ: АО «Норд-Хим» / Tianjin Forward Polymers Co.\n\n"
+            "2. Цена и порядок расчётов\n"
+            "Цена договора составляет 4 500 000 "
+            "(Four million five hundred thousand) CNY, включая НДС 20%.\n\n"
+            "7. Подписи сторон\n"
+            "АО «Норд-Хим»\n"
+            "Tianjin Forward Polymers Co.\n"
+        )
+
+        entities = await pipeline.analyze(text)
+        org_texts = {e.text.lower() for e in entities if e.entity_type == "ORG"}
+        money_texts = {e.text for e in entities if e.entity_type == "MON"}
+
+        assert "дистрибуция" not in org_texts
+        assert "cny" not in org_texts
+        assert "tianjin forward polymers co." in org_texts
+        assert any("4 500 000" in value and "CNY" in value for value in money_texts)
+
+    def test_money_not_replaced_by_llm_contract_number(self, pipeline):
+        money = "4 500 000 (Four million five hundred thousand) CNY"
+        wrong_contract = "4 500 000"
+        text = f"Цена договора составляет {money}, включая НДС 20%."
+        money_start = text.index(money)
+        wrong_start = text.index(wrong_contract)
+        entities = [
+            DetectedEntity(
+                text=money,
+                entity_type="MON",
+                start=money_start,
+                end=money_start + len(money),
+                score=0.92,
+                source_layer="regex",
+            ),
+            DetectedEntity(
+                text=wrong_contract,
+                entity_type="RU_CONTRACT_NUMBER",
+                start=wrong_start,
+                end=wrong_start + len(wrong_contract),
+                score=0.8,
+                source_layer="llm-scan",
+            ),
+        ]
+
+        processed = pipeline.post_process(text, entities)
+        assert [e.entity_type for e in processed] == ["MON"]
+        assert processed[0].text == money
 
 
 class TestPerMerging:

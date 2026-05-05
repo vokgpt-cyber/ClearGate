@@ -13,6 +13,7 @@ const ENTITY_COLORS: Record<string, EntityColor> = {
   ADDR:             { bg: '#FFF3E0', text: '#BF360C', border: '#FFAB91' },
   RU_INN:           { bg: '#FCE4EC', text: '#880E4F', border: '#F48FB1' },
   RU_OGRN:          { bg: '#FCE4EC', text: '#880E4F', border: '#F48FB1' },
+  RU_KPP:           { bg: '#FCE4EC', text: '#880E4F', border: '#F48FB1' },
   RU_SNILS:         { bg: '#E8EAF6', text: '#283593', border: '#9FA8DA' },
   RU_PASSPORT:      { bg: '#E8EAF6', text: '#283593', border: '#9FA8DA' },
   RU_BANK_ACCOUNT:  { bg: '#E0F7FA', text: '#00695C', border: '#80CBC4' },

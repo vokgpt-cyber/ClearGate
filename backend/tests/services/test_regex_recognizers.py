@@ -12,12 +12,18 @@ import pytest
 from presidio_analyzer import RecognizerResult
 
 from app.services.regex_recognizers import (
+    AddressRuRecognizer,
     BankAccountRecognizer,
+    BikRecognizer,
     CaseNumberRecognizer,
     DateRuRecognizer,
     EmailRuRecognizer,
+    EnglishLegalEntityRecognizer,
     InnRecognizer,
+    KppRecognizer,
+    MoneyRuRecognizer,
     OgrnRecognizer,
+    OrganizationRuRecognizer,
     PassportRfRecognizer,
     PhoneRuRecognizer,
     SnilsRecognizer,
@@ -54,14 +60,14 @@ class TestInnRecognizer:
         assert rec.validate_result("5024002119") is True
 
     def test_validate_result_inn_10_invalid(self, rec):
-        assert rec.validate_result("1234567890") is False
-        assert rec.validate_result("7707083894") is False
+        assert rec.validate_result("1234567890") is None
+        assert rec.validate_result("7707083894") is None
 
     def test_validate_result_inn_12(self, rec):
         assert rec.validate_result("500100732259") is True
 
     def test_validate_result_inn_12_invalid(self, rec):
-        assert rec.validate_result("123456789012") is False
+        assert rec.validate_result("123456789012") is None
 
     def test_validate_result_bad_input(self, rec):
         assert rec.validate_result("abc") is False
@@ -83,13 +89,13 @@ class TestOgrnRecognizer:
         assert rec.validate_result("1037739169335") is True
 
     def test_validate_result_ogrn_invalid(self, rec):
-        assert rec.validate_result("1234567890123") is False
+        assert rec.validate_result("1234567890123") is None
 
     def test_validate_result_ogrnip(self, rec):
         assert rec.validate_result("304500116000157") is True
 
     def test_validate_result_ogrnip_invalid(self, rec):
-        assert rec.validate_result("123456789012345") is False
+        assert rec.validate_result("123456789012345") is None
 
     def test_validate_result_bad_input(self, rec):
         assert rec.validate_result("abc") is False
@@ -109,7 +115,7 @@ class TestSnilsRecognizer:
         assert rec.validate_result("11223344595") is True
 
     def test_validate_result_invalid(self, rec):
-        assert rec.validate_result("11223344500") is False
+        assert rec.validate_result("11223344500") is None
 
     def test_validate_result_bad_input(self, rec):
         assert rec.validate_result("abc") is False
@@ -152,6 +158,113 @@ class TestBankAccountRecognizer:
 
     def test_validate_result_bad_length(self, rec):
         assert rec.validate_result("12345") is False
+
+
+class TestBikRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return BikRecognizer()
+
+    def test_detected_with_context(self, rec):
+        results = _analyze(rec, "БИК 044525225")
+        assert len(results) >= 1
+
+
+class TestKppRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return KppRecognizer()
+
+    def test_detects_value_after_label(self, rec):
+        results = _analyze(rec, "ИНН 7707083893, КПП 770701001")
+        assert len(results) == 1
+        assert results[0].entity_type == "RU_KPP"
+        assert results[0].start == 20
+        assert results[0].end == 29
+
+    def test_unlabeled_9_digits_not_detected(self, rec):
+        results = _analyze(rec, "044525225")
+        assert len(results) == 0
+
+
+class TestMoneyRuRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return MoneyRuRecognizer()
+
+    def test_detects_currency_amount(self, rec):
+        results = _analyze(rec, "штраф 1 000 000 (один миллион) рублей")
+        assert len(results) == 1
+
+    def test_detects_rub_currency_code_amount(self, rec):
+        text = "Цена договора составляет 200 000 000 (Двести миллионов) RUB, включая НДС 20%."
+        results = _analyze(rec, text)
+        matched = [text[r.start : r.end] for r in results]
+        assert any("200 000 000" in value and "RUB" in value for value in matched)
+
+    def test_detects_cny_currency_code_amount_with_english_words(self, rec):
+        text = (
+            "Цена договора составляет 4 500 000 "
+            "(Four million five hundred thousand) CNY, включая НДС 20%."
+        )
+        results = _analyze(rec, text)
+        matched = [text[r.start : r.end] for r in results]
+        assert any("4 500 000" in value and "CNY" in value for value in matched)
+
+    def test_detects_financial_percent_with_context(self, rec):
+        results = _analyze(rec, "вознаграждение составляет 5% (пять процентов)")
+        assert len(results) == 1
+
+    def test_ignores_percent_without_financial_context(self, rec):
+        results = _analyze(rec, "готовность системы 99%")
+        assert len(results) == 0
+
+
+class TestAddressRuRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return AddressRuRecognizer()
+
+    def test_detects_labeled_address_value(self, rec):
+        text = "адрес: 101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305), далее"
+        results = _analyze(rec, text)
+        assert len(results) == 1
+        assert text[results[0].start : results[0].end] == (
+            "101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305"
+        )
+
+    def test_does_not_treat_email_address_label_as_postal_address(self, rec):
+        results = _analyze(rec, "адрес электронной почты: user@example.ru")
+        assert len(results) == 0
+
+
+class TestOrganizationRuRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return OrganizationRuRecognizer()
+
+    def test_detects_legal_form_with_quotes(self, rec):
+        results = _analyze(rec, "АО «Норд-Хим» / ИП Кравцов А.В.")
+        texts = {"АО «Норд-Хим»", "ИП Кравцов А.В."}
+        assert {("АО «Норд-Хим» / ИП Кравцов А.В.")[r.start : r.end] for r in results} == texts
+
+
+class TestEnglishLegalEntityRecognizer:
+    @pytest.fixture()
+    def rec(self):
+        return EnglishLegalEntityRecognizer()
+
+    def test_detects_english_company_with_co_suffix(self, rec):
+        text = "МЕЖДУ: АО «Норд-Хим» / Tianjin Forward Polymers Co."
+        results = _analyze(rec, text)
+        matched = {text[r.start : r.end] for r in results}
+        assert "Tianjin Forward Polymers Co." in matched
+
+    def test_detects_company_limited_suffix(self, rec):
+        text = "Покупатель: Global Trade Solutions Limited"
+        results = _analyze(rec, text)
+        matched = {text[r.start : r.end] for r in results}
+        assert "Global Trade Solutions Limited" in matched
 
 
 class TestPhoneRuRecognizer:
@@ -223,9 +336,9 @@ class TestCaseNumberRecognizer:
 
 
 class TestBuildAllRecognizers:
-    def test_returns_10_recognizers(self):
+    def test_returns_15_recognizers(self):
         recognizers = build_all_recognizers()
-        assert len(recognizers) == 10
+        assert len(recognizers) == 15
 
     def test_all_have_supported_language_ru(self):
         for r in build_all_recognizers():
@@ -239,15 +352,20 @@ class TestBuildAllRecognizers:
             "RU_SNILS",
             "RU_PASSPORT",
             "RU_BANK_ACCOUNT",
+            "RU_BIK",
+            "RU_KPP",
             "RU_PHONE",
             "EMAIL_ADDRESS",
             "RU_DATE",
             "RU_CASE_NUMBER",
             "RU_CONTRACT_NUMBER",
+            "MON",
+            "ADDR",
+            "ORG",
         }
         assert entity_types == expected
 
     def test_module_level_all_recognizers(self):
         from app.services.regex_recognizers import ALL_RECOGNIZERS
 
-        assert len(ALL_RECOGNIZERS) == 10
+        assert len(ALL_RECOGNIZERS) == 15

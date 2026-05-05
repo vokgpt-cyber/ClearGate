@@ -51,6 +51,12 @@ CREATE INDEX IF NOT EXISTS error_user_idx ON client_errors(user_id);
 CREATE INDEX IF NOT EXISTS error_severity_idx ON client_errors(severity);
 """
 
+_CREATE_INDEX_STATEMENTS = [
+    stmt.strip()
+    for stmt in _CREATE_INDICES.split(";")
+    if stmt.strip()
+]
+
 
 @dataclass
 class ErrorRecord:
@@ -101,7 +107,8 @@ class ErrorStore:
         cur = self._conn.cursor()
         cur.execute(_CREATE_TABLE)
         cur.execute(_CREATE_META)
-        cur.execute(_CREATE_INDICES)
+        for stmt in _CREATE_INDEX_STATEMENTS:
+            cur.execute(stmt)
         cur.execute(
             "INSERT OR IGNORE INTO error_meta (key, value) VALUES (?, ?)",
             ("schema_version", str(_SCHEMA_VERSION)),

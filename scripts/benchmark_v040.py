@@ -47,6 +47,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
@@ -88,6 +89,7 @@ class DocResult:
     true_positive: int = 0
     false_positive: int = 0
     false_negative: int = 0
+    per_type: dict[str, dict[str, int]] = field(default_factory=dict)
     error: str | None = None
 
 
@@ -201,7 +203,15 @@ class CleargateClient:
         inside the container; 8001 outside). We try both common paths and
         fall back to None if neither responds.
         """
-        for path in ("/metrics", ":8001/metrics"):
+        parsed = urlparse(self.base_url)
+        host_metrics = (
+            f"{parsed.scheme}://{parsed.hostname}:8001/metrics"
+            if parsed.scheme and parsed.hostname
+            else None
+        )
+        for path in ("/metrics", host_metrics):
+            if path is None:
+                continue
             try:
                 r = await self._client.get(path, timeout=5.0)
                 if r.status_code == 200 and "vllm:" in r.text:
@@ -335,10 +345,11 @@ async def benchmark_doc(
         if ground_truth_path is not None:
             with ground_truth_path.open(encoding="utf-8") as fh:
                 ground_truth = json.load(fh)
-            tp, fp, fn, _per_type = compare_against_ground_truth(entities, ground_truth)
+            tp, fp, fn, per_type = compare_against_ground_truth(entities, ground_truth)
             result.true_positive = tp
             result.false_positive = fp
             result.false_negative = fn
+            result.per_type = per_type
 
         return result
     except Exception as exc:
@@ -370,7 +381,6 @@ async def main_async(args: argparse.Namespace) -> int:
         await client.login(args.username, args.password)
         print(f"Logged in as {args.username}")
 
-        per_type_acc: dict[str, dict[str, int]] = {}
         doc_results: list[DocResult] = []
         for docx, gt in pairs:
             print(f"  - benchmarking {docx.name}...", flush=True)
@@ -388,14 +398,6 @@ async def main_async(args: argparse.Namespace) -> int:
                         else " (no ground truth)"
                     )
                 )
-            # Re-derive per-type breakdown for aggregation
-            if gt:
-                with gt.open(encoding="utf-8") as fh:
-                    ground_truth = json.load(fh)
-                # We don't need the upload result here; just need the raw entities.
-                # That's wasteful — but the file is small. Better: store entities on DocResult.
-                # Refactor opportunity for v0.4.1.
-
         gpu_metrics = await client.fetch_vllm_metrics()
 
     finally:
@@ -418,6 +420,17 @@ async def main_async(args: argparse.Namespace) -> int:
     total_tp = sum(r.true_positive for r in doc_results)
     total_fp = sum(r.false_positive for r in doc_results)
     total_fn = sum(r.false_negative for r in doc_results)
+    per_type_acc: dict[str, dict[str, int]] = {}
+    for result in doc_results:
+        for entity_type, counts in result.per_type.items():
+            acc = per_type_acc.setdefault(entity_type, {"tp": 0, "fp": 0, "fn": 0})
+            acc["tp"] += counts.get("tp", 0)
+            acc["fp"] += counts.get("fp", 0)
+            acc["fn"] += counts.get("fn", 0)
+    by_type = [
+        TypeMetrics(entity_type=entity_type, tp=counts["tp"], fp=counts["fp"], fn=counts["fn"])
+        for entity_type, counts in sorted(per_type_acc.items())
+    ]
     overall_precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) else 1.0
     overall_recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) else 1.0
     overall_f1 = (
@@ -430,7 +443,7 @@ async def main_async(args: argparse.Namespace) -> int:
         run_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         base_url=args.base_url,
         docs=doc_results,
-        by_type=[],  # populated below
+        by_type=by_type,
         latency_p50_ms=p50,
         latency_p95_ms=p95,
         latency_p99_ms=p99,
@@ -508,6 +521,17 @@ def render_markdown_report(bench: BenchResult, tag: str | None = None) -> str:
     lines.append(f"- Recall:    **{bench.overall_recall:.3f}**")
     lines.append(f"- F1:        **{bench.overall_f1:.3f}**")
     lines.append("")
+    if bench.by_type:
+        lines.append("### Per-entity-type detail")
+        lines.append("")
+        lines.append("| Type | Precision | Recall | F1 | TP | FP | FN |")
+        lines.append("|------|-----------|--------|----|----|----|----|")
+        for t in bench.by_type:
+            lines.append(
+                f"| {t.entity_type} | {t.precision:.3f} | {t.recall:.3f} | "
+                f"{t.f1:.3f} | {t.tp} | {t.fp} | {t.fn} |"
+            )
+        lines.append("")
     lines.append("## Per-document detail")
     lines.append("")
     lines.append("| Document | Chars | Entities | Latency (ms) | TP | FP | FN |")
@@ -529,8 +553,8 @@ def render_markdown_report(bench: BenchResult, tag: str | None = None) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-url", default="http://localhost:8000",
-                    help="Cleargate root URL (default: http://localhost:8000)")
+    ap.add_argument("--base-url", default="http://localhost",
+                    help="Cleargate root URL (default: http://localhost)")
     ap.add_argument("--username", default="admin", help="Login username (default: admin)")
     ap.add_argument("--password", required=True, help="Login password")
     ap.add_argument("--test-dir", default=str(DEFAULT_TEST_DIR),

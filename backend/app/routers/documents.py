@@ -92,6 +92,8 @@ async def upload_document(
             )
         session.docx_bytes = content
         session.docx_filename = file.filename
+        session.anonymized_text = None
+        session.detected_entities.clear()
         document_id = session_id
         sm.save_session(session_id, user_id=current_user.user_id)
         logger.info(

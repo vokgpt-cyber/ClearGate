@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useLocale } from '@/hooks/useLocale';
+import { API_URL } from '@/lib/api';
 
 interface DocumentUploadProps {
   onTextLoaded: (text: string) => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const ACCEPTED = '.docx,.pdf,.txt';
 const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -40,6 +40,7 @@ export function DocumentUpload({ onTextLoaded }: DocumentUploadProps) {
       const resp = await fetch(`${API_URL}/api/documents/upload`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!resp.ok) {

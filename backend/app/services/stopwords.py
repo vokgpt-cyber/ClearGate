@@ -8,17 +8,22 @@ Expanded in v0.3.0 with FORM_FIELD_STOPWORDS to filter field labels.
 
 from __future__ import annotations
 
+import re
+
 # Legal roles and party names -- never PER, ORG, or LOC
 LEGAL_ROLE_STOPWORDS: set[str] = {
     # Contract parties (all declension forms)
     "исполнитель", "исполнителя", "исполнителю", "исполнителем",
     "заказчик", "заказчика", "заказчику", "заказчиком",
     "поставщик", "поставщика", "покупатель", "покупателя",
+    "услугодатель", "услугодателя", "услугодателю", "услугодателем",
     "продавец", "продавца", "подрядчик", "подрядчика",
     "субподрядчик", "арендодатель", "арендатор",
     "кредитор", "должник", "заёмщик", "заемщик",
     "залогодатель", "залогодержатель",
     "сторона", "стороны", "сторон", "сторонами",
+    "раскрывающая", "раскрывающей", "раскрывающую", "раскрывающим",
+    "получающая", "получающей", "получающую", "получающим",
     "третье лицо", "третьи лица",
     "принципал", "агент", "комиссионер", "комитент",
     "лицензиар", "лицензиат", "правообладатель",
@@ -93,6 +98,13 @@ ORG_STOPWORDS: set[str] = {
     "р/с", "к/с", "л/с",
     "пао", "ооо", "ао", "зао", "оао", "нко", "ип",
     "российская федерация", "рф",
+    "между",
+    "аренда", "лизинг", "кредит", "заем", "заём", "займ", "займа",
+    "поставка", "подряд", "услуги", "агентирование", "дистрибуция",
+    "дистрибьюторский", "дистрибьюторский договор",
+    "rub", "rur", "usd", "eur", "cny", "cnh", "rmb", "gbp", "chf",
+    "jpy", "hkd", "aed", "try", "kzt", "byn", "uah",
+    "юань", "юаней", "юаня", "доллар", "доллары", "долларов", "евро",
     "мо", "рт", "ро",
     "арбитражный суд", "арбитражном суде",
     "приложение", "приложении", "приложения",
@@ -117,6 +129,10 @@ def is_stopword(text: str, entity_type: str) -> bool:
     Uses exact matching, stem matching, and short-text filtering.
     """
     normalized = text.strip().rstrip(":;,.!?-").strip().lower()
+    canonical = normalized.replace("ё", "е")
+
+    def in_stopwords(value: str, stopwords: set[str]) -> bool:
+        return value in stopwords or value.replace("ё", "е") in stopwords
 
     # Very short entities (1-2 chars) are almost always false positives
     if len(normalized) <= 2 and entity_type in ("PER", "ORG", "LOC"):
@@ -124,20 +140,27 @@ def is_stopword(text: str, entity_type: str) -> bool:
 
     # Form-field labels — never sensitive PII themselves. Filter regardless
     # of which entity_type the NER model assigned to them.
-    if normalized in FORM_FIELD_STOPWORDS:
+    if in_stopwords(normalized, FORM_FIELD_STOPWORDS):
         return True
 
     # Exact match in global stopword lists
-    if normalized in LEGAL_ROLE_STOPWORDS:
+    if in_stopwords(normalized, LEGAL_ROLE_STOPWORDS):
         return True
-    if normalized in POSITION_STOPWORDS:
+    if in_stopwords(normalized, POSITION_STOPWORDS):
         return True
 
     # Multi-word: if every word is a legal-role stopword, the phrase is too.
     # Catches combos like "Заявки Заказчика" where each word is a stop-word.
-    words = normalized.split()
+    words = canonical.split()
     if len(words) >= 2:
         if all(w in LEGAL_ROLE_STOPWORDS for w in words):
+            return True
+
+    # Slash/comma role chains such as "Поставщик/Услугодатель/Подрядчик"
+    # are labels in template contracts, not sensitive entities.
+    role_tokens = re.findall(r"[а-яёa-z]+", canonical)
+    if len(role_tokens) >= 2:
+        if all(t in LEGAL_ROLE_STOPWORDS or t in POSITION_STOPWORDS for t in role_tokens):
             return True
 
     # Stem matching for multi-word position titles (handles declensions)
@@ -151,15 +174,14 @@ def is_stopword(text: str, entity_type: str) -> bool:
                     return True
 
     # Type-specific stop lists
-    if entity_type == "ORG" and normalized in ORG_STOPWORDS:
+    if entity_type == "ORG" and in_stopwords(normalized, ORG_STOPWORDS):
         return True
-    if entity_type == "LOC" and normalized in LOC_STOPWORDS:
+    if entity_type == "LOC" and in_stopwords(normalized, LOC_STOPWORDS):
         return True
 
     # Filter "Приложение N" patterns for ORG type
     if entity_type == "ORG":
-        import re
-        if re.match(r"^приложени[еия]\s*[№#]?\s*\d{1,2}$", normalized):
+        if re.match(r"^приложени[еия]\s*[№#]?\s*\d{1,2}$", canonical):
             return True
 
     return False

@@ -21,10 +21,13 @@ from app.models.api import (
     AnonymizeResponse,
     DeanonymizeRequest,
     DeanonymizeResponse,
+    DeepScanRequest,
 )
 from app.models.entities import DetectedEntity
 from app.routers.auth import get_current_user
 from app.routers.sessions import get_session_manager
+from app.config import settings
+from app.services.local_llm_verifier import LocalLLMVerifier
 from app.services.session_manager import SessionManager
 from app.services.user_store import UserRecord
 
@@ -41,6 +44,59 @@ def _stable_entity_id(entity: DetectedEntity) -> str:
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/sessions/{session_id}", tags=["anonymize"])
+
+
+def _align_entity_to_text(text: str, entity: DetectedEntity) -> DetectedEntity | None:
+    """Ensure an LLM-returned entity points to the actual source text."""
+    if 0 <= entity.start < entity.end <= len(text) and text[entity.start : entity.end] == entity.text:
+        return entity
+
+    needle = entity.text.strip()
+    if not needle:
+        return None
+    idx = text.find(needle)
+    if idx < 0:
+        return None
+    return entity.model_copy(update={"start": idx, "end": idx + len(needle), "text": needle})
+
+
+def _prepare_response_entities(
+    session,
+    entities: list[DetectedEntity],
+    previous: list[DetectedEntity] | None = None,
+) -> list[DetectedEntity]:
+    """Attach stable ids/placeholders and preserve reviewed UI state when possible."""
+    previous_by_key = {
+        (e.start, e.end, e.entity_type, e.text): e
+        for e in (previous or [])
+    }
+    prepared: list[DetectedEntity] = []
+    for entity in entities:
+        prior = previous_by_key.get((entity.start, entity.end, entity.entity_type, entity.text))
+        metadata = dict(entity.metadata or {})
+        if prior is not None:
+            metadata.update({
+                k: v
+                for k, v in (prior.metadata or {}).items()
+                if k in {"id", "placeholder", "state", "user_added"}
+            })
+        try:
+            placeholder = session.registry.get_or_create_placeholder(entity)
+        except Exception:  # pragma: no cover -- defensive
+            placeholder = metadata.get("placeholder")
+        if placeholder is not None:
+            metadata["placeholder"] = placeholder
+        metadata.setdefault("id", _stable_entity_id(entity))
+        metadata.setdefault("state", "pending")
+        prepared.append(entity.model_copy(update={"metadata": metadata}))
+    return prepared
+
+
+def _stats_for(entities: list[DetectedEntity]) -> dict[str, int]:
+    stats: dict[str, int] = {}
+    for entity in entities:
+        stats[entity.entity_type] = stats.get(entity.entity_type, 0) + 1
+    return stats
 
 
 @router.post("/anonymize", response_model=AnonymizeResponse)
@@ -64,28 +120,12 @@ async def anonymize(
     )
     anonymized = session.registry.anonymize_text(request.text, entities)
 
-    # Attach the placeholder that the registry assigned to each entity so
-    # the frontend can render the anonymized view (substituting ranges
-    # with placeholders) without having to parse `anonymized_text` itself.
-    # `get_or_create_placeholder` is idempotent -- `anonymize_text` above
-    # already created the entries, so these lookups are cheap hits.
-    for e in entities:
-        try:
-            placeholder = session.registry.get_or_create_placeholder(e)
-        except Exception:  # pragma: no cover -- defensive
-            placeholder = None
-        if placeholder is not None:
-            e.metadata["placeholder"] = placeholder
-        # Stable id so the frontend can track accept/reject state across
-        # re-detections without losing user decisions.
-        e.metadata["id"] = _stable_entity_id(e)
-        # Mark as pipeline-detected so the UI can distinguish from custom
-        # user-added entities.
-        e.metadata.setdefault("state", "pending")
+    entities = _prepare_response_entities(session, entities)
 
-    stats: dict[str, int] = {}
-    for e in entities:
-        stats[e.entity_type] = stats.get(e.entity_type, 0) + 1
+    session.anonymized_text = anonymized
+    session.detected_entities = entities
+
+    stats = _stats_for(entities)
 
     logger.info(
         "anonymize.done",
@@ -95,6 +135,75 @@ async def anonymize(
     )
 
     # Persist session state after registry mutation
+    sm.save_session(session_id, user_id=current_user.user_id)
+
+    return AnonymizeResponse(
+        anonymized_text=anonymized,
+        entities=entities,
+        stats=stats,
+    )
+
+
+@router.post("/deep-scan", response_model=AnonymizeResponse)
+async def deep_scan(
+    session_id: str,
+    request: DeepScanRequest,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> AnonymizeResponse:
+    """Run optional local LLM verification over the current detection result."""
+    session = sm.get_session(session_id, user_id=current_user.user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    logger.info(
+        "deep_scan.start",
+        session_id=session_id,
+        text_length=len(request.text),
+        input_entity_count=len(request.entities),
+    )
+
+    current_entities = request.entities or session.detected_entities
+    custom_entities = [
+        e for e in current_entities
+        if (e.metadata or {}).get("state") == "custom"
+    ]
+    candidates = [
+        e for e in current_entities
+        if (e.metadata or {}).get("state") != "rejected"
+    ]
+
+    verifier = LocalLLMVerifier(
+        model=settings.ollama_model,
+        base_url=settings.ollama_host,
+    )
+    refined = await verifier.verify_and_refine(request.text, candidates) if candidates else []
+    missed = await verifier.find_missed_entities(request.text, refined or candidates)
+
+    aligned: list[DetectedEntity] = []
+    # Deep scan is additive/conservative: keep the current non-rejected
+    # detection set so the LLM cannot silently drop structured regex hits
+    # such as contract numbers, dates, INN or amounts. Post-processing below
+    # still removes known false positives like document-type titles and role
+    # labels.
+    for entity in [*candidates, *refined, *missed, *custom_entities]:
+        fixed = _align_entity_to_text(request.text, entity)
+        if fixed is not None:
+            aligned.append(fixed)
+
+    entities = session.pipeline.post_process(request.text, aligned)
+    entities = _prepare_response_entities(session, entities, previous=current_entities)
+    anonymized = session.registry.anonymize_text(request.text, entities)
+    session.anonymized_text = anonymized
+    session.detected_entities = entities
+
+    stats = _stats_for(entities)
+    logger.info(
+        "deep_scan.done",
+        session_id=session_id,
+        entity_count=len(entities),
+        stats=stats,
+    )
     sm.save_session(session_id, user_id=current_user.user_id)
 
     return AnonymizeResponse(
@@ -215,6 +324,12 @@ async def add_entity(
     entity_id = f"custom-{uuid.uuid4()}"
     entity.metadata["placeholder"] = placeholder
     entity.metadata["id"] = entity_id
+    current = getattr(session, "detected_entities", [])
+    session.detected_entities = [
+        e
+        for e in current
+        if not (e.start >= entity.start and e.end <= entity.end)
+    ] + [entity]
 
     logger.info(
         "entity.added",

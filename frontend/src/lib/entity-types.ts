@@ -18,6 +18,7 @@ export type EntityTypeCode =
   | 'DATE'
   | 'RU_INN'
   | 'RU_OGRN'
+  | 'RU_KPP'
   | 'RU_SNILS'
   | 'RU_PASSPORT'
   | 'RU_BANK_ACCOUNT'
@@ -109,6 +110,13 @@ export const ENTITY_TYPES: Record<EntityTypeCode, EntityTypeInfo> = {
     labelRu: 'ОГРН',
     labelEn: 'OGRN',
     cssKey: 'ogrn',
+    group: 'id',
+  },
+  RU_KPP: {
+    code: 'RU_KPP',
+    labelRu: 'КПП',
+    labelEn: 'KPP',
+    cssKey: 'kpp',
     group: 'id',
   },
   RU_SNILS: {
@@ -222,6 +230,7 @@ export const LEGEND_ORDER: EntityTypeCode[] = [
   'ADDR',
   'RU_INN',
   'RU_OGRN',
+  'RU_KPP',
   'RU_SNILS',
   'RU_PASSPORT',
   'RU_BANK_ACCOUNT',

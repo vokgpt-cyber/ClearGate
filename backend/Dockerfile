@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir -e .
+RUN python -m spacy download ru_core_news_sm
 
 COPY app/ app/
 

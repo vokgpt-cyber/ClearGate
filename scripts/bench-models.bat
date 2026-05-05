@@ -31,7 +31,7 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0\.."
 
 if "%MODELS%"=="" set "MODELS=qwen2.5:7b-instruct-q4_K_M gemma4:26b"
-if "%ADMIN_PASSWORD%"=="" set "ADMIN_PASSWORD=admin"
+if "%ADMIN_PASSWORD%"=="" set "ADMIN_PASSWORD=adminadmin"
 
 set "BENCH_DIR=bench-results"
 if not exist "%BENCH_DIR%" mkdir "%BENCH_DIR%"

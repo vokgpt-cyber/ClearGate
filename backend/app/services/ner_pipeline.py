@@ -13,6 +13,7 @@ Post-processing includes:
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -39,6 +40,7 @@ _PRESIDIO_TYPE_MAP: dict[str, str] = {
     "EMAIL_ADDRESS": "EMAIL_ADDRESS",
     "RU_INN": "RU_INN",
     "RU_OGRN": "RU_OGRN",
+    "RU_KPP": "RU_KPP",
     "RU_SNILS": "RU_SNILS",
     "RU_PASSPORT": "RU_PASSPORT",
     "RU_BANK_ACCOUNT": "RU_BANK_ACCOUNT",
@@ -50,6 +52,56 @@ _PRESIDIO_TYPE_MAP: dict[str, str] = {
 
 # Max gap (in chars) between adjacent PER entities to merge them
 _PER_MERGE_GAP = 3
+
+_LEGAL_FORM_HINT = re.compile(
+    r"\b(?:ООО|ОАО|АО|ПАО|ЗАО|ИП|LLC|L\.L\.C\.|LTD\.?|LIMITED|INC\.?|"
+    r"CORP\.?|CORPORATION|COMPANY|CO\.?|GMBH|AG|S\.A\.|B\.V\.|N\.V\.)\b",
+    re.IGNORECASE,
+)
+_DOCUMENT_CUE = re.compile(
+    r"(?:№|N\s*)\s*[\wА-Яа-яЁё/-]{2,}|от\s+\d{2}\.\d{2}\.\d{2,4}|договор",
+    re.IGNORECASE,
+)
+_FINANCIAL_CUE = re.compile(
+    r"\b(?:сумм[ауы]|цена|стоимость|вознаграждение|оплат[ауы]|выручк[аи]|"
+    r"штраф|неустойк[аиу]|пен[яи]|НДС|CNY|CNH|RMB|RUB|RUR|USD|EUR)\b",
+    re.IGNORECASE,
+)
+_MONEY_LIKE_NUMBER = re.compile(r"^\d{1,3}(?:[ \u00A0]\d{3})+(?:[,.]\d{1,2})?$")
+_DOCUMENT_TITLE_WORDS = {
+    "аренда",
+    "агентский",
+    "дистрибуция",
+    "договор",
+    "заем",
+    "заём",
+    "кредит",
+    "лизинг",
+    "подряд",
+    "поставка",
+    "услуги",
+}
+_ENTITY_TYPE_PRIORITY = {
+    "RU_INN": 80,
+    "RU_OGRN": 80,
+    "RU_KPP": 80,
+    "RU_SNILS": 80,
+    "RU_PASSPORT": 80,
+    "RU_BANK_ACCOUNT": 80,
+    "RU_BIK": 80,
+    "RU_PHONE": 80,
+    "EMAIL_ADDRESS": 80,
+    "RU_CONTRACT_NUMBER": 75,
+    "RU_CASE_NUMBER": 75,
+    "MON": 90,
+    "RU_DATE": 65,
+    "DATE": 65,
+    "ADDR": 60,
+    "PER": 50,
+    "ORG": 45,
+    "POSITION": 35,
+    "LOC": 30,
+}
 
 
 @dataclass
@@ -195,13 +247,26 @@ class NERPipeline:
             except Exception:
                 logger.warning("ner_pipeline.find_missed_failed", exc_info=True)
 
-        # Post-processing: stopwords, merge adjacent PER, merge overlap, sort
+        entities = self.post_process(text, entities)
+        logger.info("ner_pipeline.analyze.done", entity_count=len(entities))
+        return entities
+
+    def post_process(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Apply shared entity cleanup after any detection source.
+
+        Used by the fast regex/NER pass and by optional manual LLM deep scan
+        so both paths get the same stop-word and overlap behavior.
+        """
         entities = self._filter_stopwords(entities)
+        entities = self._filter_document_title_false_positives(text, entities)
+        entities = self._filter_structured_false_positives(text, entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)
         entities.sort(key=lambda e: (e.start, -e.score))
-
-        logger.info("ner_pipeline.analyze.done", entity_count=len(entities))
         return entities
 
     def _convert_presidio_results(
@@ -234,6 +299,89 @@ class NERPipeline:
                 logger.debug("ner_pipeline.stopword_filtered", text=e.entity_type, entity_type=e.entity_type)
                 continue
             filtered.append(e)
+        return filtered
+
+    def _filter_document_title_false_positives(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Remove document-type headings misclassified as organizations.
+
+        Legal DOCX templates often start with a centered one-word heading
+        like "ДИСТРИБУЦИЯ", "АРЕНДА", "ЗАЁМ" or "ЛИЗИНГ" followed by a
+        contract number and date. Small NER models tend to tag those all-caps
+        headings as ORG, but they are document type labels, not sensitive
+        information.
+        """
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            if entity.entity_type == "ORG" and self._is_document_title(text, entity):
+                logger.debug(
+                    "ner_pipeline.document_title_filtered",
+                    text=entity.text,
+                    entity_type=entity.entity_type,
+                )
+                continue
+            filtered.append(entity)
+        return filtered
+
+    def _is_document_title(self, text: str, entity: DetectedEntity) -> bool:
+        if entity.start > 350:
+            return False
+        line_start = text.rfind("\n", 0, entity.start) + 1
+        line_end = text.find("\n", entity.end)
+        if line_end == -1:
+            line_end = len(text)
+
+        line = text[line_start:line_end].strip()
+        if not line or len(line) > 90:
+            return False
+        if _LEGAL_FORM_HINT.search(line):
+            return False
+        if entity.text.strip() and entity.text.strip() not in line:
+            return False
+
+        normalized_words = {
+            re.sub(r"[^a-zа-яё]", "", word.lower()).replace("ё", "е")
+            for word in re.findall(r"[A-Za-zА-Яа-яЁё]+", line)
+        }
+        normalized_words.discard("")
+        if not normalized_words:
+            return False
+        title_word_hit = bool(normalized_words & {w.replace("ё", "е") for w in _DOCUMENT_TITLE_WORDS})
+
+        letters = re.findall(r"[A-Za-zА-Яа-яЁё]", line)
+        uppercase_letters = [ch for ch in letters if ch.upper() == ch and ch.lower() != ch]
+        uppercase_ratio = len(uppercase_letters) / len(letters) if letters else 0.0
+        short_heading = len(normalized_words) <= 4 and uppercase_ratio >= 0.72
+        if not (title_word_hit or short_heading):
+            return False
+
+        cue_window = text[line_end : min(len(text), line_end + 180)]
+        return bool(_DOCUMENT_CUE.search(cue_window))
+
+    def _filter_structured_false_positives(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Remove LLM-added structured labels contradicted by local context."""
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            if (
+                entity.entity_type == "RU_CONTRACT_NUMBER"
+                and _MONEY_LIKE_NUMBER.fullmatch(entity.text.strip())
+            ):
+                window = text[max(0, entity.start - 90) : min(len(text), entity.end + 90)]
+                if _FINANCIAL_CUE.search(window):
+                    logger.debug(
+                        "ner_pipeline.money_as_contract_filtered",
+                        text=entity.text,
+                        entity_type=entity.entity_type,
+                    )
+                    continue
+            filtered.append(entity)
         return filtered
 
     def _merge_adjacent_per(
@@ -308,6 +456,13 @@ class NERPipeline:
 
     def _should_replace(self, existing: DetectedEntity, candidate: DetectedEntity) -> bool:
         """Decide if candidate should replace existing in overlap resolution."""
+        existing_priority = _ENTITY_TYPE_PRIORITY.get(existing.entity_type, 0)
+        candidate_priority = _ENTITY_TYPE_PRIORITY.get(candidate.entity_type, 0)
+        if candidate_priority > existing_priority:
+            return True
+        if candidate_priority < existing_priority:
+            return False
+
         # Regex-validated entities (high score) always win over NER guesses
         if candidate.score >= 0.9 and existing.score < 0.9:
             return True

@@ -1,6 +1,6 @@
 {
   "name": "cleargate-frontend",
-  "version": "0.1.0",
+  "version": "0.8.5",
   "private": true,
   "description": "CLEARGATE desktop frontend — Tauri 2 + Next.js 15",
   "scripts": {

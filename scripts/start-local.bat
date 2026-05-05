@@ -10,7 +10,7 @@ REM   4. Builds + starts backend + frontend + nginx via docker-compose.local.yml
 REM   5. Waits for the stack to become healthy (up to ~3 minutes).
 REM   6. Opens http://localhost in the default browser.
 REM
-REM Login: admin / admin
+REM Login: admin / adminadmin
 REM Stop:  scripts\stop-local.bat
 REM ============================================================================
 
@@ -92,14 +92,14 @@ goto open_browser
 :ready
 echo   OK: backend is responsive.
 
-REM --- Step 5b: Seed admin/admin user (idempotent, no-op if any user exists) -
+REM --- Step 5b: Seed admin/adminadmin user (idempotent, no-op if any user exists) -
 echo [5b] Seeding admin user (skipped if users table already populated)...
-echo admin| docker exec -i cleargate-local-backend cleargate-admin seed --username admin --password-stdin --if-empty >nul 2>&1
+echo adminadmin| docker exec -i cleargate-local-backend cleargate-admin seed --username admin --password-stdin --if-empty --admin >nul 2>&1
 if errorlevel 1 (
     echo   WARN: seed command failed. You may need to create the admin user manually:
-    echo         echo admin^| docker exec -i cleargate-local-backend cleargate-admin seed --username admin --password-stdin --if-empty
+    echo         echo adminadmin^| docker exec -i cleargate-local-backend cleargate-admin seed --username admin --password-stdin --if-empty --admin
 ) else (
-    echo   OK: admin/admin ready.
+    echo   OK: admin/adminadmin ready.
 )
 
 :open_browser
@@ -110,7 +110,7 @@ echo.
 echo ============================================================================
 echo   Cleargate is running.
 echo   URL:    http://localhost
-echo   Login:  admin / admin
+echo   Login:  admin / adminadmin
 echo   Stop:   scripts\stop-local.bat
 echo   Logs:   docker compose -f docker-compose.local.yml logs -f
 echo ============================================================================

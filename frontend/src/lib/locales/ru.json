@@ -21,7 +21,9 @@
   "sidebar": {
     "newDocument": "Новый документ",
     "recentSessions": "Недавние сессии",
-    "noSessions": "Пока нет открытых документов"
+    "noSessions": "Пока нет открытых документов",
+    "deleteSession": "Удалить сессию",
+    "confirmDeleteSession": "Удалить эту сессию и все документы внутри нее?"
   },
   "empty": {
     "eyebrow": "CLEARGATE · Анонимизация",
@@ -61,7 +63,17 @@
     "replacementsDone": "Выполнено замен",
     "unresolvedCount": "Не разрешено",
     "zoomLevel": "Масштаб документа:",
-    "resetZoom": "Сбросить масштаб (Ctrl+0)"
+    "resetZoom": "Сбросить масштаб (Ctrl+0)",
+    "startAnonymize": "Анонимизировать",
+    "anonymizing": "Анонимизируем документ",
+    "progressLabel": "Прогресс анонимизации",
+    "progressNote": "CLEARGATE размечает найденные фрагменты",
+    "deepScan": "Глубокая проверка",
+    "deepScanBusy": "Проверяем…",
+    "deepScanHint": "Дополнительно проверить разметку локальным LLM-verifier",
+    "deepScanError": "Проверка не удалась",
+    "deepScanDone": "Проверено",
+    "deepScanNoChanges": "Проверено: без изменений"
   },
   "legend": {
     "title": "Сущности",
@@ -115,13 +127,15 @@
       "ADDR": "Адрес",
       "RU_INN": "ИНН",
       "RU_OGRN": "ОГРН",
+      "RU_KPP": "КПП",
       "RU_SNILS": "СНИЛС",
       "RU_PASSPORT": "Паспорт",
       "RU_BANK_ACCOUNT": "Банк. счёт",
       "RU_PHONE": "Телефон",
       "EMAIL_ADDRESS": "Email",
       "RU_DATE": "Дата",
-      "RU_CASE_NUMBER": "Номер дела"
+      "RU_CASE_NUMBER": "Номер дела",
+      "MON": "Сумма"
     }
   },
   "llm": {
@@ -196,6 +210,7 @@
     "admin": "Администратор"
   },
   "admin": {
+    "backToWorkspace": "Назад к документам",
     "users": {
       "title": "Пользователи",
       "create": "Создать пользователя",
@@ -204,6 +219,7 @@
       "displayName": "Имя",
       "role": "Роль",
       "active": "Активен",
+      "disabled": "Отключен",
       "actions": "Действия",
       "created": "Создан",
       "lastLogin": "Последний вход",
@@ -211,6 +227,10 @@
       "enable": "Включить",
       "changeRole": "Сменить роль",
       "resetPassword": "Сбросить пароль",
+      "delete": "Удалить",
+      "makeAdmin": "Сделать админом",
+      "makeLawyer": "Сделать юристом",
+      "passwordPrompt": "Новый пароль для пользователя",
       "syncAD": "Синхронизация с AD",
       "syncing": "Синхронизация..."
     },
@@ -233,6 +253,14 @@
       "period7d": "7 дней",
       "period30d": "30 дней",
       "period90d": "90 дней",
+      "range7": "7 дней",
+      "range30": "30 дней",
+      "range90": "90 дней",
+      "totalSessions": "Всего сессий",
+      "latency": "Скорость анонимизации",
+      "p50": "P50",
+      "p95": "P95",
+      "p99": "P99",
       "sessionsPerDay": "Сессий в день",
       "latencyP50": "Медиана анонимизации",
       "latencyP95": "P95 анонимизации",
@@ -250,6 +278,15 @@
       "time": "Время",
       "client": "Клиент",
       "server": "Сервер"
+      ,
+      "timestamp": "Время",
+      "filterError": "Ошибки",
+      "filterWarning": "Предупреждения",
+      "filterInfo": "Информация",
+      "filterClient": "Клиент",
+      "filterServer": "Сервер",
+      "userAgent": "User-Agent",
+      "stack": "Стек"
     }
   }
 }

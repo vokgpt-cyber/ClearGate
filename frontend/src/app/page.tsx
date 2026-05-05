@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
 import { CommandPalette } from '@/components/CommandPalette';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
-import { createSession, listSessions, uploadDocx } from '@/lib/api';
+import { closeSession, createSession, listSessions, uploadDocx } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocale } from '@/hooks/useLocale';
 import type { InteractiveEntity } from '@/lib/entity-overlay';
@@ -97,7 +97,7 @@ export default function Home() {
     setWorking(true);
     setError(null);
     try {
-      const session = await createSession('ru', { enableLlmLayer: true });
+      const session = await createSession('ru');
       await uploadDocx(session.session_id, file);
       const doc: LoadedDoc = {
         sessionId: session.session_id,
@@ -129,6 +129,36 @@ export default function Home() {
     setIsPicking(false);
   }, []);
 
+  const handleDeleteSession = useCallback(async (id: string) => {
+    const target = sessions.find((s) => s.sessionId === id);
+    const title = target?.name ?? id;
+    if (!window.confirm(`${t('sidebar.confirmDeleteSession')}\n\n${title}`)) {
+      return;
+    }
+    const previousSessions = sessions;
+    const previousActiveId = activeId;
+    const previousIsPicking = isPicking;
+    const remaining = previousSessions.filter((s) => s.sessionId !== id);
+    setSessions(remaining);
+    setEntityCache((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (previousActiveId === id) {
+      setActiveId(remaining[0]?.sessionId ?? null);
+      setIsPicking(remaining.length === 0);
+    }
+    try {
+      await closeSession(id);
+    } catch (e) {
+      setSessions(previousSessions);
+      setActiveId(previousActiveId);
+      setIsPicking(previousIsPicking);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [activeId, isPicking, sessions, t]);
+
   const activeDoc = activeId
     ? sessions.find((s) => s.sessionId === activeId) ?? null
     : null;
@@ -159,6 +189,7 @@ export default function Home() {
         activeSessionId={showWorkspace ? activeDoc.sessionId : null}
         onNewDocument={handleNewDocument}
         onSelectSession={handleSelectSession}
+        onDeleteSession={handleDeleteSession}
       />
       <div className="cleargate-app__main">
         <Header />

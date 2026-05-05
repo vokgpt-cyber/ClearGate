@@ -25,12 +25,14 @@ import structlog
 from app.services.entity_registry import EntityRegistry
 from app.services.ner_pipeline import ChunkCache, NERPipeline
 from app.services.session_store import SessionStore
+from app.models.entities import DetectedEntity
 
 UTC = timezone.utc
 
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_TTL_MINUTES = 1440  # 24 hours
+_LEGACY_USER_ID = "__local__"
 
 
 class Session:
@@ -73,6 +75,8 @@ class Session:
         self.response_docx_bytes: bytes | None = None
         self.response_docx_filename: str | None = None
         self.deanonymized_docx_bytes: bytes | None = None
+        self.anonymized_text: str | None = None
+        self.detected_entities: list[DetectedEntity] = []
         # v0.4.0 Phase 2: cache chunks + embeddings across /anonymize calls
         self.chunk_cache: ChunkCache | None = None
 
@@ -125,28 +129,27 @@ class SessionManager:
 
     def create_session(
         self,
-        user_id: str,
+        user_id: str = _LEGACY_USER_ID,
         session_id: str | None = None,
         locale: str = "ru",
         enable_llm_layer: bool = True,
         custom_entities: list[str] | None = None,
         spacy_model: str | None = None,
     ) -> Session:
-        """Create a new anonymization session owned by ``user_id``.
+        """Create a new anonymization session owned by ``user_id``."""
+        from app.config import settings
 
-        v0.4.0: Always enables LLM layer (Deep Scan, all 5 layers).
-        No kill switch.
-        """
         if not user_id:
             raise ValueError("create_session requires a non-empty user_id")
 
         if session_id is None:
             session_id = secrets.token_urlsafe(16)
+        effective_llm_layer = enable_llm_layer and not settings.cleargate_disable_llm_layer
         session = Session(
             session_id=session_id,
             user_id=user_id,
             locale=locale,
-            enable_llm_layer=True,  # v0.4.0: always enabled
+            enable_llm_layer=effective_llm_layer,
             custom_entities=custom_entities or [],
             master_key=self._master_key,
             spacy_model=spacy_model,
@@ -156,11 +159,13 @@ class SessionManager:
         logger.info(
             "session.created",
             session_id=session_id, user_id=user_id, locale=locale,
-            deep_scan_enabled=True,
+            deep_scan_enabled=effective_llm_layer,
         )
         return session
 
-    def get_session(self, session_id: str, user_id: str) -> Session | None:
+    def get_session(
+        self, session_id: str, user_id: str = _LEGACY_USER_ID
+    ) -> Session | None:
         """Get session by ID scoped to ``user_id``.
 
         Returns None if:
@@ -186,7 +191,9 @@ class SessionManager:
             return None
         return session
 
-    def close_session(self, session_id: str, user_id: str) -> None:
+    def close_session(
+        self, session_id: str, user_id: str = _LEGACY_USER_ID
+    ) -> None:
         """Close session and securely clear all data (RAM + disk).
 
         Only closes the session if it is owned by ``user_id``.  Calls
@@ -205,11 +212,35 @@ class SessionManager:
             session.response_docx_bytes = None
             session.response_docx_filename = None
             session.deanonymized_docx_bytes = None
+            session.anonymized_text = None
+            session.detected_entities.clear()
         if self._store is not None:
             self._store.delete_session(session_id, user_id=user_id)
         logger.info("session.closed", session_id=session_id, user_id=user_id)
 
-    def save_session(self, session_id: str, user_id: str) -> None:
+    def close_sessions_for_user(self, user_id: str) -> int:
+        """Close and delete every session owned by ``user_id``."""
+        if not user_id:
+            return 0
+        closed = 0
+        for session_id, session in list(self._sessions.items()):
+            if session.user_id != user_id:
+                continue
+            session.registry.clear()
+            session.docx_bytes = None
+            session.response_docx_bytes = None
+            session.deanonymized_docx_bytes = None
+            session.detected_entities.clear()
+            self._sessions.pop(session_id, None)
+            closed += 1
+        if self._store is not None:
+            closed = max(closed, self._store.delete_sessions_for_user(user_id))
+        logger.info("session.closed_for_user", user_id=user_id, count=closed)
+        return closed
+
+    def save_session(
+        self, session_id: str, user_id: str = _LEGACY_USER_ID
+    ) -> None:
         """Explicitly persist current state to disk.
 
         Called by routers after mutations (anonymize, upload, etc.).
@@ -220,7 +251,7 @@ class SessionManager:
             return
         self._persist(session)
 
-    def list_sessions(self, user_id: str) -> list[dict]:
+    def list_sessions(self, user_id: str = _LEGACY_USER_ID) -> list[dict]:
         """List persisted sessions for ``user_id`` (metadata only, no blobs)."""
         if not user_id:
             return []
@@ -233,6 +264,9 @@ class SessionManager:
                     "entity_count": s.registry.entity_count,
                     "has_document": s.docx_bytes is not None,
                     "docx_filename": s.docx_filename,
+                    "has_anonymization": bool(
+                        s.anonymized_text and s.detected_entities
+                    ),
                 }
                 for s in self._sessions.values()
                 if s.user_id == user_id and not self._is_expired(s)
@@ -251,6 +285,9 @@ class SessionManager:
                 ),
                 "has_document": row.get("docx_filename") is not None,
                 "docx_filename": row.get("docx_filename"),
+                "has_anonymization": bool(
+                    row.get("anonymized_text") and row.get("entities_json")
+                ),
                 "custom_entities": custom,
                 "updated_at": row.get("updated_at"),
             })
@@ -286,10 +323,17 @@ class SessionManager:
                 session, "response_docx_filename", None
             ),
             deanonymized_docx_bytes=session.deanonymized_docx_bytes,
+            anonymized_text=session.anonymized_text,
+            entities_json=json.dumps(
+                [e.model_dump() for e in session.detected_entities],
+                ensure_ascii=False,
+            ) if session.detected_entities else None,
         )
 
     def _hydrate_from_store(self, session_id: str, user_id: str) -> Session | None:
         """Restore a session from disk into RAM, scoped to ``user_id``."""
+        from app.config import settings
+
         if self._store is None:
             return None
         data = self._store.load_session(session_id, user_id=user_id)
@@ -306,7 +350,10 @@ class SessionManager:
             session_id=session_id,
             user_id=data.get("user_id") or user_id,
             locale=data["locale"],
-            enable_llm_layer=bool(data.get("enable_llm_layer", 0)),
+            enable_llm_layer=(
+                bool(data.get("enable_llm_layer", 0))
+                and not settings.cleargate_disable_llm_layer
+            ),
             custom_entities=custom_entities,
             master_key=self._master_key,
             spacy_model=None,
@@ -331,6 +378,20 @@ class SessionManager:
         session.response_docx_bytes = data.get("response_docx_bytes")
         session.response_docx_filename = data.get("response_docx_filename")
         session.deanonymized_docx_bytes = data.get("deanonymized_docx_bytes")
+        session.anonymized_text = data.get("anonymized_text")
+        entities_json = data.get("entities_json")
+        if entities_json:
+            try:
+                raw_entities = json.loads(entities_json)
+                session.detected_entities = [
+                    DetectedEntity(**item) for item in raw_entities
+                ]
+            except Exception:
+                logger.warning(
+                    "session.hydrate_entities_failed",
+                    session_id=session_id,
+                    exc_info=True,
+                )
         self._sessions[session_id] = session
         logger.info("session.hydrated", session_id=session_id, user_id=user_id)
         return session

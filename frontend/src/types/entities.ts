@@ -4,7 +4,7 @@ export interface DetectedEntity {
   start: number;
   end: number;
   score: number;
-  source_layer: 'regex' | 'ner' | 'llm';
+  source_layer: 'regex' | 'ner' | 'llm' | 'llm-scan';
   metadata: Record<string, unknown>;
 }
 

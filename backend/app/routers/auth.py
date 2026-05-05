@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.services.auth import AuthService, get_auth_service
-from app.services.auth_ldap import LDAPProvider
+from app.services.auth_ldap import LDAPAuthProvider, LDAPUnreachable
 from app.services.user_store import UserRecord, UserStore
 
 logger = structlog.get_logger(__name__)
@@ -41,11 +41,11 @@ def get_user_store_from_request() -> UserStore:
     )
 
 
-def get_ldap_provider_from_request() -> LDAPProvider | None:
+def get_ldap_provider_from_request() -> LDAPAuthProvider | None:
     """Dependency stub -- overridden in main.py via app.dependency_overrides.
 
     Returns None if LDAP is not configured, otherwise returns the configured
-    LDAPProvider instance. main.py sets this during startup if settings.ldap_url is set.
+    LDAPAuthProvider instance. main.py sets this during startup if settings.ldap_url is set.
     """
     return None
 
@@ -66,10 +66,16 @@ class UserPublic(BaseModel):
     user_id: str
     username: str
     is_active: bool
+    role: str = "lawyer"
 
     @classmethod
     def from_record(cls, rec: UserRecord) -> "UserPublic":
-        return cls(user_id=rec.user_id, username=rec.username, is_active=rec.is_active)
+        return cls(
+            user_id=rec.user_id,
+            username=rec.username,
+            is_active=rec.is_active,
+            role=getattr(rec, "role", "lawyer") or "lawyer",
+        )
 
 
 class LoginResponse(BaseModel):
@@ -171,17 +177,21 @@ async def login(
     response: Response,
     users: Annotated[UserStore, Depends(get_user_store_from_request)],
     auth: Annotated[AuthService, Depends(get_auth_service)],
-    ldap: Annotated[LDAPProvider | None, Depends(get_ldap_provider_from_request)],
+    ldap: Annotated[LDAPAuthProvider | None, Depends(get_ldap_provider_from_request)],
 ) -> LoginResponse:
     """Verify credentials (LDAP-first, then local), issue a signed session cookie."""
     # Step 1: try LDAP first if configured.
     user_record = None
     if ldap is not None:
-        ldap_result = await ldap.authenticate(request.username, request.password)
+        try:
+            ldap_result = await ldap.authenticate(request.username, request.password)
+        except LDAPUnreachable:
+            logger.warning("auth.login.ldap_unreachable", exc_info=True)
+            ldap_result = None
         if ldap_result is not None:
             # LDAP succeeded; sync into local user store.
             user_record = users.get_or_create_from_ldap(
-                ldap_dn=ldap_result.dn,
+                ldap_dn=ldap_result.user_id,
                 username=ldap_result.username,
                 email=ldap_result.email,
                 display_name=ldap_result.display_name,
@@ -191,7 +201,7 @@ async def login(
     # Step 2: fall back to local password if LDAP didn't authenticate.
     if user_record is None:
         local = users.get_by_username(request.username)
-        if local is None or not local.is_active:
+        if local is None or not local.is_active or local.password_hash is None:
             # Dummy verify to equalise timing on unknown-user vs bad-password.
             auth.verify_password(
                 request.password,

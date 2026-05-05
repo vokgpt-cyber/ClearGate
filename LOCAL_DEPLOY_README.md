@@ -51,7 +51,7 @@
 6. Подождёт пока всё станет healthy.
 7. Откроет браузер на `http://localhost`.
 
-**Логин:** `admin` / `admin`
+**Логин:** `admin` / `adminadmin`
 
 Можно сразу загружать тестовый `.docx` и анонимизировать.
 
@@ -61,7 +61,7 @@
 
 На RTX 3090 + Qwen 2.5 7B (Q4):
 - Регексы (Layer 1): мгновенно
-- spaCy + GLiNER (Layer 2): 0.5-2 сек на документ
+- spaCy (Layer 2): 0.5-2 сек на документ; GLiNER в local-профиле выключен по умолчанию, чтобы первый запуск не тянул модель с HuggingFace
 - LLM verify (Layer 4): 3-8 сек на документ (continuous batching у Ollama)
 - LLM scan (Layer 5): 3-8 сек
 
@@ -111,7 +111,7 @@ docker compose -f docker-compose.local.yml down -v
 | `Ollama is not reachable` | Запустить Ollama (десктопное приложение или `ollama serve`) |
 | Браузер пишет `connection refused` на :80 | Подожди ещё 30-60 секунд (frontend поднимается медленно при первой сборке), потом обнови |
 | Анонимизация очень медленная | Проверь что Ollama использует GPU: `nvidia-smi` должен показать процесс ollama |
-| Логин не пускает | Точно `admin` / `admin` (нижний регистр) |
+| Логин не пускает | Точно `admin` / `adminadmin` (нижний регистр) |
 
 Логи всех контейнеров одной командой:
 ```powershell
@@ -131,7 +131,7 @@ docker logs --tail 200 cleargate-local-backend
 |----------|---------------------|----------------------|
 | LLM | vLLM + Qwen 3 32B AWQ (22 GB VRAM) | Host Ollama + Qwen 2.5 7B (5 GB VRAM) |
 | Embedder | BGE-M3 в контейнере | Отключён (graceful degradation) |
-| Auth | LDAP / AD | Локальный admin/admin |
+| Auth | LDAP / AD | Локальный admin/adminadmin |
 | TLS | Да (Let's Encrypt / corp CA) | Нет, plain HTTP |
 | URL | `https://<corp-domain>/` | `http://localhost/` |
 | Старт | `install-gpu.sh` (Ubuntu) | `start-local.bat` (Windows) |

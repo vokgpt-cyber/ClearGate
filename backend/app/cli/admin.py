@@ -364,6 +364,7 @@ def cmd_seed(args: argparse.Namespace) -> int:
             username=args.username,
             password_hash=password_hash,
             is_active=True,
+            role="admin" if args.admin else "lawyer",
         )
         print(f"seeded user '{rec.username}'  id={rec.user_id}")
         return 0
@@ -474,6 +475,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--if-empty",
         action="store_true",
         help="Only seed if the users table is currently empty.",
+    )
+    sp.add_argument(
+        "--admin",
+        action="store_true",
+        help="Seed the user with admin role.",
     )
     _add_password_flags(sp)
     sp.set_defaults(func=cmd_seed)

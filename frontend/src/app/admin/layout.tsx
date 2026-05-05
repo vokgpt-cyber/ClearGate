@@ -64,6 +64,9 @@ function Sidebar() {
     <div className="cleargate-admin-sidebar">
       <div className="cleargate-admin-sidebar__header">
         <h3 className="cleargate-admin-sidebar__title">Admin</h3>
+        <Link href="/" className="cleargate-admin-sidebar__back">
+          {t('admin.backToWorkspace')}
+        </Link>
       </div>
 
       <nav className="cleargate-admin-sidebar__nav">

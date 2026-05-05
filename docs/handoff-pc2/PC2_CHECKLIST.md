@@ -71,7 +71,7 @@ git pull
 cd C:\Users\V\Documents\Claude\Projects\Velum
 .\scripts\start-local.bat
 # Браузер откроется на http://localhost
-# Залогиниться admin/admin
+# Залогиниться admin/adminadmin
 # Загрузить любой test\01_NDA.docx
 # Убедиться что анонимизация работает (модель — что попадётся первой)
 .\scripts\stop-local.bat

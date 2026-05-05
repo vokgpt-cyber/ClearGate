@@ -271,14 +271,105 @@ h1, h2, h3, h4 {
 
 .cleargate-header__user {
   padding: 4px 10px;
+  border: 1px solid transparent;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-primary);
-  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background-color: var(--accent-soft);
+  cursor: pointer;
+  transition: background-color var(--transition-quick), color var(--transition-quick);
+}
+
+.cleargate-header__user:hover {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent-soft) 74%, var(--bg-hover));
+}
+
+.cleargate-header__profile-menu {
+  position: relative;
+}
+
+.cleargate-header__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 260;
+  width: 228px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.cleargate-header__menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cleargate-header__menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cleargate-header__menu-item--danger:hover {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+}
+
+.cleargate-header__menu-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--border);
+}
+
+.cleargate-version-badge {
+  position: fixed;
+  left: 16px;
+  bottom: 14px;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  max-width: calc(var(--sidebar-width) - 32px);
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 42%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-elevated) 84%, transparent);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  opacity: 0.9;
+}
+
+.cleargate-version-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--error);
+}
+
+.cleargate-version-badge__dot[data-ok="true"] {
+  background: var(--success);
 }
 
 /* ============================================================
@@ -437,7 +528,7 @@ h1, h2, h3, h4 {
   flex-direction: column;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border);
-  padding: var(--space-5) var(--space-4) var(--space-4);
+  padding: var(--space-5) var(--space-4) 54px;
 }
 
 .cleargate-sidebar__brand {
@@ -544,16 +635,14 @@ h1, h2, h3, h4 {
 
 .cleargate-sidebar__item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 4px;
   border: none;
   background-color: transparent;
   color: var(--text-secondary);
   text-align: left;
-  cursor: pointer;
   border-radius: var(--radius-md);
   transition: background-color var(--transition-quick), color var(--transition-quick);
 }
@@ -577,6 +666,55 @@ h1, h2, h3, h4 {
 .cleargate-sidebar__item.is-active .cleargate-sidebar__item-meta {
   color: var(--accent);
   opacity: 0.72;
+}
+
+.cleargate-sidebar__item-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cleargate-sidebar__item-main:focus-visible,
+.cleargate-sidebar__item-delete:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.cleargate-sidebar__item-delete {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-quick), background-color var(--transition-quick), color var(--transition-quick);
+}
+
+.cleargate-sidebar__item:hover .cleargate-sidebar__item-delete,
+.cleargate-sidebar__item:focus-within .cleargate-sidebar__item-delete {
+  opacity: 1;
+}
+
+.cleargate-sidebar__item-delete:hover {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  color: var(--error);
 }
 
 .cleargate-sidebar__item-title {
@@ -820,11 +958,23 @@ h1, h2, h3, h4 {
   cursor: not-allowed;
 }
 
+.cleargate-workspace__action-error {
+  max-width: 150px;
+  overflow: hidden;
+  color: var(--error);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cleargate-workspace__split {
   flex: 1;
   display: flex;
   min-height: 0;
   min-width: 0;
+  position: relative;
 }
 
 .cleargate-workspace__pane {
@@ -900,9 +1050,10 @@ h1, h2, h3, h4 {
 .cleargate-docx-viewer__scroll {
   flex: 1;
   overflow: auto;
-  padding: 24px 20px;
+  padding: 28px 36px 48px;
   min-height: 0;
   position: relative;
+  scrollbar-gutter: stable both-edges;
 }
 
 .cleargate-docx-viewer__container {
@@ -910,6 +1061,10 @@ h1, h2, h3, h4 {
   flex-direction: column;
   align-items: center;
   gap: 24px;
+  width: max-content;
+  min-width: 100%;
+  margin: 0 auto;
+  padding: 0 8px;
 }
 
 .cleargate-docx-viewer__placeholder,
@@ -1482,6 +1637,7 @@ h1, h2, h3, h4 {
 
 /* -- Import response & export deanonymized buttons -- */
 
+.cleargate-workspace__deep-scan,
 .cleargate-workspace__import-response,
 .cleargate-workspace__export-deanonymized {
   padding: 6px 14px;
@@ -1495,10 +1651,72 @@ h1, h2, h3, h4 {
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
 }
+.cleargate-workspace__deep-scan:hover:not(:disabled),
 .cleargate-workspace__import-response:hover,
 .cleargate-workspace__export-deanonymized:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
+}
+
+.cleargate-workspace__deep-scan:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.cleargate-workspace__deep-progress {
+  position: relative;
+  display: inline-flex;
+  width: 144px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px 14px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-brand) 28%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.7);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cleargate-workspace__deep-progress-label {
+  position: relative;
+  z-index: 1;
+}
+
+.cleargate-workspace__deep-progress-track {
+  position: absolute;
+  right: 12px;
+  bottom: 5px;
+  left: 12px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--border-strong) 38%, transparent);
+}
+
+.cleargate-workspace__deep-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-brand), var(--color-brand-light));
+  transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cleargate-workspace__deep-summary {
+  max-width: 170px;
+  overflow: hidden;
+  color: var(--success);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* -- Compare-with-original toggle (Word-style Track Changes) -- */
@@ -1684,16 +1902,399 @@ h1, h2, h3, h4 {
   cursor: default;
 }
 
-/* -- Scale / zoom indicator badge -- */
+/* -- Explicit anonymization start + progress -- */
 
-.cleargate-workspace__scale-indicator {
-  margin-left: auto;
-  padding: 2px 8px;
+.cleargate-workspace__anonymize-panel {
+  position: absolute;
+  top: 29px;
+  right: 0;
+  bottom: 0;
+  width: calc(50% - 1px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--docx-viewer-bg) 82%, transparent),
+    color-mix(in srgb, var(--docx-viewer-bg) 54%, transparent)
+  );
+  transition: opacity var(--transition-smooth), visibility var(--transition-smooth);
+}
+
+.cleargate-workspace__anonymize-panel.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.cleargate-workspace__start-card,
+.cleargate-workspace__progress-card {
+  pointer-events: auto;
+  min-width: min(360px, 86%);
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 62%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px);
+}
+
+.cleargate-workspace__start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cleargate-workspace__start-button {
+  min-width: 200px;
+  height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--color-brand) 26%, transparent);
+  transition: transform var(--transition-quick), background-color var(--transition-quick), opacity var(--transition-quick);
+}
+
+.cleargate-workspace__start-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--accent-hover);
+}
+
+.cleargate-workspace__start-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.cleargate-workspace__start-error {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--error) 42%, transparent);
   border-radius: var(--radius-sm);
-  background: transparent;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.cleargate-workspace__progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cleargate-workspace__progress-title {
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cleargate-workspace__progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--border-strong) 48%, transparent);
+}
+
+.cleargate-workspace__progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-brand), var(--color-brand-light));
+  transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cleargate-workspace__progress-note {
+  min-height: 18px;
   color: var(--text-muted);
-  font-size: 0.7rem;
-  padding: 2px 6px;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* -- Floating zoom indicator -- */
+
+.cleargate-workspace__zoom-toast {
+  position: absolute;
+  right: 22px;
+  bottom: 46px;
+  z-index: 80;
+  min-width: 58px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 48%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity var(--transition-smooth), transform var(--transition-smooth);
+}
+
+.cleargate-workspace__zoom-toast.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   Admin screens
+   ============================================================ */
+
+.cleargate-admin-sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+  padding: 18px 14px;
+}
+
+.cleargate-admin-sidebar__header {
+  margin-bottom: 18px;
+}
+
+.cleargate-admin-sidebar__title {
+  margin-bottom: 10px;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+}
+
+.cleargate-admin-sidebar__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cleargate-admin-sidebar__back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cleargate-admin-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cleargate-admin-sidebar__link {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.cleargate-admin-sidebar__link:hover,
+.cleargate-admin-sidebar__link.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.cleargate-admin-content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 28px;
+  background: var(--bg-primary);
+}
+
+.cleargate-admin-header,
+.cleargate-admin-actions,
+.cleargate-admin-filters,
+.cleargate-admin-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cleargate-admin-header {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.cleargate-admin-header h1 {
+  font-size: 1.35rem;
+}
+
+.cleargate-admin-btn,
+.cleargate-admin-action-btn,
+.cleargate-admin-select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+}
+
+.cleargate-admin-btn,
+.cleargate-admin-action-btn {
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.cleargate-admin-btn--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.cleargate-admin-action-btn--danger:hover {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.cleargate-admin-row-actions {
+  flex-wrap: wrap;
+}
+
+.cleargate-admin-table-wrapper {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.cleargate-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.cleargate-admin-table th,
+.cleargate-admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.cleargate-admin-table th {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cleargate-admin-table__mono,
+.cleargate-admin-code,
+.cleargate-admin-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.cleargate-admin-badge,
+.cleargate-admin-pill,
+.cleargate-admin-pill--active,
+.cleargate-admin-pill--inactive {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.cleargate-admin-pill--active {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+}
+
+.cleargate-admin-pill--inactive {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  color: var(--error);
+}
+
+.cleargate-admin-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--error) 36%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 7%, transparent);
+  font-size: 0.8125rem;
+}
+
+.cleargate-admin-loading,
+.cleargate-admin-empty {
+  padding: 24px;
+  color: var(--text-secondary);
+}
+
+.cleargate-admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.cleargate-admin-modal {
+  width: min(460px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.cleargate-admin-form,
+.cleargate-admin-form-group,
+.cleargate-admin-form-actions {
+  display: flex;
+}
+
+.cleargate-admin-form,
+.cleargate-admin-form-group {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cleargate-admin-form-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cleargate-admin-form input,
+.cleargate-admin-form select,
+.cleargate-admin-select,
+.cleargate-admin-card__textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
 }
 
 /* ============================================================
@@ -1704,12 +2305,14 @@ h1, h2, h3, h4 {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 100;
+  z-index: 300;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: var(--radius-pill);
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
   background: var(--accent);
   color: #fff;
   border: none;
@@ -1726,22 +2329,40 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-lg);
 }
 
+.cleargate-feedback-badge,
 .cleargate-feedback-button__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
   background: #fff;
   color: var(--accent);
   border-radius: var(--radius-pill);
-  padding: 2px 8px;
-  font-size: 0.75rem;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
   font-weight: 700;
   min-width: 20px;
   text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.cleargate-feedback-icon {
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cleargate-feedback-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 299;
+  background: transparent;
 }
 
 .cleargate-feedback-modal {
   position: fixed;
   bottom: 80px;
   right: 20px;
-  width: 380px;
+  width: min(380px, calc(100vw - 32px));
   max-height: 70vh;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -1753,44 +2374,90 @@ h1, h2, h3, h4 {
   overflow: hidden;
 }
 
+.cleargate-feedback-header,
 .cleargate-feedback-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
-  font-weight: 600;
 }
 
+.cleargate-feedback-tabs,
 .cleargate-feedback-modal__tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
 }
 
+.cleargate-feedback-tab,
 .cleargate-feedback-modal__tab {
   flex: 1;
-  padding: 10px;
-  background: none;
+  min-width: 0;
+  padding: 8px 10px;
+  background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--text-secondary);
-  transition: color var(--transition-quick), border-color var(--transition-quick);
-  border-bottom: 2px solid transparent;
+  text-align: center;
+  white-space: nowrap;
+  transition: color var(--transition-quick), background-color var(--transition-quick);
 }
 
+.cleargate-feedback-tab.is-active,
 .cleargate-feedback-modal__tab--active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
+  background: var(--accent-soft);
 }
 
+.cleargate-feedback-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.cleargate-feedback-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cleargate-feedback-content,
 .cleargate-feedback-modal__body {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
 }
 
+.cleargate-feedback-submit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cleargate-feedback-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cleargate-feedback-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cleargate-feedback-textarea,
 .cleargate-feedback-modal__textarea {
   width: 100%;
   min-height: 100px;
@@ -1804,10 +2471,60 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
+.cleargate-feedback-textarea:focus-visible,
+.cleargate-feedback-select:focus-visible,
 .cleargate-feedback-modal__textarea:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
   border-color: var(--accent);
+}
+
+.cleargate-feedback-select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.cleargate-feedback-submit-btn {
+  align-self: flex-start;
+  padding: 9px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cleargate-feedback-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cleargate-feedback-history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cleargate-feedback-empty {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 28px 8px;
+}
+
+.cleargate-feedback-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .cleargate-feedback-bubble {
@@ -1830,10 +2547,27 @@ h1, h2, h3, h4 {
   border-bottom-left-radius: 4px;
 }
 
+.cleargate-feedback-bubble-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cleargate-feedback-bubble-meta,
 .cleargate-feedback-bubble__meta {
   font-size: 0.6875rem;
   color: var(--text-muted);
   margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cleargate-feedback-admin-label {
+  margin-bottom: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 /* ============================================================

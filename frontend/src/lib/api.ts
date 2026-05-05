@@ -1,14 +1,16 @@
-// Resolve the backend base URL at module load.
-//
-// Three intended states:
-//   undefined → local dev (npm run dev / Tauri) → hit localhost:8000
-//   ""        → pilot behind nginx → use relative URLs (same-origin)
-//   "http://…" → baked by Docker build arg → use that absolute URL
-//
-// Nullish-coalescing (??) treats only `undefined`/`null` as missing, so an
-// explicit empty string survives and turns every fetch into a relative call
-// (e.g. `/api/sessions`), which nginx then proxies to the backend.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+function resolveApiUrl(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL;
+  if (env === undefined) return 'http://localhost:18000';
+  if (env !== '') return env;
+
+  if (typeof window !== 'undefined' && window.location.port === '3000') {
+    return `${window.location.protocol}//${window.location.hostname}:18000`;
+  }
+
+  return '';
+}
+
+const API_URL = resolveApiUrl();
 
 /**
  * Build the WebSocket base URL at call time (not at import time) so we can
@@ -18,10 +20,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
  */
 function wsUrl(): string {
   const env = process.env.NEXT_PUBLIC_WS_URL;
-  if (env === undefined) return 'ws://localhost:8000'; // local dev
+  if (env === undefined) return 'ws://localhost:18000'; // local dev
   if (env !== '') return env; // explicit absolute URL
+  if (typeof window !== 'undefined' && window.location.port === '3000') {
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${scheme}//${window.location.hostname}:18000`;
+  }
   // Same-origin: inherit whatever hostname:port the page is served from.
-  if (typeof window === 'undefined') return 'ws://localhost:8000';
+  if (typeof window === 'undefined') return 'ws://localhost:18000';
   const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${scheme}//${window.location.host}`;
 }
@@ -90,10 +96,9 @@ export async function createSession(
   locale = 'ru',
   options: { enableLlmLayer?: boolean } = {},
 ): Promise<{ session_id: string }> {
-  // v0.4.0: Deep Scan (Layer 4+5 LLM verification) is always enabled by default.
-  // The page.tsx caller passes { enableLlmLayer: true } explicitly to make it
-  // visible at the call site that the heavier pipeline is intentional.
-  const enable_llm_layer = options.enableLlmLayer ?? true;
+  // Fast local mode by default. Deep Scan can become an explicit advanced
+  // option later; it should not silently add minutes to every document.
+  const enable_llm_layer = options.enableLlmLayer ?? false;
   return request('/api/sessions', {
     method: 'POST',
     body: JSON.stringify({ locale, enable_llm_layer }),
@@ -108,6 +113,53 @@ export async function anonymizeText(
     method: 'POST',
     body: JSON.stringify({ text }),
   });
+}
+
+export async function deepScanText(
+  sessionId: string,
+  text: string,
+  entities: unknown[],
+): Promise<{ anonymized_text: string; entities: unknown[]; stats: Record<string, number> }> {
+  const cleanEntities = entities
+    .filter((entity): entity is Record<string, unknown> => (
+      typeof entity === 'object' && entity !== null
+    ))
+    .map((entity) => {
+      const metadata =
+        typeof entity.metadata === 'object' && entity.metadata !== null
+          ? { ...(entity.metadata as Record<string, unknown>) }
+          : {};
+      if (typeof entity.id === 'string') metadata.id = entity.id;
+      if (typeof entity.state === 'string') metadata.state = entity.state;
+      return {
+        text: entity.text,
+        entity_type: entity.entity_type,
+        start: entity.start,
+        end: entity.end,
+        score: entity.score,
+        source_layer: entity.source_layer ?? 'regex',
+        metadata,
+      };
+    });
+  return request(`/api/sessions/${sessionId}/deep-scan`, {
+    method: 'POST',
+    body: JSON.stringify({ text, entities: cleanEntities }),
+  });
+}
+
+export async function getCachedAnonymization(
+  sessionId: string,
+): Promise<{ anonymized_text: string; entities: unknown[]; stats: Record<string, number> } | null> {
+  const response = await fetch(
+    `${API_URL}/api/sessions/${encodeURIComponent(sessionId)}/anonymization`,
+    { credentials: 'include' },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API error ${response.status}: ${body}`);
+  }
+  return response.json();
 }
 
 export async function deanonymizeText(
@@ -171,6 +223,7 @@ export interface SessionMeta {
   entity_count: number;
   has_document: boolean;
   docx_filename: string | null;
+  has_anonymization?: boolean;
 }
 
 /**
@@ -179,6 +232,17 @@ export interface SessionMeta {
  */
 export async function listSessions(): Promise<SessionMeta[]> {
   return request('/api/sessions');
+}
+
+export async function closeSession(sessionId: string): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/api/sessions/${encodeURIComponent(sessionId)}`,
+    { method: 'DELETE', credentials: 'include' },
+  );
+  if (!response.ok && response.status !== 204) {
+    const body = await response.text();
+    throw new Error(`Delete session failed (${response.status}): ${body}`);
+  }
 }
 
 
@@ -478,20 +542,33 @@ export interface FeedbackItem {
   admin_reply_at: string | null;
 }
 
+type FeedbackItemWire = Omit<FeedbackItem, 'id'> & { id: string | number };
+
+function normalizeFeedbackItem(item: FeedbackItemWire): FeedbackItem {
+  return { ...item, id: String(item.id) };
+}
+
 export async function submitFeedback(input: {
   text: string;
   category: FeedbackItem['category'];
   current_url?: string;
   screenshot?: string;
-}): Promise<{ id: string }> {
-  return request('/api/feedback', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+}): Promise<{ id: string; created_at: string }> {
+  const response = await request<{ id: string | number; created_at: string }>(
+    '/api/feedback/',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+  return { ...response, id: String(response.id) };
 }
 
 export async function listMyFeedback(): Promise<FeedbackItem[]> {
-  return request('/api/feedback/mine');
+  const response = await request<{ items: FeedbackItemWire[]; count: number }>(
+    '/api/feedback/mine',
+  );
+  return response.items.map(normalizeFeedbackItem);
 }
 
 // =================== Admin (Phase 6) ===================
@@ -509,7 +586,10 @@ export interface AdminUserItem {
 }
 
 export async function adminListUsers(): Promise<AdminUserItem[]> {
-  return request('/api/admin/users');
+  const response = await request<{ users: AdminUserItem[]; total: number }>(
+    '/api/admin/users',
+  );
+  return response.users;
 }
 
 export async function adminCreateUser(input: {
@@ -541,6 +621,17 @@ export async function adminUpdateUser(
   });
 }
 
+export async function adminDeleteUser(user_id: string): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/api/admin/users/${encodeURIComponent(user_id)}`,
+    { method: 'DELETE', credentials: 'include' },
+  );
+  if (!response.ok && response.status !== 204) {
+    const body = await response.text();
+    throw new Error(`Delete user failed (${response.status}): ${body}`);
+  }
+}
+
 export interface AdminFeedbackItem extends FeedbackItem {
   user_id: string;
   username: string;
@@ -550,7 +641,16 @@ export async function adminListFeedback(
   status?: FeedbackItem['status'],
 ): Promise<AdminFeedbackItem[]> {
   const qs = status ? `?status=${status}` : '';
-  return request(`/api/admin/feedback${qs}`);
+  const response = await request<{
+    items: Array<Omit<AdminFeedbackItem, 'id'> & { id: string | number }>;
+    total: number;
+  }>(
+    `/api/admin/feedback${qs}`,
+  );
+  return response.items.map((item) => ({
+    ...item,
+    id: String(item.id),
+  }));
 }
 
 export async function adminReplyFeedback(
@@ -617,7 +717,30 @@ export async function adminListErrors(
   const params = new URLSearchParams();
   if (severity) params.set('severity', severity);
   params.set('limit', String(limit));
-  return request(`/api/admin/errors?${params.toString()}`);
+  const response = await request<{
+    items: Array<Partial<AdminErrorItem> & {
+      id: string | number;
+      timestamp?: string;
+      page_url?: string | null;
+      stack?: string | null;
+    }>;
+    total: number;
+  }>(`/api/admin/errors?${params.toString()}`);
+  return response.items.map((item) => ({
+    id: String(item.id),
+    source:
+      item.source === 'server' || item.page_url?.startsWith('/api')
+        ? 'server'
+        : 'client',
+    severity: item.severity ?? 'error',
+    message: item.message ?? '',
+    url: item.url ?? item.page_url ?? null,
+    user_id: item.user_id ?? null,
+    username: item.username ?? null,
+    created_at: item.created_at ?? item.timestamp ?? new Date().toISOString(),
+    user_agent: item.user_agent ?? null,
+    stack_trace: item.stack_trace ?? item.stack ?? null,
+  }));
 }
 
 // =================== Backward-compatible aliases ===================
@@ -631,6 +754,7 @@ export async function adminListErrors(
 export const getUsers = adminListUsers;
 export const createUser = adminCreateUser;
 export const updateUser = adminUpdateUser;
+export const deleteUser = adminDeleteUser;
 export const getErrors = adminListErrors;
 
 /** GET /api/admin/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD — admin page
@@ -658,7 +782,16 @@ export async function getFeedback(
   if (status && status !== 'all') params.set('status', status);
   if (limit !== undefined) params.set('limit', String(limit));
   const qs = params.toString();
-  return request(`/api/admin/feedback${qs ? `?${qs}` : ''}`);
+  const response = await request<{
+    items: Array<Omit<AdminFeedbackItem, 'id'> & { id: string | number }>;
+    total: number;
+  }>(
+    `/api/admin/feedback${qs ? `?${qs}` : ''}`,
+  );
+  return response.items.map((item) => ({
+    ...item,
+    id: String(item.id),
+  }));
 }
 
 /** PATCH /api/admin/feedback/{id} — reply and/or change status. Both

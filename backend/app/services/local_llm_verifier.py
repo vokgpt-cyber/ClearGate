@@ -16,7 +16,7 @@ import os
 
 import structlog
 
-from app.models.entities import DetectedEntity
+from app.models.entities import KNOWN_ENTITY_TYPES, DetectedEntity
 
 logger = structlog.get_logger(__name__)
 
@@ -36,13 +36,18 @@ _PROMPT_PREFIX = """Ты эксперт по обработке юридичес
 2. Найди упущенные сущности (кореференции типа "он", "указанная организация", упоминания через должность)
 3. Удали ложные срабатывания
 
+entity_type должен быть ровно одним значением из списка:
+PER, ORG, LOC, ADDR, MON, RU_DATE, POSITION, RU_INN, RU_OGRN, RU_KPP,
+RU_BANK_ACCOUNT, RU_BIK, RU_PHONE, EMAIL_ADDRESS, RU_CASE_NUMBER,
+RU_CONTRACT_NUMBER.
+
 Верни строго JSON:
 {
   "verified": [
-    {"text": "...", "entity_type": "PER|ORG|LOC|ADDR|MON|DATE|POSITION", "start": N, "end": N, "score": 0.0-1.0}
+    {"text": "...", "entity_type": "PER", "start": N, "end": N, "score": 0.0-1.0}
   ],
   "added": [
-    {"text": "...", "entity_type": "...", "start": N, "end": N, "score": 0.0-1.0}
+    {"text": "...", "entity_type": "ORG", "start": N, "end": N, "score": 0.0-1.0}
   ],
   "removed_indices": []
 }
@@ -58,10 +63,15 @@ _PROMPT_PREFIX_FIND_MISSED = """Ты эксперт по обработке юр
 2. Найди ВСЕ чувствительные сущности, которые НЕ в списке найденных (ФИО, организации, адреса, должности, номера дел, реквизиты, даты важных событий)
 3. Особое внимание на кореференции ("он", "она", "компания", "истец", "ответчик") и неполные упоминания
 
+entity_type должен быть ровно одним значением из списка:
+PER, ORG, LOC, ADDR, MON, RU_DATE, POSITION, RU_INN, RU_OGRN, RU_KPP,
+RU_BANK_ACCOUNT, RU_BIK, RU_PHONE, EMAIL_ADDRESS, RU_CASE_NUMBER,
+RU_CONTRACT_NUMBER.
+
 Верни строго JSON БЕЗ дополнительных пояснений:
 {
   "added": [
-    {"text": "...", "entity_type": "PER|ORG|LOC|ADDR|MON|DATE|POSITION|RU_CASE_NUMBER", "start": N, "end": N, "score": 0.7-1.0}
+    {"text": "...", "entity_type": "RU_CONTRACT_NUMBER", "start": N, "end": N, "score": 0.7-1.0}
   ]
 }
 
@@ -75,6 +85,39 @@ _FIND_MISSED_PAYLOAD_TEMPLATE = """ТЕКСТ:
 {known_entities}"""
 
 _MAX_TEXT_LEN = 8000  # Cap text length for 7B model context window
+_KNOWN_ENTITY_TYPES = set(KNOWN_ENTITY_TYPES)
+_ENTITY_TYPE_ALIASES = {
+    "DATE": "RU_DATE",
+    "PHONE": "RU_PHONE",
+    "EMAIL": "EMAIL_ADDRESS",
+    "INN": "RU_INN",
+    "OGRN": "RU_OGRN",
+    "KPP": "RU_KPP",
+    "BIK": "RU_BIK",
+    "ACCOUNT": "RU_BANK_ACCOUNT",
+    "BANK_ACCOUNT": "RU_BANK_ACCOUNT",
+    "CONTRACT": "RU_CONTRACT_NUMBER",
+    "CONTRACT_NUMBER": "RU_CONTRACT_NUMBER",
+    "CASE": "RU_CASE_NUMBER",
+    "CASE_NUMBER": "RU_CASE_NUMBER",
+    "MONEY": "MON",
+    "AMOUNT": "MON",
+}
+
+
+def _normalize_entity_type(raw: object) -> str | None:
+    """Map LLM labels to known CLEARGATE entity types, drop malformed ones."""
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().upper()
+    # The prompt lists alternatives as PER|ORG|..., and small models
+    # sometimes echo the whole alternatives string as the answer.
+    if not value or "|" in value or "/" in value:
+        return None
+    value = _ENTITY_TYPE_ALIASES.get(value, value)
+    if value in _KNOWN_ENTITY_TYPES:
+        return value
+    return None
 
 
 class LocalLLMVerifier:
@@ -251,10 +294,13 @@ class LocalLLMVerifier:
 
             for item in result.get("added", []):
                 try:
+                    entity_type = _normalize_entity_type(item.get("entity_type"))
+                    if entity_type is None:
+                        continue
                     missed.append(
                         DetectedEntity(
                             text=item["text"],
-                            entity_type=item.get("entity_type", "UNKNOWN"),
+                            entity_type=entity_type,
                             start=item.get("start", 0),
                             end=item.get("end", 0),
                             score=min(float(item.get("score", 0.8)), 1.0),
@@ -294,10 +340,13 @@ class LocalLLMVerifier:
         # Verified entities from LLM
         for item in result.get("verified", []):
             try:
+                entity_type = _normalize_entity_type(item.get("entity_type"))
+                if entity_type is None:
+                    continue
                 entities.append(
                     DetectedEntity(
                         text=item["text"],
-                        entity_type=item.get("entity_type", "UNKNOWN"),
+                        entity_type=entity_type,
                         start=item.get("start", 0),
                         end=item.get("end", 0),
                         score=min(float(item.get("score", 0.8)), 1.0),
@@ -310,10 +359,13 @@ class LocalLLMVerifier:
         # Newly added entities from LLM
         for item in result.get("added", []):
             try:
+                entity_type = _normalize_entity_type(item.get("entity_type"))
+                if entity_type is None:
+                    continue
                 entities.append(
                     DetectedEntity(
                         text=item["text"],
-                        entity_type=item.get("entity_type", "UNKNOWN"),
+                        entity_type=entity_type,
                         start=item.get("start", 0),
                         end=item.get("end", 0),
                         score=min(float(item.get("score", 0.7)), 1.0),

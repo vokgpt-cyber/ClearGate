@@ -169,7 +169,58 @@ def render_comparison(runs: list[tuple[Path, dict[str, Any]]]) -> str:
         lines.append(row)
     lines.append("")
 
-    # ---- 4) Notes ----
+    # ---- 4) Per-entity-type detail ----
+    entity_types: list[str] = []
+    seen_types: set[str] = set()
+    for _, run in runs:
+        for row in run.get("by_type", []):
+            entity_type = row.get("entity_type", "?")
+            if entity_type not in seen_types:
+                seen_types.add(entity_type)
+                entity_types.append(entity_type)
+
+    if entity_types:
+        lines.append("## Per-entity-type detail")
+        lines.append("")
+        head = "| Type | "
+        for label in labels:
+            head += f"{label} F1 | {label} TP/FP/FN | "
+        if len(labels) >= 2:
+            head += "F1 delta |"
+        lines.append(head)
+        lines.append("|" + "---|" * (1 + 2 * len(labels) + (1 if len(labels) >= 2 else 0)))
+
+        for entity_type in entity_types:
+            row = f"| {entity_type} | "
+            f1s: list[float] = []
+            for _, run in runs:
+                item = next(
+                    (x for x in run.get("by_type", []) if x.get("entity_type") == entity_type),
+                    None,
+                )
+                if item is None:
+                    row += "- | - | "
+                    f1s.append(float("nan"))
+                    continue
+                tp = item.get("tp", 0)
+                fp = item.get("fp", 0)
+                fn = item.get("fn", 0)
+                precision = tp / (tp + fp) if (tp + fp) else 1.0
+                recall = tp / (tp + fn) if (tp + fn) else 1.0
+                f1 = _f1(precision, recall)
+                f1s.append(f1)
+                row += f"{f1:.2f} | {tp}/{fp}/{fn} | "
+            if len(labels) >= 2:
+                try:
+                    delta = f1s[-1] - f1s[0]
+                    sign = "+" if delta >= 0 else ""
+                    row += f"{sign}{delta:.2f} |"
+                except (TypeError, ValueError):
+                    row += "- |"
+            lines.append(row)
+        lines.append("")
+
+    # ---- 5) Notes ----
     lines.append("## Notes")
     lines.append("")
     lines.append("- All metrics are set-based: an entity matches ground truth "

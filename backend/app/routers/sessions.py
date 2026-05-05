@@ -14,7 +14,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.models.api import CreateSessionRequest, CreateSessionResponse, SessionInfoResponse
+from app.models.api import (
+    AnonymizeResponse,
+    CreateSessionRequest,
+    CreateSessionResponse,
+    SessionInfoResponse,
+)
 from app.routers.auth import get_current_user
 from app.services.session_manager import SessionManager
 from app.services.user_store import UserRecord
@@ -76,6 +81,29 @@ async def get_session(
         created_at=session.created_at.isoformat(),
         entity_count=session.registry.entity_count,
         locale=session.locale,
+    )
+
+
+@router.get("/{session_id}/anonymization", response_model=AnonymizeResponse)
+async def get_cached_anonymization(
+    session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> AnonymizeResponse:
+    """Return the last anonymization result for a session, if any."""
+    session = sm.get_session(session_id, user_id=current_user.user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if not session.anonymized_text or not session.detected_entities:
+        raise HTTPException(status_code=404, detail="Session has no anonymization yet")
+
+    stats: dict[str, int] = {}
+    for entity in session.detected_entities:
+        stats[entity.entity_type] = stats.get(entity.entity_type, 0) + 1
+    return AnonymizeResponse(
+        anonymized_text=session.anonymized_text,
+        entities=session.detected_entities,
+        stats=stats,
     )
 
 

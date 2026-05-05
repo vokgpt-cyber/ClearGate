@@ -28,6 +28,7 @@ interface SidebarProps {
   activeSessionId: string | null;
   onNewDocument: () => void;
   onSelectSession?: (id: string) => void;
+  onDeleteSession?: (id: string) => void;
 }
 
 export function Sidebar({
@@ -35,6 +36,7 @@ export function Sidebar({
   activeSessionId,
   onNewDocument,
   onSelectSession,
+  onDeleteSession,
 }: SidebarProps) {
   const { t } = useLocale();
 
@@ -67,20 +69,35 @@ export function Sidebar({
           <div className="cleargate-sidebar__empty">{t('sidebar.noSessions')}</div>
         ) : (
           sessions.map((s) => (
-            <button
+            <div
               key={s.id}
-              type="button"
               className={`cleargate-sidebar__item ${
                 s.id === activeSessionId ? 'is-active' : ''
               }`}
-              onClick={() => onSelectSession?.(s.id)}
-              title={s.title}
             >
-              <span className="cleargate-sidebar__item-title">{s.title}</span>
-              <span className="cleargate-sidebar__item-meta">
-                {formatRelative(s.openedAt)}
-              </span>
-            </button>
+              <button
+                type="button"
+                className="cleargate-sidebar__item-main"
+                onClick={() => onSelectSession?.(s.id)}
+                title={s.title}
+              >
+                <span className="cleargate-sidebar__item-title">{s.title}</span>
+                <span className="cleargate-sidebar__item-meta">
+                  {formatRelative(s.openedAt)}
+                </span>
+              </button>
+              {onDeleteSession && (
+                <button
+                  type="button"
+                  className="cleargate-sidebar__item-delete"
+                  onClick={() => onDeleteSession(s.id)}
+                  title={t('sidebar.deleteSession')}
+                  aria-label={`${t('sidebar.deleteSession')}: ${s.title}`}
+                >
+                  x
+                </button>
+              )}
+            </div>
           ))
         )}
       </div>

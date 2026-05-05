@@ -43,6 +43,7 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
             (re.compile(r"^/api/sessions/\d+$"), "GET", "session.info"),
             (re.compile(r"^/api/documents/upload$"), "POST", "document.uploaded"),
             (re.compile(r"^/api/sessions/.+/anonymize$"), "POST", "anonymize.done"),
+            (re.compile(r"^/api/sessions/.+/deep-scan$"), "POST", "deep_scan.done"),
             (re.compile(r"^/api/sessions/.+/llm$"), "POST", "llm.send"),
             (re.compile(r"^/api/feedback$"), "POST", "feedback.submitted"),
             (re.compile(r"^/api/feedback/mine$"), "GET", "feedback.list"),
@@ -114,10 +115,12 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
         # (Phase 3 parallel work initializes app.state.audit_log)
         if hasattr(request.app.state, "audit_log"):
             try:
-                request.app.state.audit_log.log_event(
+                await request.app.state.audit_log.record(
                     event_type=event_type,
                     user_id=user_id,
-                    metadata=event_payload,
+                    ip_address=client_host,
+                    user_agent=request.headers.get("user-agent", ""),
+                    payload=event_payload,
                 )
             except Exception as e:
                 logger.exception("telemetry.audit_log_failed", exc=e)

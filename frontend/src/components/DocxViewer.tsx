@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/hooks/useLocale';
+import { API_URL } from '@/lib/api';
 
 interface DocxViewerProps {
   /** Session id that has a DOCX attached (returned from upload). */
@@ -32,8 +33,6 @@ interface DocxViewerProps {
 }
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export function DocxViewer({ documentId, onReady, className, label, urlOverride }: DocxViewerProps) {
   const { t } = useLocale();
@@ -57,7 +56,7 @@ export function DocxViewer({ documentId, onReady, className, label, urlOverride 
     (async () => {
       try {
         const fetchUrl = urlOverride ?? `${API_URL}/api/documents/${documentId}/raw`;
-        const response = await fetch(fetchUrl);
+        const response = await fetch(fetchUrl, { credentials: 'include' });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }

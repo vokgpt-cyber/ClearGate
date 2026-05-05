@@ -39,7 +39,7 @@
 Подготовлены команды на удаление ~11.5 GB безопасно-удаляемых артефактов (старые offline-bundles от 21-23 апреля). Реорганизация: `build_handoff_docx.py` -> `scripts/`, `CLEARGATE_Concept_v2.md` -> `docs/archive/`. Часть выполнена — проверь `git status` после pull, если что-то осталось untracked, можно закрыть отдельным маленьким коммитом.
 
 ### Этап 3 — Локальный профиль для ПК #2
-Создан `docker-compose.local.yml` (минимальный compose без vLLM, без BGE, без LDAP, без TLS — использует Ollama на хосте). Скрипты: `scripts/start-local.bat`, `scripts/stop-local.bat`. Документ: `LOCAL_DEPLOY_README.md`. Идея: одна команда -> запущенный Cleargate на http://localhost с admin/admin.
+Создан `docker-compose.local.yml` (минимальный compose без vLLM, без BGE, без LDAP, без TLS — использует Ollama на хосте). Скрипты: `scripts/start-local.bat`, `scripts/stop-local.bat`. Документ: `LOCAL_DEPLOY_README.md`. Идея: одна команда -> запущенный Cleargate на http://localhost с admin/adminadmin.
 
 ### Этап 4 — Benchmark pack для сравнения моделей (только что закончили)
 Создано:
@@ -65,7 +65,7 @@ feat(local): add simple PC#2 deploy profile (host Ollama, no BGE/LDAP/TLS)
 
 **Конкретные шаги (на ПК #2):**
 
-1. Запустить `.\scripts\start-local.bat` один раз — убедиться что Cleargate работает локально (зайти на http://localhost, залогиниться admin/admin, загрузить любой `test/*.docx`).
+1. Запустить `.\scripts\start-local.bat` один раз — убедиться что Cleargate работает локально (зайти на http://localhost, залогиниться admin/adminadmin, загрузить любой `test/*.docx`).
 2. Остановить: `.\scripts\stop-local.bat`
 3. Запустить полное сравнение моделей:
    ```powershell

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.entities import DetectedEntity
 
@@ -61,6 +61,23 @@ class AnonymizeRequest(BaseModel):
     """Request to run anonymization on text."""
 
     text: str = Field(..., min_length=1, max_length=10_000_000)
+
+
+class DeepScanEntity(DetectedEntity):
+    """Deep-scan entity payload from the interactive UI.
+
+    The frontend's interactive entities carry convenience fields such as
+    ``id`` and ``state`` at the top level. Ignore them here and preserve
+    durable values through ``metadata``.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class DeepScanRequest(AnonymizeRequest):
+    """Request to run optional local-LLM verification over current entities."""
+
+    entities: list[DeepScanEntity] = Field(default_factory=list)
 
 
 class AnonymizeResponse(BaseModel):

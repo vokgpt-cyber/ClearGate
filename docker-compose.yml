@@ -29,7 +29,8 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
       - ./backend/app:/app/app:ro
       - ./models:/app/models:ro
@@ -100,4 +101,19 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_P
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    networks:
+      - cleargate-net
+    depends_on:
+      - backend
+    profiles:
+      - web  # only start with: docker compose --profile web up
+
+networks:
+  cleargate-net:
+    driver: bridge
+
+volumes:
+  ollama-data:
+    driver: local

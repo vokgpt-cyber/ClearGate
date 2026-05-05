@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useLocale } from '@/hooks/useLocale';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+import { API_URL } from '@/lib/api';
 
 interface LLMPanelProps {
   sessionId: string | null;
@@ -41,6 +40,7 @@ export function LLMPanel({ sessionId, anonymizedText }: LLMPanelProps) {
       const resp = await fetch(`${API_URL}/api/sessions/${sessionId}/llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ text: fullText }),
       });
 

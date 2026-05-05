@@ -55,6 +55,12 @@ CREATE INDEX IF NOT EXISTS feedback_status_idx ON feedback(status);
 CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback(created_at DESC);
 """
 
+_CREATE_INDEX_STATEMENTS = [
+    stmt.strip()
+    for stmt in _CREATE_INDICES.split(";")
+    if stmt.strip()
+]
+
 
 @dataclass
 class FeedbackRecord:
@@ -124,7 +130,8 @@ class FeedbackStore:
         cur = self._conn.cursor()
         cur.execute(_CREATE_TABLE)
         cur.execute(_CREATE_META)
-        cur.execute(_CREATE_INDICES)
+        for stmt in _CREATE_INDEX_STATEMENTS:
+            cur.execute(stmt)
         cur.execute(
             "INSERT OR IGNORE INTO feedback_meta (key, value) VALUES (?, ?)",
             ("schema_version", str(_SCHEMA_VERSION)),

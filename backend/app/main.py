@@ -65,7 +65,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     # v0.4.0 Phase 3: hash-chained audit log.
-    audit_log = AuditLog(db_path=store_dir / "audit.db", file_dir=store_dir / "audit-logs")
+    audit_log = AuditLog(
+        db_path=store_dir / "audit.db",
+        jsonl_path=store_dir / "audit-logs" / "audit.jsonl",
+    )
+    app.state.audit_log = audit_log
 
     # v0.4.0 Phase 6: feedback + error stores.
     feedback_store = FeedbackStore(db_path=store_dir / "feedback.db")
@@ -78,20 +82,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_user_store_from_request as get_admin_user_store,
         get_feedback_store_from_request as get_admin_feedback_store,
         get_error_store_from_request as get_admin_error_store,
-        get_audit_log_from_request,
-        get_ldap_provider_from_request,
     )
     app.dependency_overrides[get_feedback_store_from_request] = lambda: feedback_store
     app.dependency_overrides[get_error_store_from_request] = lambda: error_store
     app.dependency_overrides[get_admin_user_store] = lambda: user_store
     app.dependency_overrides[get_admin_feedback_store] = lambda: feedback_store
     app.dependency_overrides[get_admin_error_store] = lambda: error_store
-    app.dependency_overrides[get_audit_log_from_request] = lambda: audit_log
-    app.dependency_overrides[get_ldap_provider_from_request] = lambda: ldap_provider
 
     # Wire the UserStore dependency into the auth router without
     # leaking it into module-level state (keeps tests tractable).
     app.dependency_overrides[auth_router.get_user_store_from_request] = lambda: user_store
+    app.dependency_overrides[auth_router.get_ldap_provider_from_request] = lambda: ldap_provider
 
     logger.info(
         "app.startup",

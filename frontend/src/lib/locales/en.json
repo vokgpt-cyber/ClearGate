@@ -21,7 +21,9 @@
   "sidebar": {
     "newDocument": "New document",
     "recentSessions": "Recent sessions",
-    "noSessions": "No documents opened yet"
+    "noSessions": "No documents opened yet",
+    "deleteSession": "Delete session",
+    "confirmDeleteSession": "Delete this session and all documents inside it?"
   },
   "empty": {
     "eyebrow": "CLEARGATE · Anonymization",
@@ -61,7 +63,17 @@
     "replacementsDone": "Replacements made",
     "unresolvedCount": "Unresolved",
     "zoomLevel": "Document zoom:",
-    "resetZoom": "Reset zoom (Ctrl+0)"
+    "resetZoom": "Reset zoom (Ctrl+0)",
+    "startAnonymize": "Anonymize",
+    "anonymizing": "Anonymizing document",
+    "progressLabel": "Anonymization progress",
+    "progressNote": "CLEARGATE is marking detected fragments",
+    "deepScan": "Deep check",
+    "deepScanBusy": "Checking…",
+    "deepScanHint": "Run an extra local LLM-verifier pass over the current markup",
+    "deepScanError": "Check failed",
+    "deepScanDone": "Checked",
+    "deepScanNoChanges": "Checked: no changes"
   },
   "legend": {
     "title": "Entities",
@@ -115,13 +127,15 @@
       "ADDR": "Address",
       "RU_INN": "INN",
       "RU_OGRN": "OGRN",
+      "RU_KPP": "KPP",
       "RU_SNILS": "SNILS",
       "RU_PASSPORT": "Passport",
       "RU_BANK_ACCOUNT": "Bank Account",
       "RU_PHONE": "Phone",
       "EMAIL_ADDRESS": "Email",
       "RU_DATE": "Date",
-      "RU_CASE_NUMBER": "Case Number"
+      "RU_CASE_NUMBER": "Case Number",
+      "MON": "Amount"
     }
   },
   "llm": {
@@ -196,6 +210,7 @@
     "admin": "Admin"
   },
   "admin": {
+    "backToWorkspace": "Back to documents",
     "users": {
       "title": "Users",
       "create": "Create user",
@@ -204,6 +219,7 @@
       "displayName": "Display name",
       "role": "Role",
       "active": "Active",
+      "disabled": "Disabled",
       "actions": "Actions",
       "created": "Created",
       "lastLogin": "Last login",
@@ -211,6 +227,10 @@
       "enable": "Enable",
       "changeRole": "Change role",
       "resetPassword": "Reset password",
+      "delete": "Delete",
+      "makeAdmin": "Make admin",
+      "makeLawyer": "Make lawyer",
+      "passwordPrompt": "New password for user",
       "syncAD": "Sync with AD",
       "syncing": "Syncing..."
     },
@@ -233,6 +253,14 @@
       "period7d": "7 days",
       "period30d": "30 days",
       "period90d": "90 days",
+      "range7": "7 days",
+      "range30": "30 days",
+      "range90": "90 days",
+      "totalSessions": "Total sessions",
+      "latency": "Anonymization speed",
+      "p50": "P50",
+      "p95": "P95",
+      "p99": "P99",
       "sessionsPerDay": "Sessions per day",
       "latencyP50": "Anonymization median",
       "latencyP95": "Anonymization P95",
@@ -250,6 +278,15 @@
       "time": "Time",
       "client": "Client",
       "server": "Server"
+      ,
+      "timestamp": "Time",
+      "filterError": "Errors",
+      "filterWarning": "Warnings",
+      "filterInfo": "Info",
+      "filterClient": "Client",
+      "filterServer": "Server",
+      "userAgent": "User-Agent",
+      "stack": "Stack"
     }
   }
 }

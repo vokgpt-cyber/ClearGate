@@ -113,6 +113,8 @@ src-tauri/Cargo.lock
 
 # ----------- ML Models (NEVER commit — too large) -----------
 models/
+!backend/app/models/
+!backend/app/models/**
 *.gguf
 *.safetensors
 *.bin

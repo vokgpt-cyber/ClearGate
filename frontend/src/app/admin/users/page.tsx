@@ -5,6 +5,7 @@ import { useLocale } from '@/hooks/useLocale';
 import {
   getUsers,
   createUser,
+  deleteUser,
   updateUser,
   syncAD,
   type AdminUser,
@@ -54,6 +55,36 @@ export default function UsersPage() {
       await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  const handleToggleRole = async (userId: string, role: AdminUser['role']) => {
+    try {
+      await updateUser(userId, { role: role === 'admin' ? 'lawyer' : 'admin' });
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    const nextPassword = window.prompt(t('admin.users.passwordPrompt'));
+    if (!nextPassword) return;
+    try {
+      await updateUser(userId, { new_password: nextPassword });
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!window.confirm(`${t('admin.users.delete')}: ${username}?`)) return;
+    try {
+      await deleteUser(userId);
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
@@ -112,12 +143,32 @@ export default function UsersPage() {
                     {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : '—'}
                   </td>
                   <td>
-                    <button
-                      onClick={() => handleToggleActive(user.user_id, user.is_active)}
-                      className="cleargate-admin-action-btn"
-                    >
-                      {user.is_active ? t('admin.users.disable') : t('admin.users.enable')}
-                    </button>
+                    <div className="cleargate-admin-row-actions">
+                      <button
+                        onClick={() => handleToggleActive(user.user_id, user.is_active)}
+                        className="cleargate-admin-action-btn"
+                      >
+                        {user.is_active ? t('admin.users.disable') : t('admin.users.enable')}
+                      </button>
+                      <button
+                        onClick={() => handleToggleRole(user.user_id, user.role)}
+                        className="cleargate-admin-action-btn"
+                      >
+                        {user.role === 'admin' ? t('admin.users.makeLawyer') : t('admin.users.makeAdmin')}
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(user.user_id)}
+                        className="cleargate-admin-action-btn"
+                      >
+                        {t('admin.users.resetPassword')}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.user_id, user.username)}
+                        className="cleargate-admin-action-btn cleargate-admin-action-btn--danger"
+                      >
+                        {t('admin.users.delete')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

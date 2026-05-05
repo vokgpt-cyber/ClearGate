@@ -109,6 +109,43 @@ class TestRegexLayer:
         case_entities = [e for e in entities if e.entity_type == "RU_CASE_NUMBER"]
         assert len(case_entities) >= 1
 
+    @pytest.mark.asyncio
+    async def test_detects_kpp_value_only(self, pipeline):
+        text = "ИНН 7707083893, КПП 770701001"
+        entities = await pipeline.analyze(text)
+        kpp_entities = [e for e in entities if e.entity_type == "RU_KPP"]
+        assert [e.text for e in kpp_entities] == ["770701001"]
+
+    @pytest.mark.asyncio
+    async def test_detects_money_amount_with_words(self, pipeline):
+        text = "Штраф составляет 1 000 000 (один миллион) рублей за каждый случай."
+        entities = await pipeline.analyze(text)
+        money_entities = [e for e in entities if e.entity_type == "MON"]
+        assert any(e.text == "1 000 000 (один миллион) рублей" for e in money_entities)
+
+    @pytest.mark.asyncio
+    async def test_detects_financial_percent_rate(self, pipeline):
+        text = "Вознаграждение Агента составляет 5% (пять процентов) от выручки."
+        entities = await pipeline.analyze(text)
+        money_entities = [e for e in entities if e.entity_type == "MON"]
+        assert any(e.text == "5% (пять процентов)" for e in money_entities)
+
+    @pytest.mark.asyncio
+    async def test_detects_address_block(self, pipeline):
+        text = "адрес: 101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305), именуемое далее"
+        entities = await pipeline.analyze(text)
+        address_entities = [e for e in entities if e.entity_type == "ADDR"]
+        assert len(address_entities) == 1
+        assert address_entities[0].text == "101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305"
+
+    @pytest.mark.asyncio
+    async def test_detects_russian_legal_entities(self, pipeline):
+        text = "МЕЖДУ: АО «Норд-Хим» / ИП Кравцов А.В."
+        entities = await pipeline.analyze(text)
+        org_texts = {e.text for e in entities if e.entity_type == "ORG"}
+        assert "АО «Норд-Хим»" in org_texts
+        assert "ИП Кравцов А.В." in org_texts
+
 
 class TestMergeOverlapping:
     @pytest.mark.asyncio

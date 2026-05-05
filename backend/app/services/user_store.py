@@ -65,7 +65,7 @@ class UserRecord:
         self,
         user_id: str,
         username: str,
-        password_hash: str,
+        password_hash: str | None,
         is_active: bool,
         created_at: datetime,
         updated_at: datetime,
@@ -251,20 +251,46 @@ class UserStore:
             logger.info("user_store.role_updated", user_id=user_id, role=role)
         return ok
 
-    def record_login(self, user_id: str) -> None:
+    def update_profile(
+        self,
+        user_id: str,
+        *,
+        email: str | None,
+        display_name: str | None,
+    ) -> bool:
+        """Update optional profile fields. Returns True iff the user existed."""
+        now_iso = datetime.now(UTC).isoformat()
+        cur = self._conn.execute(
+            """
+            UPDATE users
+               SET email = ?, display_name = ?, updated_at = ?
+             WHERE user_id = ?
+            """,
+            (email, display_name, now_iso, user_id),
+        )
+        self._conn.commit()
+        ok = cur.rowcount > 0
+        if ok:
+            logger.info("user_store.profile_updated", user_id=user_id)
+        return ok
+
+    def record_login(self, user_id: str) -> bool:
         """Update the last_login_at timestamp for a user."""
         now_iso = datetime.now(UTC).isoformat()
-        self._conn.execute(
+        cur = self._conn.execute(
             "UPDATE users SET last_login_at = ? WHERE user_id = ?",
             (now_iso, user_id),
         )
         self._conn.commit()
-        logger.info("user_store.login_recorded", user_id=user_id)
+        ok = cur.rowcount > 0
+        if ok:
+            logger.info("user_store.login_recorded", user_id=user_id)
+        return ok
 
     def get_or_create_from_ldap(
         self,
-        ldap_dn: str,
-        username: str,
+        ldap_dn: object,
+        username: str | None = None,
         email: str | None = None,
         display_name: str | None = None,
         role: str = "lawyer",
@@ -277,12 +303,30 @@ class UserStore:
 
         Returns the UserRecord in either case.
         """
+        if username is None and hasattr(ldap_dn, "user_id"):
+            ldap_result = ldap_dn
+            ldap_dn = getattr(ldap_result, "user_id")
+            username = getattr(ldap_result, "username")
+            email = getattr(ldap_result, "email", None)
+            display_name = getattr(ldap_result, "display_name", None)
+            role = getattr(ldap_result, "role", role)
+        if username is None:
+            raise TypeError("username is required when ldap_dn is passed directly")
+
+        ldap_dn = str(ldap_dn)
+
         # Try to find by ldap_dn
         cur = self._conn.execute(
             "SELECT user_id FROM users WHERE ldap_dn = ?",
             (ldap_dn,),
         )
         row = cur.fetchone()
+        if row is None:
+            cur = self._conn.execute(
+                "SELECT user_id FROM users WHERE username = ? COLLATE NOCASE",
+                (username,),
+            )
+            row = cur.fetchone()
 
         now_iso = datetime.now(UTC).isoformat()
 
@@ -292,10 +336,11 @@ class UserStore:
             self._conn.execute(
                 """
                 UPDATE users
-                   SET role = ?, email = ?, display_name = ?, last_login_at = ?, updated_at = ?
+                   SET role = ?, email = ?, display_name = ?, ldap_dn = ?,
+                       last_login_at = ?, updated_at = ?
                  WHERE user_id = ?
                 """,
-                (role, email, display_name, now_iso, now_iso, user_id),
+                (role, email, display_name, ldap_dn, now_iso, now_iso, user_id),
             )
             self._conn.commit()
             logger.info("user_store.ldap_user_updated", user_id=user_id, ldap_dn=ldap_dn)
@@ -318,7 +363,7 @@ class UserStore:
             return UserRecord(
                 user_id=uid,
                 username=username,
-                password_hash=password_hash,
+                password_hash=None,
                 is_active=True,
                 created_at=datetime.fromisoformat(now_iso).replace(tzinfo=UTC),
                 updated_at=datetime.fromisoformat(now_iso).replace(tzinfo=UTC),
@@ -400,7 +445,9 @@ class UserStore:
         return UserRecord(
             user_id=data["user_id"],
             username=data["username"],
-            password_hash=data["password_hash"],
+            password_hash=(
+                None if data["password_hash"] == "!ldap-only" else data["password_hash"]
+            ),
             is_active=bool(data["is_active"]),
             created_at=created,
             updated_at=updated,

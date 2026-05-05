@@ -4,9 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useLocale } from '@/hooks/useLocale';
 import type { DetectedEntity } from '@/types/entities';
 import { getEntityColor } from '@/lib/colors';
-import { createSession, anonymizeText } from '@/lib/api';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+import { API_URL, createSession, anonymizeText } from '@/lib/api';
 
 interface SplitScreenProps {
   onAnonymized?: (sessionId: string, anonymizedText: string, entities: DetectedEntity[]) => void;
@@ -93,7 +91,11 @@ export function SplitScreen({ onAnonymized }: SplitScreenProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const resp = await fetch(`${API_URL}/api/documents/upload`, { method: 'POST', body: formData });
+      const resp = await fetch(`${API_URL}/api/documents/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
       if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json();
       setOriginalText(data.text);

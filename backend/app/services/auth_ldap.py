@@ -14,8 +14,6 @@ import asyncio
 import hashlib
 import re
 from dataclasses import dataclass
-from typing import Optional
-
 import structlog
 from ldap3 import Server, Connection, ALL, ALL_ATTRIBUTES, Tls
 from ldap3.core.exceptions import LDAPException, LDAPBindError, LDAPSocketOpenError
@@ -280,6 +278,7 @@ class LDAPAuthProvider:
     @staticmethod
     def _escape_ldap(value: str) -> str:
         """Escape special characters in LDAP filter values per RFC 4515."""
+        value = value.replace(r"\x00", r"\00")
         special_chars = {
             "*": r"\2a",
             "(": r"\28",
@@ -306,22 +305,41 @@ class LDAPAuthProvider:
         return None
 
 
-def get_ldap_provider() -> LDAPAuthProvider | None:
+def get_ldap_provider(
+    url: str | None = None,
+    bind_dn: str | None = None,
+    bind_password: str | None = None,
+    base_dn: str | None = None,
+    admin_group_dn: str | None = None,
+    user_group_dn: str | None = None,
+    timeout_seconds: int | None = None,
+) -> LDAPAuthProvider | None:
     """Factory function: returns LDAPAuthProvider if LDAP is configured, else None.
 
     Used in main.py lifespan to conditionally enable LDAP auth.
     """
     from app.config import settings
 
-    if not settings.ldap_url:
+    resolved_url = url if url is not None else settings.ldap_url
+    if not resolved_url:
         return None
 
     return LDAPAuthProvider(
-        url=settings.ldap_url,
-        bind_dn=settings.ldap_bind_dn,
-        bind_password=settings.ldap_bind_password,
-        base_dn=settings.ldap_base_dn,
-        admin_group_dn=settings.ldap_admin_group_dn or None,
-        user_group_dn=settings.ldap_user_group_dn or None,
-        timeout_seconds=settings.ldap_timeout_seconds,
+        url=resolved_url,
+        bind_dn=bind_dn if bind_dn is not None else settings.ldap_bind_dn,
+        bind_password=(
+            bind_password if bind_password is not None else settings.ldap_bind_password
+        ),
+        base_dn=base_dn if base_dn is not None else settings.ldap_base_dn,
+        admin_group_dn=(
+            admin_group_dn if admin_group_dn is not None else settings.ldap_admin_group_dn
+        ) or None,
+        user_group_dn=(
+            user_group_dn if user_group_dn is not None else settings.ldap_user_group_dn
+        ) or None,
+        timeout_seconds=(
+            timeout_seconds
+            if timeout_seconds is not None
+            else settings.ldap_timeout_seconds
+        ),
     )

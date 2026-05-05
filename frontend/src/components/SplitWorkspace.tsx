@@ -50,15 +50,17 @@ import {
   type InteractiveEntity,
   type OverlayEntity,
 } from '@/lib/entity-overlay';
-import { diffWordsHtml } from '@/lib/word-diff';
+import { diffWords } from '@/lib/word-diff';
 import {
   addCustomEntity,
   anonymizeText,
   API_URL,
   deanonymizeDocx,
+  deepScanText,
   downloadBlob,
   exportAnonymizedDocx,
   exportDeanonymizedDocx,
+  getCachedAnonymization,
   importResponseDocx,
   type DeanonymizeDocxResult,
   type Restoration,
@@ -90,6 +92,108 @@ const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.0;
 const SCALE_STEP = 0.1;
 
+type DeepScanSummary = {
+  added: number;
+  removed: number;
+};
+
+type CompareMutation =
+  | { kind: 'ins'; start: number; end: number; text: string }
+  | { kind: 'del'; at: number; text: string };
+
+const entitySignature = (
+  entity: Pick<InteractiveEntity, 'start' | 'end' | 'entity_type' | 'text'>,
+) => `${entity.start}:${entity.end}:${entity.entity_type}:${entity.text}`;
+
+function comparePosition(mutation: CompareMutation): number {
+  return mutation.kind === 'ins' ? mutation.start : mutation.at;
+}
+
+function wrapRangeWithDiffMarker(range: Range, kind: 'ins' | 'del'): boolean {
+  const doc = range.startContainer.ownerDocument;
+  if (!doc) return false;
+  const marker = doc.createElement(kind);
+  marker.className =
+    kind === 'ins' ? 'cleargate-diff-ins' : 'cleargate-diff-del';
+  const fragment = range.extractContents();
+  marker.appendChild(fragment);
+  range.insertNode(marker);
+  return true;
+}
+
+function insertDeletedDiffMarker(
+  container: HTMLElement,
+  at: number,
+  text: string,
+  pane: DocxPane,
+): boolean {
+  const map = pane.getAnchorMap();
+  const pos = map.toDomPosition(Math.min(at, map.plainText.length));
+  if (!pos) return false;
+  const doc = container.ownerDocument;
+  const marker = doc.createElement('del');
+  marker.className = 'cleargate-diff-del';
+  marker.textContent = text;
+  const range = doc.createRange();
+  range.setStart(pos.node, pos.offset);
+  range.collapse(true);
+  range.insertNode(marker);
+  return true;
+}
+
+function applyFormattedCompareDiff(
+  pane: DocxPane,
+  oldText: string,
+  newText: string,
+): number {
+  const container = pane.getContainer();
+  const mutations: CompareMutation[] = [];
+  let oldOffset = 0;
+  let newOffset = 0;
+
+  for (const op of diffWords(oldText, newText)) {
+    if (op.kind === 'eq') {
+      oldOffset += op.text.length;
+      newOffset += op.text.length;
+    } else if (op.kind === 'ins') {
+      if (op.text.trim()) {
+        mutations.push({
+          kind: 'ins',
+          start: newOffset,
+          end: newOffset + op.text.length,
+          text: op.text,
+        });
+      }
+      newOffset += op.text.length;
+    } else {
+      if (op.text.trim()) {
+        mutations.push({ kind: 'del', at: newOffset, text: op.text });
+      }
+      oldOffset += op.text.length;
+    }
+  }
+
+  let applied = 0;
+  const ordered = mutations.sort(
+    (a, b) => comparePosition(b) - comparePosition(a),
+  );
+  for (const mutation of ordered) {
+    try {
+      if (mutation.kind === 'ins') {
+        const map = pane.getAnchorMap();
+        const range = map.toRange(mutation.start, mutation.end);
+        if (range && wrapRangeWithDiffMarker(range, 'ins')) applied++;
+      } else if (insertDeletedDiffMarker(container, mutation.at, mutation.text, pane)) {
+        applied++;
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Cleargate] compare marker skipped', mutation, e);
+    }
+  }
+  return applied;
+}
+
 export function SplitWorkspace({
   documentId,
   documentName,
@@ -99,8 +203,8 @@ export function SplitWorkspace({
   // still works for callers that don't care about cross-session caching;
   // the actual hydration / on-complete dispatch is hooked up inside the
   // detection effect (added in a follow-up patch).
-  initialEntities: _initialEntities,
-  onAnonymizationComplete: _onAnonymizationComplete,
+  initialEntities = [],
+  onAnonymizationComplete,
 }: SplitWorkspaceProps) {
   const { t } = useLocale();
 
@@ -123,6 +227,7 @@ export function SplitWorkspace({
   const [status, setStatus] = useState<LegendStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [entities, setEntities] = useState<InteractiveEntity[]>([]);
+  const [progressValue, setProgressValue] = useState(0);
 
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
   const [onlyUnconfirmed, setOnlyUnconfirmed] = useState(false);
@@ -135,7 +240,11 @@ export function SplitWorkspace({
   const [bothReady, setBothReady] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const detectionStartedRef = useRef(false);
+  const [deepScanBusy, setDeepScanBusy] = useState(false);
+  const [deepScanError, setDeepScanError] = useState<string | null>(null);
+  const [deepScanProgress, setDeepScanProgress] = useState(0);
+  const [deepScanSummary, setDeepScanSummary] = useState<DeepScanSummary | null>(null);
+  const restoreStartedRef = useRef(false);
 
   // Phase 1 round-trip: import response -> deanonymize -> export
   const responseFileRef = useRef<HTMLInputElement | null>(null);
@@ -171,13 +280,29 @@ export function SplitWorkspace({
   //   - `zoom` does not change the underlying DOM, so the existing
   //     anchor maps and selection offsets remain valid as-is.
   const [docScale, setDocScale] = useState<number>(1);
+  const [showZoomPill, setShowZoomPill] = useState(false);
+  const zoomPillTimerRef = useRef<number | null>(null);
+  const flashZoomPill = useCallback(() => {
+    setShowZoomPill(true);
+    if (zoomPillTimerRef.current !== null) {
+      window.clearTimeout(zoomPillTimerRef.current);
+    }
+    zoomPillTimerRef.current = window.setTimeout(() => {
+      setShowZoomPill(false);
+      zoomPillTimerRef.current = null;
+    }, 1100);
+  }, []);
   const adjustScale = useCallback((delta: number) => {
     setDocScale((prev) => {
       const next = Math.round((prev + delta) * 100) / 100;
       return Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
     });
-  }, []);
-  const resetScale = useCallback(() => setDocScale(1), []);
+    flashZoomPill();
+  }, [flashZoomPill]);
+  const resetScale = useCallback(() => {
+    setDocScale(1);
+    flashZoomPill();
+  }, [flashZoomPill]);
 
   // The entity set actually drawn on screen after filters are applied.
   const visibleEntities = useMemo(() => {
@@ -313,12 +438,14 @@ export function SplitWorkspace({
     setStatus('idle');
     setError(null);
     setEntities([]);
+    setProgressValue(0);
     setHiddenTypes(new Set());
     setOnlyUnconfirmed(false);
     setPopover(null);
     setSelection(null);
     setBothReady(false);
-    detectionStartedRef.current = false;
+    restoreStartedRef.current = false;
+    rightContainerRef.current?.classList.remove('cleargate-compare');
     leftContainerRef.current = null;
     rightContainerRef.current = null;
     leftPaneRef.current = null;
@@ -327,7 +454,24 @@ export function SplitWorkspace({
     setDocScale(1);
     setManualResolutions([]);
     setCompareMode(false);
+    setDeepScanBusy(false);
+    setDeepScanError(null);
+    setDeepScanProgress(0);
+    setDeepScanSummary(null);
+    if (zoomPillTimerRef.current !== null) {
+      window.clearTimeout(zoomPillTimerRef.current);
+      zoomPillTimerRef.current = null;
+    }
+    setShowZoomPill(false);
   }, [documentId]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomPillTimerRef.current !== null) {
+        window.clearTimeout(zoomPillTimerRef.current);
+      }
+    };
+  }, []);
 
   // ─── document zoom: apply, wheel, keyboard ───────────────────────
   //
@@ -405,66 +549,196 @@ export function SplitWorkspace({
     rightPane.rerender(entitiesToDraw, { mode: 'placeholder' });
   }, []);
 
-  // ─── initial detection ───────────────────────────────────────────
-  //
-  // Fires exactly once per document (guarded by detectionStartedRef).
-  // We trigger it from `bothReady` rather than from `readyTick` to
-  // guarantee refs were observed as populated atomically.
+  const toInteractiveEntities = useCallback((raw: OverlayEntity[]) => {
+    return raw.map((e, idx) => ({
+      ...e,
+      id:
+        (e.metadata?.id as string | undefined) ??
+        `det-${idx}-${e.start}-${e.end}-${e.entity_type}`,
+      state:
+        (e.metadata?.state as InteractiveEntity['state'] | undefined) ??
+        'pending',
+    }));
+  }, []);
+
+  const applyEntities = useCallback(
+    (nextEntities: InteractiveEntity[]) => {
+      setEntities(nextEntities);
+      setStatus(nextEntities.length > 0 ? 'detected' : 'idle');
+      rerenderBothPanes(nextEntities);
+    },
+    [rerenderBothPanes],
+  );
+
+  // ─── restore cached anonymization ────────────────────────────────
   useEffect(() => {
     if (!bothReady) return;
-    if (detectionStartedRef.current) return;
-    detectionStartedRef.current = true;
+    if (restoreStartedRef.current) return;
+    restoreStartedRef.current = true;
 
-    const leftPane = leftPaneRef.current;
-    if (!leftPane) return;
-    const plainText = leftPane.getPlainText();
+    if (initialEntities.length > 0) {
+      applyEntities(initialEntities);
+      return;
+    }
 
     let cancelled = false;
-    setStatus('detecting');
-    setError(null);
-
     (async () => {
       try {
-        // eslint-disable-next-line no-console
-        console.info('[Cleargate] anonymize start', {
-          documentId,
-          chars: plainText.length,
-        });
-        const response = await anonymizeText(documentId, plainText);
-        // eslint-disable-next-line no-console
-        console.info('[Cleargate] anonymize response', {
-          entities: response.entities?.length ?? 0,
-        });
-        if (cancelled) return;
-        const raw = (response.entities as OverlayEntity[]) ?? [];
-        const interactive: InteractiveEntity[] = raw.map((e, idx) => ({
-          ...e,
-          id:
-            (e.metadata?.id as string | undefined) ??
-            `det-${idx}-${e.start}-${e.end}-${e.entity_type}`,
-          state: 'pending',
-        }));
-        setEntities(interactive);
-        setStatus('detected');
-        // Explicit rerender with the fresh entity list — do not wait
-        // for the `[visibleEntities]` effect to fire. This is the key
-        // fix for "только после повторной загрузки документа".
-        rerenderBothPanes(interactive);
+        const cached = await getCachedAnonymization(documentId);
+        if (cancelled || !cached) return;
+        const interactive = toInteractiveEntities(
+          (cached.entities as OverlayEntity[]) ?? [],
+        );
+        applyEntities(interactive);
+        onAnonymizationComplete?.(documentId, interactive);
       } catch (e) {
-        if (cancelled) return;
-        // eslint-disable-next-line no-console
-        console.error('[Cleargate] anonymize failed', e);
-        setError(e instanceof Error ? e.message : String(e));
-        setStatus('error');
-        // Allow the user to retry via the legend "retry" button.
-        detectionStartedRef.current = false;
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.warn('[Cleargate] cached anonymization restore failed', e);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [bothReady, documentId, rerenderBothPanes]);
+  }, [
+    applyEntities,
+    bothReady,
+    documentId,
+    initialEntities,
+    onAnonymizationComplete,
+    toInteractiveEntities,
+  ]);
+
+  // ─── explicit detection ──────────────────────────────────────────
+  const runAnonymization = useCallback(async () => {
+    if (!bothReady || status === 'detecting') return;
+    const leftPane = leftPaneRef.current;
+    if (!leftPane) return;
+    const plainText = leftPane.getPlainText();
+
+    setStatus('detecting');
+    setProgressValue(8);
+    setError(null);
+    try {
+      // eslint-disable-next-line no-console
+      console.info('[Cleargate] anonymize start', {
+        documentId,
+        chars: plainText.length,
+      });
+      const response = await anonymizeText(documentId, plainText);
+      // eslint-disable-next-line no-console
+      console.info('[Cleargate] anonymize response', {
+        entities: response.entities?.length ?? 0,
+      });
+      const interactive = toInteractiveEntities(
+        (response.entities as OverlayEntity[]) ?? [],
+      );
+      setProgressValue(100);
+      applyEntities(interactive);
+      onAnonymizationComplete?.(documentId, interactive);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[Cleargate] anonymize failed', e);
+      setError(e instanceof Error ? e.message : String(e));
+      setStatus('error');
+    }
+  }, [
+    applyEntities,
+    bothReady,
+    documentId,
+    onAnonymizationComplete,
+    status,
+    toInteractiveEntities,
+  ]);
+
+  const runDeepScan = useCallback(async () => {
+    if (!bothReady || deepScanBusy || status === 'detecting') return;
+    const leftPane = leftPaneRef.current;
+    if (!leftPane) return;
+    const plainText = leftPane.getPlainText();
+
+    setDeepScanBusy(true);
+    setDeepScanError(null);
+    setDeepScanSummary(null);
+    setDeepScanProgress(7);
+    try {
+      // eslint-disable-next-line no-console
+      console.info('[Cleargate] deep scan start', {
+        documentId,
+        chars: plainText.length,
+        entities: entities.length,
+      });
+      const response = await deepScanText(documentId, plainText, entities);
+      const interactive = toInteractiveEntities(
+        (response.entities as OverlayEntity[]) ?? [],
+      );
+      const before = new Set(entities.map(entitySignature));
+      const after = new Set(interactive.map(entitySignature));
+      const added = [...after].filter((key) => !before.has(key)).length;
+      const removed = [...before].filter((key) => !after.has(key)).length;
+      setDeepScanSummary({ added, removed });
+      setDeepScanProgress(100);
+      applyEntities(interactive);
+      onAnonymizationComplete?.(documentId, interactive);
+      // eslint-disable-next-line no-console
+      console.info('[Cleargate] deep scan response', {
+        entities: response.entities?.length ?? 0,
+        added,
+        removed,
+      });
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 700);
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[Cleargate] deep scan failed', e);
+      setDeepScanError(e instanceof Error ? e.message : String(e));
+      setDeepScanProgress(0);
+    } finally {
+      setDeepScanBusy(false);
+    }
+  }, [
+    applyEntities,
+    bothReady,
+    deepScanBusy,
+    documentId,
+    entities,
+    onAnonymizationComplete,
+    status,
+    toInteractiveEntities,
+  ]);
+
+  useEffect(() => {
+    if (status !== 'detecting') return;
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const eased = 92 - 84 * Math.exp(-elapsed / 9000);
+      setProgressValue((prev) => Math.max(prev, Math.min(92, Math.round(eased))));
+    }, 350);
+    return () => window.clearInterval(id);
+  }, [status]);
+
+  useEffect(() => {
+    if (!deepScanBusy) return;
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const eased = 94 - 87 * Math.exp(-elapsed / 14000);
+      setDeepScanProgress((prev) => Math.max(prev, Math.min(94, Math.round(eased))));
+    }, 350);
+    return () => window.clearInterval(id);
+  }, [deepScanBusy]);
+
+  const deepScanSummaryLabel = useMemo(() => {
+    if (!deepScanSummary) return null;
+    if (deepScanSummary.added === 0 && deepScanSummary.removed === 0) {
+      return t('workspace.deepScanNoChanges');
+    }
+    return `${t('workspace.deepScanDone')}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
+  }, [deepScanSummary, t]);
 
   // ─── rerender on filter / state changes (NOT initial detection) ──
   //
@@ -812,13 +1086,19 @@ export function SplitWorkspace({
         };
         // Remove any existing entities fully covered by the new selection
         // to prevent overlapping marks (e.g. "Москва" inside full address).
-        setEntities((prev) => [
-          ...prev.filter(
-            (e) =>
-              !(e.start >= added.start && e.end <= added.end && e.id !== added.id),
-          ),
-          added,
-        ]);
+        setEntities((prev) => {
+          const next = [
+            ...prev.filter(
+              (e) =>
+                !(e.start >= added.start && e.end <= added.end && e.id !== added.id),
+            ),
+            added,
+          ];
+          setStatus('detected');
+          rerenderBothPanes(next);
+          onAnonymizationComplete?.(documentId, next);
+          return next;
+        });
         setSelection(null);
         // Clear the browser text selection so the toolbar disappears.
         window.getSelection()?.removeAllRanges();
@@ -828,7 +1108,7 @@ export function SplitWorkspace({
         setSelectionBusy(false);
       }
     },
-    [documentId],
+    [documentId, onAnonymizationComplete, rerenderBothPanes],
   );
 
   const dismissSelection = useCallback(() => {
@@ -920,10 +1200,10 @@ export function SplitWorkspace({
   //
   // ON: compute a word-level LCS diff between the left pane's plain
   // text (original) and the right pane's plain text (deanonymized
-  // response), and replace the right pane's DOM with an inline diff
-  // overlay. We deliberately do NOT mutate DocxPane's cleanHtml, so
-  // toggling OFF just calls applyRestorationOverlays again, which
-  // restores from the immutable snapshot taken at render time.
+  // response), then apply markers inside the already-rendered DOCX DOM.
+  // This preserves page geometry, paragraph formatting, tables, fonts,
+  // and docx-preview's scroll behavior instead of replacing the pane
+  // with a plain-text diff.
   const toggleCompareMode = useCallback(() => {
     const leftPane = leftPaneRef.current;
     const rightPane = rightPaneRef.current;
@@ -931,24 +1211,25 @@ export function SplitWorkspace({
     const container = rightPane.getContainer();
 
     if (!compareMode) {
-      // Entering compare mode: build diff HTML and swap in-place.
+      // Entering compare mode: restore the clean DOCX render first,
+      // then layer restoration highlights and diff markers on top.
       const oldText = leftPane.getPlainText();
       const newText = rightPane.getPlainText();
-      const diffInner = diffWordsHtml(oldText, newText);
-      container.innerHTML =
-        `<div class="cleargate-compare" style="white-space: pre-wrap; ` +
-        `font-family: inherit; padding: 1rem; line-height: 1.5;">` +
-        diffInner +
-        `</div>`;
+      rightPane.rerender([], { mode: 'highlight' });
+      applyRestorationOverlays(rightPane);
+      container.classList.add('cleargate-compare');
+      const markerCount = applyFormattedCompareDiff(rightPane, oldText, newText);
       setCompareMode(true);
       // eslint-disable-next-line no-console
       console.info('[Cleargate] compare mode ON', {
         oldChars: oldText.length,
         newChars: newText.length,
+        markers: markerCount,
       });
     } else {
       // Leaving compare mode: restore the deanonymized preview by
       // replaying the highlight overlays on top of the clean snapshot.
+      container.classList.remove('cleargate-compare');
       rightPane.rerender([], { mode: 'highlight' });
       applyRestorationOverlays(rightPane);
       setCompareMode(false);
@@ -980,28 +1261,16 @@ export function SplitWorkspace({
     <div className="cleargate-workspace">
       <div className="cleargate-workspace__subheader">
         <div className="cleargate-workspace__doc-title">
-          <span className="cleargate-workspace__doc-icon" aria-hidden>
-            ¶
-          </span>
           <span className="cleargate-workspace__doc-name" title={documentName}>
             {documentName}
           </span>
-          <button
-            type="button"
-            className="cleargate-workspace__scale-indicator"
-            onClick={resetScale}
-            title={t('workspace.resetZoom')}
-            aria-label={`${t('workspace.zoomLevel')} ${Math.round(docScale * 100)}%`}
-          >
-            {Math.round(docScale * 100)}%
-          </button>
         </div>
         <div className="cleargate-workspace__actions">
           <button
             type="button"
             className="cleargate-workspace__export"
             onClick={handleExport}
-            disabled={exportBusy || !bothReady}
+            disabled={exportBusy || !bothReady || entities.length === 0}
             title={
               exportError ??
               (exportBusy
@@ -1013,6 +1282,52 @@ export function SplitWorkspace({
               ? t('workspace.exportDocxBusy')
               : t('workspace.exportDocx')}
           </button>
+          {!responseImported && (
+            deepScanBusy ? (
+              <div
+                className="cleargate-workspace__deep-progress"
+                role="progressbar"
+                aria-label={t('workspace.deepScanBusy')}
+                aria-valuenow={deepScanProgress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <span className="cleargate-workspace__deep-progress-label">
+                  {t('workspace.deepScanBusy')}
+                </span>
+                <span className="cleargate-workspace__deep-progress-track">
+                  <span
+                    className="cleargate-workspace__deep-progress-fill"
+                    style={{ width: `${deepScanProgress}%` }}
+                  />
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="cleargate-workspace__deep-scan"
+                onClick={runDeepScan}
+                disabled={
+                  !bothReady ||
+                  entities.length === 0 ||
+                  status === 'detecting'
+                }
+                title={t('workspace.deepScanHint')}
+              >
+                {t('workspace.deepScan')}
+              </button>
+            )
+          )}
+          {deepScanError && !deepScanBusy && (
+            <span className="cleargate-workspace__action-error" role="status">
+              {t('workspace.deepScanError')}
+            </span>
+          )}
+          {deepScanSummaryLabel && !deepScanBusy && !deepScanError && (
+            <span className="cleargate-workspace__deep-summary" role="status">
+              {deepScanSummaryLabel}
+            </span>
+          )}
           {/* Phase 1 round-trip: import response */}
           <button
             type="button"
@@ -1112,7 +1427,64 @@ export function SplitWorkspace({
           className="cleargate-workspace__pane"
           urlOverride={rightPaneUrl}
         />
+        {!responseImported && (
+          <div
+            className={`cleargate-workspace__anonymize-panel ${
+              status === 'detecting' ? 'is-detecting' : ''
+            } ${entities.length > 0 ? 'is-hidden' : ''}`}
+          >
+            {status === 'detecting' ? (
+              <div className="cleargate-workspace__progress-card" role="status">
+                <div className="cleargate-workspace__progress-title">
+                  {t('workspace.anonymizing')}
+                </div>
+                <div
+                  className="cleargate-workspace__progress-track"
+                  aria-label={t('workspace.progressLabel')}
+                  aria-valuenow={progressValue}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  role="progressbar"
+                >
+                  <div
+                    className="cleargate-workspace__progress-fill"
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+                <div className="cleargate-workspace__progress-note">
+                  {t('workspace.progressNote')}
+                </div>
+              </div>
+            ) : (
+              <div className="cleargate-workspace__start-card">
+                <button
+                  type="button"
+                  className="cleargate-workspace__start-button"
+                  onClick={runAnonymization}
+                  disabled={!bothReady}
+                >
+                  {t('workspace.startAnonymize')}
+                </button>
+                {error && (
+                  <div className="cleargate-workspace__start-error">{error}</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      <button
+        type="button"
+        className={`cleargate-workspace__zoom-toast ${
+          showZoomPill ? 'is-visible' : ''
+        }`}
+        onClick={resetScale}
+        title={t('workspace.resetZoom')}
+        aria-label={`${t('workspace.zoomLevel')} ${Math.round(docScale * 100)}%`}
+      >
+        {Math.round(docScale * 100)}%
+      </button>
 
       {!responseImported && (
         <EntityLegend

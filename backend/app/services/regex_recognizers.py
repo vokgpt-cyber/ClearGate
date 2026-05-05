@@ -18,7 +18,12 @@ from __future__ import annotations
 
 import re
 
-from presidio_analyzer import Pattern, PatternRecognizer
+from presidio_analyzer import (
+    EntityRecognizer,
+    Pattern,
+    PatternRecognizer,
+    RecognizerResult,
+)
 
 from app.services.checksum_validators import (
     validate_inn_10,
@@ -27,6 +32,85 @@ from app.services.checksum_validators import (
     validate_ogrnip,
     validate_snils,
 )
+
+
+_REGEX_FLAGS = re.IGNORECASE | re.UNICODE | re.MULTILINE
+
+
+def _trim_span(text: str, start: int, end: int) -> tuple[int, int]:
+    """Trim separators which are useful in regexes but unsafe to redact."""
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1] in " \t\r\n,;:":
+        end -= 1
+    return start, end
+
+
+class GroupRegexRecognizer(EntityRecognizer):
+    """Regex recognizer which can return a named capture group as the entity.
+
+    Presidio's PatternRecognizer returns the full pattern span. That is fine
+    for identifiers, but legal documents often need "label: value" patterns
+    where only the value should become the placeholder.
+    """
+
+    PATTERNS: list[tuple[re.Pattern[str], float, str]] = []
+
+    def __init__(
+        self,
+        supported_entity: str,
+        name: str,
+        patterns: list[tuple[re.Pattern[str], float, str]] | None = None,
+        supported_language: str = "ru",
+    ) -> None:
+        super().__init__(
+            supported_entities=[supported_entity],
+            name=name,
+            supported_language=supported_language,
+        )
+        self.supported_entity = supported_entity
+        self._patterns = patterns or self.PATTERNS
+
+    def analyze(
+        self,
+        text: str,
+        entities: list[str],
+        nlp_artifacts: object | None = None,
+        regex_flags: int | None = None,
+    ) -> list[RecognizerResult]:
+        if self.supported_entity not in entities:
+            return []
+
+        results: list[RecognizerResult] = []
+        for pattern, score, group_name in self._patterns:
+            for match in pattern.finditer(text):
+                try:
+                    start = match.start(group_name)
+                    end = match.end(group_name)
+                except IndexError:
+                    start = match.start()
+                    end = match.end()
+                if start < 0 or end <= start:
+                    continue
+                start, end = _trim_span(text, start, end)
+                if end <= start:
+                    continue
+                results.append(
+                    RecognizerResult(
+                        entity_type=self.supported_entity,
+                        start=start,
+                        end=end,
+                        score=score,
+                        recognition_metadata={"recognizer_name": self.name},
+                    )
+                )
+        deduped: dict[tuple[str, int, int], RecognizerResult] = {}
+        for result in results:
+            key = (result.entity_type, result.start, result.end)
+            existing = deduped.get(key)
+            if existing is None or result.score > existing.score:
+                deduped[key] = result
+        return sorted(deduped.values(), key=lambda r: (r.start, r.end, -r.score))
 
 
 class InnRecognizer(PatternRecognizer):
@@ -499,7 +583,228 @@ class ContractNumberRecognizer(PatternRecognizer):
         )
 
 
-def build_all_recognizers() -> list[PatternRecognizer]:
+class KppRecognizer(GroupRegexRecognizer):
+    """Recognizes Russian KPP (tax registration reason code).
+
+    KPP is not checksum-protected, so we only redact a 9-digit value when
+    it appears next to an explicit "КПП" label.
+    """
+
+    PATTERNS = [
+        (
+            re.compile(r"\bКПП\b\s*(?:[:№N]\s*)?(?P<value>\d{9})(?!\d)", _REGEX_FLAGS),
+            0.95,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="RU_KPP",
+            name="Russian KPP Recognizer",
+            supported_language=supported_language,
+        )
+
+
+class MoneyRuRecognizer(GroupRegexRecognizer):
+    """Recognizes amounts and financial rates in Russian legal texts."""
+
+    _CURRENCY = (
+        r"руб\.|рубл[а-яё]*|руб\b|₽|RUB|RUR|"
+        r"USD|US\$|EUR|€|CNY|CNH|RMB|GBP|£|CHF|JPY|¥|HKD|AED|TRY|KZT|BYN|UAH|"
+        r"доллар[а-яё]*|евро|юан[ьяей]*|фунт[а-яё]*|иен[а-яё]*|тенге"
+    )
+
+    _FINANCIAL_CONTEXT = re.compile(
+        (
+            r"\b(?:сумм[ауы]|размер[еа]?|цена|стоимость|вознаграждение|штраф|"
+            r"неустойк[аиу]|пен[яи]|комисси[яи]|ставк[аи]|процент[аыов]?|"
+            r"задолженность|оплат[ауы]|выплат[аые]|выручк[аи])\b"
+        ),
+        _REGEX_FLAGS,
+    )
+
+    PATTERNS = [
+        (
+            re.compile(
+                (
+                    r"(?P<value>(?<!\w)(?:\d{1,3}(?:[ \u00A0]\d{3})+|\d+)"
+                    r"(?:[,.]\d{1,2})?"
+                    r"(?:\s*\([^\)\n]{3,160}\))?"
+                    rf"\s*(?:{_CURRENCY})"
+                    r"(?:\s*\d{1,2}\s*(?:коп\.|копеек|копейки|копейка))?)"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.92,
+            "value",
+        ),
+        (
+            re.compile(
+                r"(?P<value>(?<!\d)\d{1,3}(?:[,.]\d{1,2})?\s*%\s*(?:\([^\)\n]{3,100}\))?)",
+                _REGEX_FLAGS,
+            ),
+            0.78,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="MON",
+            name="Russian Money Recognizer",
+            supported_language=supported_language,
+        )
+
+    def analyze(
+        self,
+        text: str,
+        entities: list[str],
+        nlp_artifacts: object | None = None,
+        regex_flags: int | None = None,
+    ) -> list[RecognizerResult]:
+        results = super().analyze(text, entities, nlp_artifacts, regex_flags)
+        filtered: list[RecognizerResult] = []
+        for result in results:
+            value = text[result.start : result.end]
+            if "%" in value:
+                window = text[max(0, result.start - 80) : min(len(text), result.end + 80)]
+                if not self._FINANCIAL_CONTEXT.search(window):
+                    continue
+            filtered.append(result)
+        return filtered
+
+
+class AddressRuRecognizer(GroupRegexRecognizer):
+    """Recognizes Russian postal/legal address blocks."""
+
+    PATTERNS = [
+        (
+            re.compile(
+                (
+                    r"\b(?:(?:юридический\s+адрес|почтовый\s+адрес|"
+                    r"фактический\s+адрес|место\s+нахождения)\s*:?\s*|адрес\s*:\s*)"
+                    r"(?P<value>(?:\d{6},\s*)?[^;\n()]{10,220}?)"
+                    r"(?=,\s*(?:именуем|далее|в лице)|\)|;|\n|$)"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.93,
+            "value",
+        ),
+        (
+            re.compile(
+                (
+                    r"(?P<value>(?:\d{6},\s*)?(?:[^,\n;():]{2,70},\s*){0,4}"
+                    r"(?:ул\.|улица|пр-т|проспект|пер\.|переулок|шоссе|наб\.|"
+                    r"площадь|пл\.)\s*[^,\n;()]{2,90},\s*"
+                    r"(?:д\.|дом)\s*[^,\n;()]{1,30}"
+                    r"(?:,\s*(?:стр\.|строение|корп\.|корпус|оф\.|офис|пом\.|"
+                    r"помещение|кв\.|квартира)\s*[^,\n;()]{1,30})*)"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.9,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="ADDR",
+            name="Russian Address Recognizer",
+            supported_language=supported_language,
+        )
+
+
+class OrganizationRuRecognizer(GroupRegexRecognizer):
+    """Recognizes common Russian legal-entity and sole-proprietor names."""
+
+    PATTERNS = [
+        (
+            re.compile(
+                (
+                    r"(?P<value>\b(?:Общество\s+с\s+ограниченной\s+ответственностью|"
+                    r"Акционерное\s+общество|Публичное\s+акционерное\s+общество|"
+                    r"Закрытое\s+акционерное\s+общество)\s+"
+                    r"(?:[«\"][^»\"\n]{2,120}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,120}))"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.94,
+            "value",
+        ),
+        (
+            re.compile(
+                (
+                    r"(?P<value>\b(?:ООО|ОАО|АО|ПАО|ЗАО)\s+"
+                    r"(?:[«\"][^»\"\n]{2,120}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,80}))"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.93,
+            "value",
+        ),
+        (
+            re.compile(
+                (
+                    r"(?P<value>\b(?:ИП|Индивидуальный\s+предприниматель)\s+"
+                    r"[А-ЯЁ][а-яё]+(?:\s+(?:[А-ЯЁ]\.\s*){1,2}|(?:\s+[А-ЯЁ][а-яё]+){1,2}))"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.92,
+            "value",
+        ),
+        (
+            re.compile(
+                r"(?P<value>\b(?:Банк|банк)\s+[А-ЯЁA-Z][^,\n;]{2,80}?\s*\((?:ПАО|АО|ООО)\))",
+                _REGEX_FLAGS,
+            ),
+            0.88,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="ORG",
+            name="Russian Organization Recognizer",
+            supported_language=supported_language,
+        )
+
+
+class EnglishLegalEntityRecognizer(GroupRegexRecognizer):
+    """Recognizes English legal-entity names in mixed Russian contracts."""
+
+    PATTERNS = [
+        (
+            re.compile(
+                (
+                    r"(?P<value>\b"
+                    r"(?:[A-Z][A-Za-z0-9&'’.\-]*(?:\s+[A-Z][A-Za-z0-9&'’.\-]*){1,8})"
+                    r"\s+(?:Co\.?|Company|Ltd\.?|Limited|LLC|L\.L\.C\.|Inc\.?|"
+                    r"Corporation|Corp\.?|PLC|GmbH|AG|S\.A\.|S\.A\.S\.|B\.V\.|"
+                    r"N\.V\.|Pte\.?\s+Ltd\.?)"
+                    r"(?:,\s*(?:Ltd\.?|Limited|LLC|Inc\.?))?"
+                    r")"
+                ),
+                re.UNICODE | re.MULTILINE,
+            ),
+            0.94,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="ORG",
+            name="English Legal Entity Recognizer",
+            supported_language=supported_language,
+        )
+
+
+def build_all_recognizers() -> list[EntityRecognizer]:
     """Create instances of all Russian PII recognizers.
 
     Returns:
@@ -512,11 +817,16 @@ def build_all_recognizers() -> list[PatternRecognizer]:
         PassportRfRecognizer(),
         BankAccountRecognizer(),
         BikRecognizer(),
+        KppRecognizer(),
         PhoneRuRecognizer(),
         EmailRuRecognizer(),
         DateRuRecognizer(),
         CaseNumberRecognizer(),
         ContractNumberRecognizer(),
+        MoneyRuRecognizer(),
+        AddressRuRecognizer(),
+        OrganizationRuRecognizer(),
+        EnglishLegalEntityRecognizer(),
     ]
 
 
