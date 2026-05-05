@@ -1,0 +1,25 @@
+{
+  "id": "001_distribution_cny",
+  "text_file": "001_distribution_cny.txt",
+  "description": "Distribution agreement with English company, CNY amount and role-chain labels.",
+  "expected_entities": [
+    {"text": "№ Д-15-2024", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "28.05.2024", "entity_type": "RU_DATE"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "Tianjin Forward Polymers Co.", "entity_type": "ORG"},
+    {"text": "4 500 000 (Four million five hundred thousand) CNY", "entity_type": "MON"}
+  ],
+  "forbidden_entities": [
+    {"text": "ДИСТРИБУЦИЯ", "entity_type": "ORG"},
+    {"text": "CNY", "entity_type": "ORG"},
+    {"text": "Поставщик/Услугодатель/Подрядчик", "entity_type": "POSITION"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 4},
+    "MON": {"min": 1},
+    "RU_CONTRACT_NUMBER": {"min": 1, "max": 1}
+  },
+  "llm_false_positives": [
+    {"text": "4 500 000", "entity_type": "RU_CONTRACT_NUMBER"}
+  ]
+}

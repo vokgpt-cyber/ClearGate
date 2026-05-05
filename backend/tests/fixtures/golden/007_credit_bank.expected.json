@@ -1,0 +1,25 @@
+{
+  "id": "007_credit_bank",
+  "text_file": "007_credit_bank.txt",
+  "description": "Credit agreement with bank, loan amount, rate and bank details.",
+  "expected_entities": [
+    {"text": "№ К-117-2025", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "21.01.2025", "entity_type": "RU_DATE"},
+    {"text": "АО «Северо-Балтийский Банк»", "entity_type": "ORG"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "200 000 000 (Двести миллионов) RUB", "entity_type": "MON"},
+    {"text": "12% (двенадцать процентов)", "entity_type": "MON"},
+    {"text": "044525225", "entity_type": "RU_BIK"},
+    {"text": "30101810400000000225", "entity_type": "RU_BANK_ACCOUNT"}
+  ],
+  "forbidden_entities": [
+    {"text": "КРЕДИТ", "entity_type": "ORG"},
+    {"text": "Банк", "entity_type": "ORG"},
+    {"text": "Заёмщику", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 2},
+    "MON": {"min": 2},
+    "RU_BANK_ACCOUNT": {"min": 1}
+  }
+}

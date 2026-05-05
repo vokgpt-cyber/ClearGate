@@ -1,0 +1,23 @@
+{
+  "id": "006_reconciliation_act",
+  "text_file": "006_reconciliation_act.txt",
+  "description": "Reconciliation act with debt amount and bank account details.",
+  "expected_entities": [
+    {"text": "№ АС-77/2026", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "31.03.2026", "entity_type": "RU_DATE"},
+    {"text": "ООО «ТехноЛогика»", "entity_type": "ORG"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "1 245 300 (Один миллион двести сорок пять тысяч триста) RUB", "entity_type": "MON"},
+    {"text": "40817810099910004312", "entity_type": "RU_BANK_ACCOUNT"},
+    {"text": "044525225", "entity_type": "RU_BIK"}
+  ],
+  "forbidden_entities": [
+    {"text": "АКТ СВЕРКИ", "entity_type": "ORG"},
+    {"text": "RUB", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 3},
+    "MON": {"min": 1},
+    "RU_BANK_ACCOUNT": {"min": 1}
+  }
+}

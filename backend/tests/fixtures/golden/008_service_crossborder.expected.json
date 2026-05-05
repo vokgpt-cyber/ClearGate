@@ -1,0 +1,25 @@
+{
+  "id": "008_service_crossborder",
+  "text_file": "008_service_crossborder.txt",
+  "description": "Cross-border services agreement with English LLC, USD amount, email and phone.",
+  "expected_entities": [
+    {"text": "№ SVC-2026/04", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "04.04.2026", "entity_type": "RU_DATE"},
+    {"text": "ООО «Правовой Контур»", "entity_type": "ORG"},
+    {"text": "Meridian Advisory LLC", "entity_type": "ORG"},
+    {"text": "75 000 (Seventy five thousand) USD", "entity_type": "MON"},
+    {"text": "billing@meridian.example", "entity_type": "EMAIL_ADDRESS"},
+    {"text": "+7 495 555-12-34", "entity_type": "RU_PHONE"}
+  ],
+  "forbidden_entities": [
+    {"text": "УСЛУГИ", "entity_type": "ORG"},
+    {"text": "USD", "entity_type": "ORG"},
+    {"text": "Исполнитель", "entity_type": "PER"},
+    {"text": "Заказчику", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 2},
+    "MON": {"min": 1},
+    "EMAIL_ADDRESS": {"min": 1}
+  }
+}

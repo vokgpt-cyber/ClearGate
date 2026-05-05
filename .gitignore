@@ -22,6 +22,10 @@ client_data/
 real_documents/
 *.real.docx
 *.real.pdf
+qa/private_corpus/
+backend/tests/fixtures/private_corpus/
+*.private.docx
+*.private.pdf
 mapping_tables/
 *.mapping
 *.session

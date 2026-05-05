@@ -1,0 +1,25 @@
+{
+  "id": "003_lease_address_kpp",
+  "text_file": "003_lease_address_kpp.txt",
+  "description": "Lease with address, INN, KPP, OGRN and RUB amount.",
+  "expected_entities": [
+    {"text": "№ АН-04-2024", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "01.02.2024", "entity_type": "RU_DATE"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "ООО «Бизнес-Парк Сапфир»", "entity_type": "ORG"},
+    {"text": "7707083893", "entity_type": "RU_INN"},
+    {"text": "770701001", "entity_type": "RU_KPP"},
+    {"text": "1027700132195", "entity_type": "RU_OGRN"},
+    {"text": "101000, г. Москва, ул. Мясницкая, д. 24, стр. 1, оф. 305", "entity_type": "ADDR"},
+    {"text": "850 000 (Восемьсот пятьдесят тысяч) RUB", "entity_type": "MON"}
+  ],
+  "forbidden_entities": [
+    {"text": "АРЕНДА", "entity_type": "ORG"},
+    {"text": "RUB", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 2},
+    "ADDR": {"min": 1},
+    "MON": {"min": 1}
+  }
+}

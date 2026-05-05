@@ -1,0 +1,21 @@
+{
+  "id": "005_nda_roles",
+  "text_file": "005_nda_roles.txt",
+  "description": "NDA with confidentiality role labels and English legal entity.",
+  "expected_entities": [
+    {"text": "№ NDA-01/2026", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "12.01.2026", "entity_type": "RU_DATE"},
+    {"text": "ООО «Вектор-Дата»", "entity_type": "ORG"},
+    {"text": "Global Trade Solutions Limited", "entity_type": "ORG"},
+    {"text": "190000, г. Санкт-Петербург, Невский проспект, д. 10, оф. 15", "entity_type": "ADDR"}
+  ],
+  "forbidden_entities": [
+    {"text": "СОГЛАШЕНИЕ О КОНФИДЕНЦИАЛЬНОСТИ", "entity_type": "ORG"},
+    {"text": "Раскрывающая сторона", "entity_type": "ORG"},
+    {"text": "Получающей стороне", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 2},
+    "ADDR": {"min": 1}
+  }
+}

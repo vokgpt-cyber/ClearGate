@@ -1,0 +1,25 @@
+{
+  "id": "002_loan_roles",
+  "text_file": "002_loan_roles.txt",
+  "description": "Loan title and template role chain must not be anonymized.",
+  "expected_entities": [
+    {"text": "№ 3-04-2024", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "05.06.2024", "entity_type": "RU_DATE"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "ООО «Альфа-Капитал-Инвест»", "entity_type": "ORG"},
+    {"text": "50 000 000 (Пятьдесят миллионов) RUB", "entity_type": "MON"}
+  ],
+  "forbidden_entities": [
+    {"text": "ЗАЁМ", "entity_type": "ORG"},
+    {"text": "RUB", "entity_type": "ORG"},
+    {"text": "Поставщик/Услугодатель/Подрядчик", "entity_type": "POSITION"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 4},
+    "MON": {"min": 1},
+    "RU_CONTRACT_NUMBER": {"min": 1, "max": 1}
+  },
+  "llm_false_positives": [
+    {"text": "50 000 000", "entity_type": "RU_CONTRACT_NUMBER"}
+  ]
+}

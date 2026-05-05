@@ -182,6 +182,7 @@ markers = [
     "slow: slow tests (>1s)",
     "ner: NER pipeline tests",
     "llm: tests requiring LLM API calls",
+    "golden: synthetic golden-corpus regression tests",
 ]
 
 [tool.coverage.run]
