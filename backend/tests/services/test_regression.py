@@ -14,6 +14,11 @@ import pytest
 from app.models.entities import DetectedEntity
 from app.routers.anonymize import _new_deep_scan_suggestions
 from app.services.ner_pipeline import NERPipeline
+from app.services.regex_recognizers import (
+    AddressRuRecognizer,
+    MoneyRuRecognizer,
+    OrganizationRuRecognizer,
+)
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures"
 
@@ -117,6 +122,28 @@ class TestStopwordFiltering:
 
         assert pipeline.post_process(text, entities) == []
 
+    def test_pdf_delayed_title_not_org_after_post_process(self, pipeline):
+        prefix = "\n" * 30 + (" " * 420)
+        title = "\u0414\u0418\u0421\u0422\u0420\u0418\u0411\u0423\u0426\u0418\u042f"
+        text = (
+            f"{prefix}{title}\n"
+            "\u2116 \u0414-15-2024\n"
+            "\u041c\u0415\u0416\u0414\u0423: \u0410\u041e \u00ab\u041d\u043e\u0440\u0434-\u0425\u0438\u043c\u00bb / Tianjin Forward Polymers Co."
+        )
+        start = text.index(title)
+        entities = [
+            DetectedEntity(
+                text=title,
+                entity_type="ORG",
+                start=start,
+                end=start + len(title),
+                score=0.92,
+                source_layer="llm-scan",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
     def test_slash_role_chain_not_position_after_post_process(self, pipeline):
         role = (
             "\u041f\u043e\u0441\u0442\u0430\u0432\u0449\u0438\u043a/"
@@ -172,11 +199,16 @@ class TestStopwordFiltering:
 
         entities = await pipeline.analyze(text)
         org_texts = {e.text.lower() for e in entities if e.entity_type == "ORG"}
+        english_hits = [
+            e for e in entities
+            if e.entity_type == "ORG" and e.text.lower() == "tianjin forward polymers co."
+        ]
         money_texts = {e.text for e in entities if e.entity_type == "MON"}
 
         assert "дистрибуция" not in org_texts
         assert "cny" not in org_texts
         assert "tianjin forward polymers co." in org_texts
+        assert len(english_hits) >= 2
         assert any("4 500 000" in value and "CNY" in value for value in money_texts)
 
     def test_money_not_replaced_by_llm_contract_number(self, pipeline):
@@ -207,6 +239,68 @@ class TestStopwordFiltering:
         processed = pipeline.post_process(text, entities)
         assert [e.entity_type for e in processed] == ["MON"]
         assert processed[0].text == money
+
+    def test_pdf_lease_false_positives_after_post_process(self, pipeline):
+        text = (
+            "Аренда складского помещения площадью 1850 кв.м.\n"
+            "Без НДС 18%.\n"
+            "Задержка более 10 дней: пеня 0,1% в день.\n"
+            "Право Арендодателя на расторжение.\n"
+            "РЕКВИЗИТЫ сторон\n"
+            "Месячная стоимость: (Двести тысяч (200 000) рублей).\n"
+            "Валюта CNY."
+        )
+        candidates = [
+            ("кв.м.", "LOC"),
+            ("18%", "MON"),
+            ("пеня", "MON"),
+            ("Арендодателя", "LOC"),
+            ("РЕКВИЗИТЫ", "ORG"),
+            ("200 000", "RU_BIK"),
+            ("CNY", "ORG"),
+        ]
+        entities = [
+            DetectedEntity(
+                text=value,
+                entity_type=entity_type,
+                start=text.index(value),
+                end=text.index(value) + len(value),
+                score=0.9,
+                source_layer="llm-scan",
+            )
+            for value, entity_type in candidates
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
+    def test_pdf_lease_recognizers_keep_real_values_and_bounds(self):
+        text = (
+            "Заключен между ООО «Промышленная\n"
+            "недвижимость СПб» и АО «Норд-Хим».\n"
+            "Адрес: СПб, ул. Литераторов, д. 20 / Банк: ПАО ВТБ\n"
+            "Месячная стоимость: (Двести тысяч (200 000) рублей).\n"
+            "Без НДС 18%. Пеня 0,1% в день."
+        )
+
+        orgs = [
+            text[r.start:r.end].replace("\n", " ")
+            for r in OrganizationRuRecognizer().analyze(text, ["ORG"])
+        ]
+        addresses = [
+            text[r.start:r.end]
+            for r in AddressRuRecognizer().analyze(text, ["ADDR"])
+        ]
+        money = [
+            text[r.start:r.end]
+            for r in MoneyRuRecognizer().analyze(text, ["MON"])
+        ]
+
+        assert "ООО «Промышленная недвижимость СПб»" in orgs
+        assert any(value == "СПб, ул. Литераторов, д. 20" for value in addresses)
+        assert all("Банк" not in value for value in addresses)
+        assert "(Двести тысяч (200 000) рублей)" in money
+        assert "18%" not in money
+        assert "0,1%" not in money
 
 
 class TestPerMerging:

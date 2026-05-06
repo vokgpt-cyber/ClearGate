@@ -9,11 +9,21 @@ document shape.
 from __future__ import annotations
 
 import io
+import re
 
 import structlog
 from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
+
+_LEGAL_FORM_LINEBREAK = re.compile(
+    r"\b(ООО|ОАО|АО|ПАО|ЗАО)\s+([«\"][^»\"\n]{2,80})\n\s*([^»\"]{2,100}[»\"])",
+    re.IGNORECASE,
+)
+_REQUISITE_LABEL_INLINE = re.compile(
+    r"\s+((?:Банк|ИНН|ОГРН|КПП|БИК|Адрес|Арендодатель|Арендатор)\s*:)",
+    re.IGNORECASE,
+)
 
 
 class ParseResult(BaseModel):
@@ -90,7 +100,7 @@ class DocumentProcessor:
                     ocr_used = True
                 else:
                     warnings.append(f"Page {idx} has no extractable text; OCR was unavailable or empty.")
-            pages.append(text.rstrip())
+            pages.append(self._normalize_pdf_text(text).rstrip())
 
         text = "\n".join(pages)
         page_count = len(pages)
@@ -128,6 +138,26 @@ class DocumentProcessor:
                 exc_info=True,
             )
             return ""
+
+    def _normalize_pdf_text(self, text: str) -> str:
+        """Clean common PDF extraction artifacts before NER.
+
+        Text PDFs often split a quoted company name across visual lines or
+        keep requisites such as "Адрес ... Банк ..." on one extracted line.
+        The DOCX path does not have those artifacts, so normalize only here.
+        """
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+        previous = None
+        while previous != normalized:
+            previous = normalized
+            normalized = _LEGAL_FORM_LINEBREAK.sub(
+                lambda m: f"{m.group(1)} {m.group(2)} {m.group(3).strip()}",
+                normalized,
+            )
+        normalized = _REQUISITE_LABEL_INLINE.sub(r"\n\1", normalized)
+        normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+        normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+        return normalized
 
     def _text_to_docx(self, text: str) -> bytes:
         """Create a simple DOCX wrapper for plain text."""

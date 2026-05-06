@@ -90,11 +90,17 @@ class TestSessionStoreCRUD:
         kwargs["response_docx_bytes"] = b"response-content"
         kwargs["response_docx_filename"] = "response.docx"
         kwargs["deanonymized_docx_bytes"] = b"deanonymized-content"
+        kwargs["deanonymize_result_json"] = '{"total_replacements": 2}'
+        kwargs["manual_resolutions_json"] = '[{"placeholder":"[X]","value":"Y"}]'
+        kwargs["workflow_stage"] = "deanonymized"
         store.save_session(**kwargs)
         data = store.load_session("test-session-1")
         assert data["response_docx_bytes"] == b"response-content"
         assert data["response_docx_filename"] == "response.docx"
         assert data["deanonymized_docx_bytes"] == b"deanonymized-content"
+        assert data["deanonymize_result_json"] == '{"total_replacements": 2}'
+        assert data["manual_resolutions_json"] == '[{"placeholder":"[X]","value":"Y"}]'
+        assert data["workflow_stage"] == "deanonymized"
 
 
 class TestSessionStoreExpiry:

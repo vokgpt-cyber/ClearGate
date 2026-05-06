@@ -15,7 +15,7 @@ import { useLocale } from '@/hooks/useLocale';
 import { useAuth } from '@/hooks/useAuth';
 import { healthCheck } from '@/lib/api';
 
-const FALLBACK_VERSION = 'v0.9.0';
+const FALLBACK_VERSION = 'v0.9.2';
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();

@@ -336,9 +336,9 @@ class TestCaseNumberRecognizer:
 
 
 class TestBuildAllRecognizers:
-    def test_returns_15_recognizers(self):
+    def test_returns_16_recognizers(self):
         recognizers = build_all_recognizers()
-        assert len(recognizers) == 15
+        assert len(recognizers) == 16
 
     def test_all_have_supported_language_ru(self):
         for r in build_all_recognizers():
@@ -368,4 +368,4 @@ class TestBuildAllRecognizers:
     def test_module_level_all_recognizers(self):
         from app.services.regex_recognizers import ALL_RECOGNIZERS
 
-        assert len(ALL_RECOGNIZERS) == 15
+        assert len(ALL_RECOGNIZERS) == 16

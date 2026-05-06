@@ -51,3 +51,16 @@ def test_txt_parse_builds_docx_preview() -> None:
     doc = Document(io.BytesIO(result.render_docx_bytes))
     preview_text = "\n".join(p.text for p in doc.paragraphs)
     assert "INN 7801456328" in preview_text
+
+
+def test_pdf_text_normalizer_repairs_legal_entity_line_breaks() -> None:
+    raw = (
+        "Заключен между ООО «Промышленная\n"
+        "недвижимость СПб» и АО «Норд-Хим».\n"
+        "Адрес: СПб, ул. Литераторов, д. 20 Банк: ПАО ВТБ\n"
+    )
+
+    normalized = DocumentProcessor()._normalize_pdf_text(raw)
+
+    assert "ООО «Промышленная недвижимость СПб»" in normalized
+    assert "д. 20\nБанк: ПАО ВТБ" in normalized

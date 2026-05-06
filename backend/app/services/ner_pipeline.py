@@ -68,6 +68,25 @@ _FINANCIAL_CUE = re.compile(
     re.IGNORECASE,
 )
 _MONEY_LIKE_NUMBER = re.compile(r"^\d{1,3}(?:[ \u00A0]\d{3})+(?:[,.]\d{1,2})?$")
+_BIK_VALUE = re.compile(r"^04\d{7}$")
+_BANK_ACCOUNT_VALUE = re.compile(r"^\d{20}$")
+_KPP_VALUE = re.compile(r"^\d{9}$")
+_INN_VALUE = re.compile(r"^(?:\d{10}|\d{12})$")
+_OGRN_VALUE = re.compile(r"^(?:\d{13}|\d{15})$")
+_MONEY_DIGIT = re.compile(r"\d")
+_MONEY_CURRENCY = re.compile(
+    r"\b(?:руб\.?|рубл[а-яё]*|RUB|RUR|USD|EUR|CNY|CNH|RMB|GBP|CHF|JPY|HKD|AED|TRY|KZT|BYN|UAH|"
+    r"доллар[а-яё]*|евро|юан[ьяей]*|тенге)\b|[₽€$£¥]",
+    re.IGNORECASE,
+)
+_NON_SECRET_PERCENT_CUE = re.compile(
+    r"\b(?:НДС|VAT|пен[яи]|неустойк[аиу]|штраф)\b",
+    re.IGNORECASE,
+)
+_CURRENCY_CODE_VALUE = re.compile(
+    r"^(?:RUB|RUR|USD|EUR|CNY|CNH|RMB|GBP|CHF|JPY|HKD|AED|TRY|KZT|BYN|UAH)$",
+    re.IGNORECASE,
+)
 _DOCUMENT_TITLE_WORDS = {
     "аренда",
     "агентский",
@@ -264,6 +283,7 @@ class NERPipeline:
         entities = self._filter_stopwords(entities)
         entities = self._filter_document_title_false_positives(text, entities)
         entities = self._filter_structured_false_positives(text, entities)
+        entities = self._filter_invalid_structured_entities(text, entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)
         entities.sort(key=lambda e: (e.start, -e.score))
@@ -316,7 +336,7 @@ class NERPipeline:
         """
         filtered: list[DetectedEntity] = []
         for entity in entities:
-            if entity.entity_type == "ORG" and self._is_document_title(text, entity):
+            if entity.entity_type in {"ORG", "LOC"} and self._is_document_title(text, entity):
                 logger.debug(
                     "ner_pipeline.document_title_filtered",
                     text=entity.text,
@@ -326,8 +346,55 @@ class NERPipeline:
             filtered.append(entity)
         return filtered
 
+    def _filter_invalid_structured_entities(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Drop LLM/NER guesses that contradict strict structured formats."""
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            value = entity.text.strip()
+            digits = re.sub(r"\D", "", value)
+            if entity.entity_type == "RU_BIK" and not _BIK_VALUE.fullmatch(digits):
+                logger.debug("ner_pipeline.invalid_bik_filtered", text=entity.text)
+                continue
+            if (
+                entity.entity_type == "RU_BANK_ACCOUNT"
+                and not _BANK_ACCOUNT_VALUE.fullmatch(digits)
+            ):
+                logger.debug("ner_pipeline.invalid_bank_account_filtered", text=entity.text)
+                continue
+            if entity.entity_type == "RU_KPP" and not _KPP_VALUE.fullmatch(digits):
+                logger.debug("ner_pipeline.invalid_kpp_filtered", text=entity.text)
+                continue
+            if entity.entity_type == "RU_INN" and not _INN_VALUE.fullmatch(digits):
+                logger.debug("ner_pipeline.invalid_inn_filtered", text=entity.text)
+                continue
+            if entity.entity_type == "RU_OGRN" and not _OGRN_VALUE.fullmatch(digits):
+                logger.debug("ner_pipeline.invalid_ogrn_filtered", text=entity.text)
+                continue
+            if entity.entity_type == "MON":
+                if not _MONEY_DIGIT.search(value):
+                    logger.debug("ner_pipeline.money_without_digits_filtered", text=entity.text)
+                    continue
+                window = text[max(0, entity.start - 80) : min(len(text), entity.end + 80)]
+                if "%" in value and _NON_SECRET_PERCENT_CUE.search(window):
+                    logger.debug("ner_pipeline.non_secret_percent_filtered", text=entity.text)
+                    continue
+                if "%" not in value and not _MONEY_CURRENCY.search(value):
+                    # Bare numbers can be monetary only with a strong local cue.
+                    if not _FINANCIAL_CUE.search(window):
+                        logger.debug("ner_pipeline.bare_money_without_cue_filtered", text=entity.text)
+                        continue
+            if entity.entity_type in {"ORG", "LOC"} and _CURRENCY_CODE_VALUE.fullmatch(value):
+                logger.debug("ner_pipeline.currency_code_filtered", text=entity.text)
+                continue
+            filtered.append(entity)
+        return filtered
+
     def _is_document_title(self, text: str, entity: DetectedEntity) -> bool:
-        if entity.start > 350:
+        if entity.start > 1200:
             return False
         line_start = text.rfind("\n", 0, entity.start) + 1
         line_end = text.find("\n", entity.end)

@@ -257,6 +257,9 @@ export interface SessionMeta {
   has_document: boolean;
   docx_filename: string | null;
   has_anonymization?: boolean;
+  workflow_stage?: WorkflowStage;
+  has_response?: boolean;
+  has_deanonymized?: boolean;
 }
 
 /**
@@ -365,10 +368,9 @@ export function downloadBlob(blob: Blob, filename: string): void {
 
 /** A placeholder the LLM used that we couldn't resolve automatically. */
 export interface UnresolvedPlaceholder {
-  placeholder: string;
-  label: string;
-  number: number;
+  raw_text: string;
   normalized: string;
+  paragraph_index: number;
 }
 
 /** A single placeholder that was successfully substituted with its real value. */
@@ -385,6 +387,17 @@ export interface DeanonymizeDocxResult {
   restorations: Restoration[];
   total_replacements: number;
   total_unresolved: number;
+}
+
+export type WorkflowStage = 'anonymized' | 'llm_response' | 'deanonymized';
+
+export interface DocumentWorkflowState {
+  stage: WorkflowStage;
+  response_imported: boolean;
+  deanonymized_available: boolean;
+  response_docx_filename: string | null;
+  deanonymize_result: DeanonymizeDocxResult | null;
+  manual_resolutions: Array<{ placeholder: string; value: string }>;
 }
 
 /** Result from importing a response .docx. */
@@ -486,6 +499,31 @@ export async function exportDeanonymizedDocx(
   }
 
   return { blob, filename };
+}
+
+export async function getDocumentWorkflow(
+  sessionId: string,
+): Promise<DocumentWorkflowState | null> {
+  const response = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(sessionId)}/workflow`,
+    { credentials: 'include' },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Workflow state failed (${response.status}): ${errorText}`);
+  }
+  return response.json();
+}
+
+export async function setDocumentWorkflowStage(
+  sessionId: string,
+  stage: WorkflowStage,
+): Promise<DocumentWorkflowState> {
+  return request(`/api/documents/${encodeURIComponent(sessionId)}/workflow-stage`, {
+    method: 'POST',
+    body: JSON.stringify({ stage }),
+  });
 }
 
 

@@ -79,6 +79,9 @@ class Session:
         self.response_docx_bytes: bytes | None = None
         self.response_docx_filename: str | None = None
         self.deanonymized_docx_bytes: bytes | None = None
+        self.deanonymize_result_json: str | None = None
+        self.manual_resolutions_json: str | None = None
+        self.workflow_stage: str = "anonymized"
         self.anonymized_text: str | None = None
         self.detected_entities: list[DetectedEntity] = []
         # v0.4.0 Phase 2: cache chunks + embeddings across /anonymize calls
@@ -220,6 +223,9 @@ class SessionManager:
             session.response_docx_bytes = None
             session.response_docx_filename = None
             session.deanonymized_docx_bytes = None
+            session.deanonymize_result_json = None
+            session.manual_resolutions_json = None
+            session.workflow_stage = "anonymized"
             session.anonymized_text = None
             session.detected_entities.clear()
         if self._store is not None:
@@ -240,7 +246,11 @@ class SessionManager:
             session.source_format = None
             session.source_filename = None
             session.response_docx_bytes = None
+            session.response_docx_filename = None
             session.deanonymized_docx_bytes = None
+            session.deanonymize_result_json = None
+            session.manual_resolutions_json = None
+            session.workflow_stage = "anonymized"
             session.detected_entities.clear()
             self._sessions.pop(session_id, None)
             closed += 1
@@ -277,6 +287,9 @@ class SessionManager:
                     "docx_filename": s.source_filename or s.docx_filename,
                     "source_format": s.source_format,
                     "source_filename": s.source_filename,
+                    "workflow_stage": getattr(s, "workflow_stage", "anonymized"),
+                    "has_response": s.response_docx_bytes is not None,
+                    "has_deanonymized": s.deanonymized_docx_bytes is not None,
                     "has_anonymization": bool(
                         s.anonymized_text and s.detected_entities
                     ),
@@ -300,6 +313,9 @@ class SessionManager:
                 "docx_filename": row.get("source_filename") or row.get("docx_filename"),
                 "source_format": row.get("source_format"),
                 "source_filename": row.get("source_filename"),
+                "workflow_stage": row.get("workflow_stage") or "anonymized",
+                "has_response": bool(row.get("has_response")),
+                "has_deanonymized": bool(row.get("has_deanonymized")),
                 "has_anonymization": bool(
                     row.get("anonymized_text") and row.get("entities_json")
                 ),
@@ -340,6 +356,13 @@ class SessionManager:
                 session, "response_docx_filename", None
             ),
             deanonymized_docx_bytes=session.deanonymized_docx_bytes,
+            deanonymize_result_json=getattr(
+                session, "deanonymize_result_json", None
+            ),
+            manual_resolutions_json=getattr(
+                session, "manual_resolutions_json", None
+            ),
+            workflow_stage=getattr(session, "workflow_stage", "anonymized"),
             anonymized_text=session.anonymized_text,
             entities_json=json.dumps(
                 [e.model_dump() for e in session.detected_entities],
@@ -397,6 +420,9 @@ class SessionManager:
         session.response_docx_bytes = data.get("response_docx_bytes")
         session.response_docx_filename = data.get("response_docx_filename")
         session.deanonymized_docx_bytes = data.get("deanonymized_docx_bytes")
+        session.deanonymize_result_json = data.get("deanonymize_result_json")
+        session.manual_resolutions_json = data.get("manual_resolutions_json")
+        session.workflow_stage = data.get("workflow_stage") or "anonymized"
         session.anonymized_text = data.get("anonymized_text")
         entities_json = data.get("entities_json")
         if entities_json:

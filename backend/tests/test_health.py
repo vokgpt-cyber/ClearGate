@@ -2,6 +2,7 @@
 
 from fastapi.testclient import TestClient
 
+from app.config import settings
 from app.main import app
 
 client = TestClient(app)
@@ -30,12 +31,12 @@ class TestHealthEndpoint:
     def test_health_version_matches_config(self):
         response = client.get("/health")
         data = response.json()
-        assert data["version"] == "0.1.0-alpha"
+        assert data["version"] == settings.version
 
     def test_health_profile_default(self):
         response = client.get("/health")
         data = response.json()
-        assert data["profile"] == "alpha"
+        assert data["profile"] == settings.cleargate_profile
 
 
 class TestReadinessEndpoint:

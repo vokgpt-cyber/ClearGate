@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 # Sprint B.3 bumped this from 1 -> 2 to add the `user_id` column.
 # The schema upgrade is strictly additive (nullable column + index), so
 # we can auto-migrate on startup without a separate migration tool.
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     response_docx_bytes     BLOB,
     response_docx_filename  TEXT,
     deanonymized_docx_bytes BLOB,
+    deanonymize_result_json TEXT,
+    manual_resolutions_json TEXT,
+    workflow_stage TEXT NOT NULL DEFAULT 'anonymized',
     anonymized_text TEXT,
     entities_json   TEXT,
     updated_at      TEXT NOT NULL
@@ -128,6 +131,20 @@ class SessionStore:
                         to_version=4,
                         column=col_name,
                     )
+        if current < 5:
+            for col_name, col_def in (
+                ("deanonymize_result_json", "TEXT"),
+                ("manual_resolutions_json", "TEXT"),
+                ("workflow_stage", "TEXT NOT NULL DEFAULT 'anonymized'"),
+            ):
+                if col_name not in existing_cols:
+                    cur.execute(f"ALTER TABLE sessions ADD COLUMN {col_name} {col_def}")
+                    logger.info(
+                        "session_store.migrated_column",
+                        from_version=current,
+                        to_version=5,
+                        column=col_name,
+                    )
 
         cur.execute(_CREATE_USER_INDEX)
 
@@ -153,6 +170,9 @@ class SessionStore:
         response_docx_bytes: bytes | None = None,
         response_docx_filename: str | None = None,
         deanonymized_docx_bytes: bytes | None = None,
+        deanonymize_result_json: str | None = None,
+        manual_resolutions_json: str | None = None,
+        workflow_stage: str = "anonymized",
         anonymized_text: str | None = None,
         entities_json: str | None = None,
         user_id: str | None = None,
@@ -172,8 +192,9 @@ class SessionStore:
                 enable_llm_layer, spacy_model, source_format, source_filename, registry_blob,
                 docx_bytes, docx_filename,
                 response_docx_bytes, response_docx_filename,
-                deanonymized_docx_bytes, anonymized_text, entities_json, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                deanonymized_docx_bytes, deanonymize_result_json, manual_resolutions_json,
+                workflow_stage, anonymized_text, entities_json, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(session_id) DO UPDATE SET
                 source_format = excluded.source_format,
                 source_filename = excluded.source_filename,
@@ -183,6 +204,9 @@ class SessionStore:
                 response_docx_bytes = excluded.response_docx_bytes,
                 response_docx_filename = excluded.response_docx_filename,
                 deanonymized_docx_bytes = excluded.deanonymized_docx_bytes,
+                deanonymize_result_json = excluded.deanonymize_result_json,
+                manual_resolutions_json = excluded.manual_resolutions_json,
+                workflow_stage = excluded.workflow_stage,
                 anonymized_text = excluded.anonymized_text,
                 entities_json = excluded.entities_json,
                 updated_at = excluded.updated_at
@@ -193,7 +217,9 @@ class SessionStore:
                 spacy_model, source_format, source_filename, registry_blob,
                 docx_bytes, docx_filename,
                 response_docx_bytes, response_docx_filename,
-                deanonymized_docx_bytes, anonymized_text, entities_json, now,
+                deanonymized_docx_bytes, deanonymize_result_json,
+                manual_resolutions_json, workflow_stage,
+                anonymized_text, entities_json, now,
             ),
         )
         self._conn.commit()
@@ -209,6 +235,9 @@ class SessionStore:
                 response_docx_bytes=response_docx_bytes,
                 response_docx_filename=response_docx_filename,
                 deanonymized_docx_bytes=deanonymized_docx_bytes,
+                deanonymize_result_json=deanonymize_result_json,
+                manual_resolutions_json=manual_resolutions_json,
+                workflow_stage=workflow_stage,
                 anonymized_text=anonymized_text,
                 entities_json=entities_json,
             )
@@ -303,7 +332,11 @@ class SessionStore:
             "session_id, user_id, locale, created_at, custom_entities, "
             "enable_llm_layer, spacy_model, docx_filename, "
             "source_format, source_filename, "
-            "response_docx_filename, anonymized_text, entities_json, updated_at"
+            "response_docx_filename, "
+            "response_docx_bytes IS NOT NULL AS has_response, "
+            "deanonymized_docx_bytes IS NOT NULL AS has_deanonymized, "
+            "workflow_stage, "
+            "anonymized_text, entities_json, updated_at"
         )
         if user_id is None:
             cur = self._conn.execute(
@@ -387,6 +420,9 @@ class SessionStore:
         response_docx_bytes: bytes | None,
         response_docx_filename: str | None,
         deanonymized_docx_bytes: bytes | None,
+        deanonymize_result_json: str | None,
+        manual_resolutions_json: str | None,
+        workflow_stage: str,
         anonymized_text: str | None,
         entities_json: str | None,
     ) -> None:
@@ -400,6 +436,7 @@ class SessionStore:
             "source_filename": source_filename,
             "docx_filename": docx_filename,
             "response_docx_filename": response_docx_filename,
+            "workflow_stage": workflow_stage,
             "updated_at": datetime.now(UTC).isoformat(),
         }
         (session_dir / "metadata.json").write_text(
@@ -412,6 +449,16 @@ class SessionStore:
             (session_dir / "llm-response.docx").write_bytes(response_docx_bytes)
         if deanonymized_docx_bytes is not None:
             (session_dir / "deanonymized.docx").write_bytes(deanonymized_docx_bytes)
+        if deanonymize_result_json is not None:
+            (session_dir / "deanonymize-result.json").write_text(
+                deanonymize_result_json,
+                encoding="utf-8",
+            )
+        if manual_resolutions_json is not None:
+            (session_dir / "manual-resolutions.json").write_text(
+                manual_resolutions_json,
+                encoding="utf-8",
+            )
         if anonymized_text is not None:
             (session_dir / "anonymized.txt").write_text(anonymized_text, encoding="utf-8")
         if entities_json is not None:

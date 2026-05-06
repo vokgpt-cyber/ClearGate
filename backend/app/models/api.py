@@ -201,3 +201,20 @@ class ExportDeanonymizedRequest(BaseModel):
     """Body for the deanonymized-DOCX export endpoint."""
 
     manual_resolutions: list[ManualResolution] = Field(default_factory=list)
+
+
+class WorkflowStageRequest(BaseModel):
+    """Persist the active document workflow stage for a session."""
+
+    stage: Literal["anonymized", "llm_response", "deanonymized"]
+
+
+class DocumentWorkflowState(BaseModel):
+    """Persisted state of the LLM response/deanonymization workflow."""
+
+    stage: Literal["anonymized", "llm_response", "deanonymized"] = "anonymized"
+    response_imported: bool = False
+    deanonymized_available: bool = False
+    response_docx_filename: str | None = None
+    deanonymize_result: DeanonymizeDocxResult | None = None
+    manual_resolutions: list[ManualResolution] = Field(default_factory=list)

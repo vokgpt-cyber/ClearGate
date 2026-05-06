@@ -140,6 +140,14 @@ body {
   line-height: 1.5;
 }
 
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-weight: 700;
@@ -718,7 +726,7 @@ h1, h2, h3, h4 {
 }
 
 .cleargate-sidebar__item-title {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   max-width: 100%;
   overflow: hidden;
@@ -909,12 +917,12 @@ h1, h2, h3, h4 {
 }
 
 .cleargate-workspace__close {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border: 1px solid var(--border-strong);
   background-color: transparent;
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -935,12 +943,12 @@ h1, h2, h3, h4 {
 }
 
 .cleargate-workspace__export {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border: 1px solid var(--color-brand);
   background-color: var(--color-brand);
   color: var(--bg-primary);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1639,6 +1647,7 @@ h1, h2, h3, h4 {
 
 .cleargate-workspace__deep-scan,
 .cleargate-workspace__import-response,
+.cleargate-workspace__workflow-toggle,
 .cleargate-workspace__export-deanonymized {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
@@ -1647,18 +1656,27 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
   font: inherit;
   font-size: 0.7rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
 }
 .cleargate-workspace__deep-scan:hover:not(:disabled),
 .cleargate-workspace__import-response:hover,
+.cleargate-workspace__workflow-toggle:hover,
 .cleargate-workspace__export-deanonymized:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 
-.cleargate-workspace__deep-scan:disabled {
+.cleargate-workspace__deep-scan.is-active,
+.cleargate-workspace__workflow-toggle[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-elevated));
+  color: var(--success);
+}
+
+.cleargate-workspace__deep-scan:disabled,
+.cleargate-workspace__workflow-toggle:disabled {
   opacity: 0.52;
   cursor: not-allowed;
 }
@@ -1679,7 +1697,7 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
   font: inherit;
   font-size: 0.7rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1763,7 +1781,8 @@ h1, h2, h3, h4 {
   border: 1px solid var(--border);
   background-color: transparent;
   color: var(--text-primary);
-  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;

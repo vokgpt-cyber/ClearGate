@@ -61,9 +61,12 @@ import {
   exportAnonymizedDocx,
   exportDeanonymizedDocx,
   getCachedAnonymization,
+  getDocumentWorkflow,
   importResponseDocx,
+  setDocumentWorkflowStage,
   type DeanonymizeDocxResult,
   type Restoration,
+  type WorkflowStage,
 } from '@/lib/api';
 import { useLocale } from '@/hooks/useLocale';
 import type { EntityTypeCode } from '@/lib/entity-types';
@@ -97,6 +100,11 @@ type DeepScanSummary = {
   removed: number;
   suggestions: number;
 };
+
+type DeepScanLayer = {
+  base: InteractiveEntity[];
+  suggestions: InteractiveEntity[];
+} | null;
 
 type CompareMutation =
   | { kind: 'ins'; start: number; end: number; text: string }
@@ -245,14 +253,18 @@ export function SplitWorkspace({
   const [deepScanError, setDeepScanError] = useState<string | null>(null);
   const [deepScanProgress, setDeepScanProgress] = useState(0);
   const [deepScanSummary, setDeepScanSummary] = useState<DeepScanSummary | null>(null);
-  const [deepScanSuggestions, setDeepScanSuggestions] = useState<InteractiveEntity[]>([]);
+  const [deepScanLayer, setDeepScanLayer] = useState<DeepScanLayer>(null);
+  const [deepScanActive, setDeepScanActive] = useState(false);
   const restoreStartedRef = useRef(false);
+  const workflowRestoreStartedRef = useRef(false);
 
   // Phase 1 round-trip: import response -> deanonymize -> export
   const responseFileRef = useRef<HTMLInputElement | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [responseImported, setResponseImported] = useState(false);
+  const [responseViewActive, setResponseViewActive] = useState(false);
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('anonymized');
   const [deanonymizeBusy, setDeanonymizeBusy] = useState(false);
   const [deanonymizeError, setDeanonymizeError] = useState<string | null>(null);
   const [deanonymizeResult, setDeanonymizeResult] =
@@ -267,12 +279,20 @@ export function SplitWorkspace({
   >([]);
   // URL override for right pane: after deanonymize, show the deanonymized doc
   const [rightPaneUrl, setRightPaneUrl] = useState<string | null>(null);
+  const rightPaneUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    rightPaneUrlRef.current = rightPaneUrl;
+  }, [rightPaneUrl]);
 
   // Compare-with-original mode (Word-style Track Changes).
   // When ON, the right pane's DOM is replaced in-place with a word-level
   // diff overlay. Toggling OFF restores the docx-preview render via
   // `pane.rerender(overlays, 'highlight')` using the stashed restorations.
   const [compareMode, setCompareMode] = useState(false);
+  const compareModeRef = useRef(false);
+  useEffect(() => {
+    compareModeRef.current = compareMode;
+  }, [compareMode]);
 
   // Synchronized document zoom (both panes scale together).
   // Implemented via the CSS `zoom` property on the docx-preview
@@ -424,7 +444,11 @@ export function SplitWorkspace({
       // If we just switched to the deanonymized preview, overlay the
       // restored values using the same interactive entity system as the
       // left pane.
-      applyRestorationOverlays(pane);
+      if (rightPaneUrlRef.current) {
+        if (!compareModeRef.current) applyRestorationOverlays(pane);
+      } else if (visibleEntitiesRef.current.length > 0) {
+        pane.rerender(visibleEntitiesRef.current, { mode: 'placeholder' });
+      }
 
       markBothReadyIfPossible();
     },
@@ -447,6 +471,7 @@ export function SplitWorkspace({
     setSelection(null);
     setBothReady(false);
     restoreStartedRef.current = false;
+    workflowRestoreStartedRef.current = false;
     rightContainerRef.current?.classList.remove('cleargate-compare');
     leftContainerRef.current = null;
     rightContainerRef.current = null;
@@ -456,11 +481,18 @@ export function SplitWorkspace({
     setDocScale(1);
     setManualResolutions([]);
     setCompareMode(false);
+    setWorkflowStage('anonymized');
+    setResponseImported(false);
+    setResponseViewActive(false);
+    setRightPaneUrl(null);
+    setDeanonymizeResult(null);
+    setDeanonymizeError(null);
     setDeepScanBusy(false);
     setDeepScanError(null);
     setDeepScanProgress(0);
     setDeepScanSummary(null);
-    setDeepScanSuggestions([]);
+    setDeepScanLayer(null);
+    setDeepScanActive(false);
     if (zoomPillTimerRef.current !== null) {
       window.clearTimeout(zoomPillTimerRef.current);
       zoomPillTimerRef.current = null;
@@ -540,17 +572,26 @@ export function SplitWorkspace({
   // imperatively instead of via a `[visibleEntities]` useEffect so we
   // control exactly when the panes are redrawn and avoid the subtle
   // effect-ordering race that used to require a manual reload.
-  const rerenderBothPanes = useCallback((entitiesToDraw: InteractiveEntity[]) => {
-    const leftPane = leftPaneRef.current;
-    const rightPane = rightPaneRef.current;
-    if (!leftPane || !rightPane) {
-      // eslint-disable-next-line no-console
-      console.warn('[Cleargate] rerender skipped — panes not ready');
-      return;
-    }
-    leftPane.rerender(entitiesToDraw, { mode: 'highlight' });
-    rightPane.rerender(entitiesToDraw, { mode: 'placeholder' });
-  }, []);
+  const rerenderBothPanes = useCallback(
+    (entitiesToDraw: InteractiveEntity[]) => {
+      const leftPane = leftPaneRef.current;
+      const rightPane = rightPaneRef.current;
+      if (!leftPane || !rightPane) {
+        // eslint-disable-next-line no-console
+        console.warn('[Cleargate] rerender skipped — panes not ready');
+        return;
+      }
+      leftPane.rerender(entitiesToDraw, { mode: 'highlight' });
+      if (rightPaneUrlRef.current) {
+        if (compareModeRef.current) return;
+        rightPane.rerender([], { mode: 'highlight' });
+        applyRestorationOverlays(rightPane);
+        return;
+      }
+      rightPane.rerender(entitiesToDraw, { mode: 'placeholder' });
+    },
+    [applyRestorationOverlays],
+  );
 
   const toInteractiveEntities = useCallback((raw: OverlayEntity[]) => {
     return raw.map((e, idx) => ({
@@ -572,6 +613,66 @@ export function SplitWorkspace({
     },
     [rerenderBothPanes],
   );
+
+  const responsePreviewUrl = useCallback(
+    () => `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
+    [documentId],
+  );
+
+  const leaveCompareMode = useCallback(() => {
+    rightContainerRef.current?.classList.remove('cleargate-compare');
+    setCompareMode(false);
+  }, []);
+
+  const showAnonymizedWorkflow = useCallback(async () => {
+    leaveCompareMode();
+    setResponseViewActive(false);
+    setWorkflowStage('anonymized');
+    setRightPaneUrl(null);
+    setDeanonymizeError(null);
+    try {
+      const state = await setDocumentWorkflowStage(documentId, 'anonymized');
+      setWorkflowStage(state.stage);
+      setResponseImported(state.response_imported);
+      setManualResolutions(state.manual_resolutions ?? []);
+      if (state.deanonymize_result) {
+        setDeanonymizeResult(state.deanonymize_result);
+        restorationsRef.current = state.deanonymize_result.restorations ?? [];
+      }
+    } catch (e) {
+      // Keep the visual rollback local even if persistence failed.
+      // eslint-disable-next-line no-console
+      console.warn('[Cleargate] workflow rollback persist failed', e);
+    }
+  }, [documentId, leaveCompareMode]);
+
+  const showDeanonymizedWorkflow = useCallback(async () => {
+    leaveCompareMode();
+    setDeanonymizeError(null);
+    try {
+      const state = await setDocumentWorkflowStage(documentId, 'deanonymized');
+      const result = state.deanonymize_result ?? deanonymizeResult;
+      if (!result) {
+        throw new Error('No saved deanonymization result');
+      }
+      setWorkflowStage(state.stage);
+      setResponseImported(true);
+      setManualResolutions(state.manual_resolutions ?? []);
+      setDeanonymizeResult(result);
+      restorationsRef.current = result.restorations ?? [];
+      setResponseViewActive(true);
+      setRightPaneUrl(responsePreviewUrl());
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Cleargate] workflow restore failed', e);
+      setDeanonymizeError(e instanceof Error ? e.message : String(e));
+    }
+  }, [
+    deanonymizeResult,
+    documentId,
+    leaveCompareMode,
+    responsePreviewUrl,
+  ]);
 
   // ─── restore cached anonymization ────────────────────────────────
   useEffect(() => {
@@ -614,6 +715,45 @@ export function SplitWorkspace({
     toInteractiveEntities,
   ]);
 
+  // Restore persisted LLM-response/deanonymization view state after the
+  // base anonymization overlays are available.
+  useEffect(() => {
+    if (!bothReady || status !== 'detected') return;
+    if (workflowRestoreStartedRef.current) return;
+    workflowRestoreStartedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const state = await getDocumentWorkflow(documentId);
+        if (cancelled || !state) return;
+        setWorkflowStage(state.stage);
+        setResponseImported(state.response_imported);
+        setManualResolutions(state.manual_resolutions ?? []);
+        if (state.deanonymize_result) {
+          setDeanonymizeResult(state.deanonymize_result);
+          restorationsRef.current = state.deanonymize_result.restorations ?? [];
+        }
+        if (state.stage === 'deanonymized' && state.deanonymized_available) {
+          setResponseViewActive(true);
+          setRightPaneUrl(responsePreviewUrl());
+        } else {
+          setResponseViewActive(false);
+          setRightPaneUrl(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.warn('[Cleargate] workflow state restore failed', e);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bothReady, documentId, responsePreviewUrl, status]);
+
   // ─── explicit detection ──────────────────────────────────────────
   const runAnonymization = useCallback(async () => {
     if (!bothReady || status === 'detecting') return;
@@ -624,6 +764,10 @@ export function SplitWorkspace({
     setStatus('detecting');
     setProgressValue(8);
     setError(null);
+    setDeepScanLayer(null);
+    setDeepScanActive(false);
+    setDeepScanSummary(null);
+    setDeepScanError(null);
     try {
       // eslint-disable-next-line no-console
       console.info('[Cleargate] anonymize start', {
@@ -656,8 +800,53 @@ export function SplitWorkspace({
     toInteractiveEntities,
   ]);
 
+  const mergeDeepScanSuggestions = useCallback(
+    (base: InteractiveEntity[], suggestions: InteractiveEntity[]) => {
+      const existing = new Set(base.map(entitySignature));
+      return [
+        ...base,
+        ...suggestions.filter(
+          (suggestion) => !existing.has(entitySignature(suggestion)),
+        ),
+      ].sort((a, b) => a.start - b.start);
+    },
+    [],
+  );
+
+  const setDeepScanLayerEnabled = useCallback(
+    (enabled: boolean) => {
+      if (!deepScanLayer) return;
+      setDeepScanActive(enabled);
+      const suggestionKeys = new Set(
+        deepScanLayer.suggestions.map(entitySignature),
+      );
+      const next = enabled
+        ? mergeDeepScanSuggestions(entities, deepScanLayer.suggestions)
+        : entities.filter((entity) => !suggestionKeys.has(entitySignature(entity)));
+      applyEntities(next);
+      onAnonymizationComplete?.(documentId, next);
+      setDeepScanSummary({
+        added: enabled ? deepScanLayer.suggestions.length : 0,
+        removed: enabled ? 0 : deepScanLayer.suggestions.length,
+        suggestions: deepScanLayer.suggestions.length,
+      });
+    },
+    [
+      applyEntities,
+      deepScanLayer,
+      documentId,
+      entities,
+      mergeDeepScanSuggestions,
+      onAnonymizationComplete,
+    ],
+  );
+
   const runDeepScan = useCallback(async () => {
     if (!bothReady || deepScanBusy || status === 'detecting') return;
+    if (deepScanLayer) {
+      setDeepScanLayerEnabled(!deepScanActive);
+      return;
+    }
     const leftPane = leftPaneRef.current;
     if (!leftPane) return;
     const plainText = leftPane.getPlainText();
@@ -665,7 +854,6 @@ export function SplitWorkspace({
     setDeepScanBusy(true);
     setDeepScanError(null);
     setDeepScanSummary(null);
-    setDeepScanSuggestions([]);
     setDeepScanProgress(7);
     try {
       // eslint-disable-next-line no-console
@@ -678,12 +866,19 @@ export function SplitWorkspace({
       const suggestions = toInteractiveEntities(
         (response.suggestions as OverlayEntity[] | undefined) ?? [],
       );
-      setDeepScanSuggestions(suggestions);
+      const layer = { base: entities, suggestions };
+      setDeepScanLayer(layer);
+      setDeepScanActive(true);
       setDeepScanSummary({
-        added: 0,
+        added: suggestions.length,
         removed: 0,
         suggestions: response.suggestion_count ?? suggestions.length,
       });
+      if (suggestions.length > 0) {
+        const merged = mergeDeepScanSuggestions(entities, suggestions);
+        applyEntities(merged);
+        onAnonymizationComplete?.(documentId, merged);
+      }
       setDeepScanProgress(100);
       // eslint-disable-next-line no-console
       console.info('[Cleargate] deep scan response', {
@@ -704,10 +899,14 @@ export function SplitWorkspace({
   }, [
     applyEntities,
     bothReady,
+    deepScanActive,
     deepScanBusy,
+    deepScanLayer,
     documentId,
     entities,
+    mergeDeepScanSuggestions,
     onAnonymizationComplete,
+    setDeepScanLayerEnabled,
     status,
     toInteractiveEntities,
   ]);
@@ -737,36 +936,16 @@ export function SplitWorkspace({
   const deepScanSummaryLabel = useMemo(() => {
     if (!deepScanSummary) return null;
     if (deepScanSummary.suggestions > 0) {
-      return `${t('workspace.deepScanSuggestions')}: ${deepScanSummary.suggestions}`;
+      if (deepScanActive) {
+        return `${t('workspace.deepScanApplied')}: +${deepScanSummary.suggestions}`;
+      }
+      return `${t('workspace.deepScanDisabled')}: -${deepScanSummary.suggestions}`;
     }
     if (deepScanSummary.added === 0 && deepScanSummary.removed === 0) {
       return t('workspace.deepScanNoChanges');
     }
     return `${t('workspace.deepScanDone')}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
-  }, [deepScanSummary, t]);
-
-  const applyDeepScanSuggestions = useCallback(() => {
-    if (deepScanSuggestions.length === 0) return;
-    const existing = new Set(entities.map(entitySignature));
-    const toAdd = deepScanSuggestions.filter(
-      (suggestion) => !existing.has(entitySignature(suggestion)),
-    );
-    if (toAdd.length === 0) {
-      setDeepScanSuggestions([]);
-      return;
-    }
-    const merged = [...entities, ...toAdd].sort((a, b) => a.start - b.start);
-    applyEntities(merged);
-    onAnonymizationComplete?.(documentId, merged);
-    setDeepScanSuggestions([]);
-    setDeepScanSummary({ added: toAdd.length, removed: 0, suggestions: 0 });
-  }, [
-    applyEntities,
-    deepScanSuggestions,
-    documentId,
-    entities,
-    onAnonymizationComplete,
-  ]);
+  }, [deepScanActive, deepScanSummary, t]);
 
   // ─── rerender on filter / state changes (NOT initial detection) ──
   //
@@ -1184,7 +1363,13 @@ export function SplitWorkspace({
           chars: result.char_count,
           placeholders: result.placeholder_count,
         });
+        leaveCompareMode();
+        setManualResolutions([]);
         setResponseImported(true);
+        setResponseViewActive(false);
+        setWorkflowStage('llm_response');
+        setRightPaneUrl(null);
+        setDeanonymizeResult(null);
 
         // Auto-trigger deanonymization
         setDeanonymizeBusy(true);
@@ -1196,9 +1381,9 @@ export function SplitWorkspace({
           // the right pane finishes rendering the deanonymized DOCX.
           restorationsRef.current = dResult.restorations ?? [];
           // Switch right pane to show deanonymized document
-          setRightPaneUrl(
-            `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
-          );
+          setWorkflowStage('deanonymized');
+          setResponseViewActive(true);
+          setRightPaneUrl(responsePreviewUrl());
           // eslint-disable-next-line no-console
           console.info('[Cleargate] deanonymize complete', {
             replacements: dResult.total_replacements,
@@ -1221,7 +1406,7 @@ export function SplitWorkspace({
         setImportBusy(false);
       }
     },
-    [documentId, importBusy],
+    [documentId, importBusy, leaveCompareMode, responsePreviewUrl],
   );
 
   // --- toggle Compare-with-original mode on the right pane ---
@@ -1240,11 +1425,10 @@ export function SplitWorkspace({
 
     if (!compareMode) {
       // Entering compare mode: restore the clean DOCX render first,
-      // then layer restoration highlights and diff markers on top.
+      // then layer diff markers on top without deanonymization pills.
       const oldText = leftPane.getPlainText();
       const newText = rightPane.getPlainText();
       rightPane.rerender([], { mode: 'highlight' });
-      applyRestorationOverlays(rightPane);
       container.classList.add('cleargate-compare');
       const markerCount = applyFormattedCompareDiff(rightPane, oldText, newText);
       setCompareMode(true);
@@ -1285,6 +1469,28 @@ export function SplitWorkspace({
     }
   }, [documentId, exportDeanonymizedBusy, manualResolutions]);
 
+  const hasSavedResponse = responseImported && deanonymizeResult !== null;
+  const importResponseLabel = responseImported
+    ? t('workspace.replaceResponse')
+    : t('workspace.importResponse');
+  const importResponseTitle =
+    importError ??
+    (importBusy
+      ? t('workspace.importResponseBusy')
+      : deanonymizeBusy
+        ? t('workspace.deanonymizeBusy')
+        : importResponseLabel);
+  const deepScanButtonLabel = deepScanLayer
+    ? deepScanActive
+      ? t('workspace.deepScanDisable')
+      : t('workspace.deepScanEnable')
+    : t('workspace.deepScan');
+  const deepScanButtonTitle = deepScanLayer
+    ? deepScanActive
+      ? t('workspace.deepScanDisableHint')
+      : t('workspace.deepScanEnableHint')
+    : t('workspace.deepScanHint');
+
   return (
     <div className="cleargate-workspace">
       <div className="cleargate-workspace__subheader">
@@ -1310,7 +1516,7 @@ export function SplitWorkspace({
               ? t('workspace.exportDocxBusy')
               : t('workspace.exportDocx')}
           </button>
-          {!responseImported && (
+          {!responseViewActive && (
             deepScanBusy ? (
               <div
                 className="cleargate-workspace__deep-progress"
@@ -1333,52 +1539,31 @@ export function SplitWorkspace({
             ) : (
               <button
                 type="button"
-                className="cleargate-workspace__deep-scan"
+                className={`cleargate-workspace__deep-scan ${
+                  deepScanActive ? 'is-active' : ''
+                }`}
                 onClick={runDeepScan}
                 disabled={
                   !bothReady ||
                   entities.length === 0 ||
                   status === 'detecting'
                 }
-                title={t('workspace.deepScanHint')}
+                aria-pressed={deepScanLayer ? deepScanActive : undefined}
+                title={deepScanButtonTitle}
               >
-                {t('workspace.deepScan')}
+                {deepScanButtonLabel}
               </button>
             )
           )}
-          {deepScanError && !deepScanBusy && (
+          {deepScanError && !responseViewActive && !deepScanBusy && (
             <span className="cleargate-workspace__action-error" role="status">
               {t('workspace.deepScanError')}
             </span>
           )}
-          {deepScanSummaryLabel && !deepScanBusy && !deepScanError && (
+          {deepScanSummaryLabel && !responseViewActive && !deepScanBusy && !deepScanError && (
             <span className="cleargate-workspace__deep-summary" role="status">
               {deepScanSummaryLabel}
             </span>
-          )}
-          {deepScanSuggestions.length > 0 && !deepScanBusy && (
-            <div className="cleargate-workspace__deep-suggestions" role="status">
-              <span>{t('workspace.deepScanReview')}</span>
-              <button
-                type="button"
-                className="cleargate-workspace__deep-suggestions-apply"
-                onClick={applyDeepScanSuggestions}
-              >
-                {t('workspace.deepScanApply')}
-              </button>
-              <button
-                type="button"
-                className="cleargate-workspace__deep-suggestions-dismiss"
-                onClick={() => {
-                  setDeepScanSuggestions([]);
-                  setDeepScanSummary(null);
-                }}
-                aria-label={t('workspace.deepScanDismiss')}
-                title={t('workspace.deepScanDismiss')}
-              >
-                x
-              </button>
-            </div>
           )}
           {/* Phase 1 round-trip: import response */}
           <button
@@ -1386,20 +1571,13 @@ export function SplitWorkspace({
             className="cleargate-workspace__import-response"
             onClick={() => responseFileRef.current?.click()}
             disabled={importBusy || deanonymizeBusy || !bothReady || entities.length === 0}
-            title={
-              importError ??
-              (importBusy
-                ? t('workspace.importResponseBusy')
-                : deanonymizeBusy
-                  ? t('workspace.deanonymizeBusy')
-                  : t('workspace.importResponse'))
-            }
+            title={importResponseTitle}
           >
             {importBusy
               ? t('workspace.importResponseBusy')
               : deanonymizeBusy
                 ? t('workspace.deanonymizeBusy')
-                : t('workspace.importResponse')}
+                : importResponseLabel}
           </button>
           <input
             ref={responseFileRef}
@@ -1414,7 +1592,30 @@ export function SplitWorkspace({
           />
 
           {/* Compare-with-original toggle (Word-style Track Changes) */}
-          {responseImported && (
+          {hasSavedResponse && (
+            <button
+              type="button"
+              className="cleargate-workspace__workflow-toggle"
+              onClick={
+                responseViewActive
+                  ? showAnonymizedWorkflow
+                  : showDeanonymizedWorkflow
+              }
+              disabled={deanonymizeBusy}
+              aria-pressed={workflowStage === 'deanonymized' && responseViewActive}
+              title={
+                responseViewActive
+                  ? t('workspace.workflowBackToAnonymized')
+                  : t('workspace.workflowReturnToResponse')
+              }
+            >
+              {responseViewActive
+                ? t('workspace.workflowBackToAnonymized')
+                : t('workspace.workflowReturnToResponse')}
+            </button>
+          )}
+
+          {responseViewActive && hasSavedResponse && (
             <button
               type="button"
               className="cleargate-workspace__compare"
@@ -1434,7 +1635,7 @@ export function SplitWorkspace({
           )}
 
           {/* Phase 1 round-trip: export deanonymized */}
-          {responseImported && (
+          {responseViewActive && hasSavedResponse && (
             <button
               type="button"
               className="cleargate-workspace__export-deanonymized"
@@ -1479,7 +1680,7 @@ export function SplitWorkspace({
           className="cleargate-workspace__pane"
           urlOverride={rightPaneUrl}
         />
-        {!responseImported && (
+        {!responseViewActive && (
           <div
             className={`cleargate-workspace__anonymize-panel ${
               status === 'detecting' ? 'is-detecting' : ''
@@ -1538,7 +1739,7 @@ export function SplitWorkspace({
         {Math.round(docScale * 100)}%
       </button>
 
-      {!responseImported && (
+      {!responseViewActive && (
         <EntityLegend
           counts={counts}
           totalEntities={entities.length}
@@ -1599,9 +1800,10 @@ export function SplitWorkspace({
                   setDeanonymizeResult(dResult);
                   restorationsRef.current = dResult.restorations ?? [];
                   // Refresh right pane preview with cache-busting timestamp
-                  setRightPaneUrl(
-                    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/response-raw?t=${Date.now()}`,
-                  );
+                  setWorkflowStage('deanonymized');
+                  setResponseImported(true);
+                  setResponseViewActive(true);
+                  setRightPaneUrl(responsePreviewUrl());
                 })
                 .catch((e) => {
                   console.error('[Cleargate] apply resolutions failed', e);

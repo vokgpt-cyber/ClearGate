@@ -110,7 +110,11 @@ class TestPersistAndRestore:
         session.docx_bytes = b"original-docx"
         session.docx_filename = "contract.docx"
         session.response_docx_bytes = b"response-docx"
+        session.response_docx_filename = "response.docx"
         session.deanonymized_docx_bytes = b"deanonymized-docx"
+        session.deanonymize_result_json = '{"total_replacements":1}'
+        session.manual_resolutions_json = "[]"
+        session.workflow_stage = "deanonymized"
         sm.save_session(sid)
 
         sm._sessions.clear()
@@ -118,7 +122,11 @@ class TestPersistAndRestore:
         assert restored.docx_bytes == b"original-docx"
         assert restored.docx_filename == "contract.docx"
         assert restored.response_docx_bytes == b"response-docx"
+        assert restored.response_docx_filename == "response.docx"
         assert restored.deanonymized_docx_bytes == b"deanonymized-docx"
+        assert restored.deanonymize_result_json == '{"total_replacements":1}'
+        assert restored.manual_resolutions_json == "[]"
+        assert restored.workflow_stage == "deanonymized"
 
     def test_close_removes_from_disk(
         self, master_key: bytes, store: SessionStore,

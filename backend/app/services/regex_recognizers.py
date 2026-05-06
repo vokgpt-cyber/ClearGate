@@ -623,6 +623,10 @@ class MoneyRuRecognizer(GroupRegexRecognizer):
         ),
         _REGEX_FLAGS,
     )
+    _NON_SECRET_PERCENT_CONTEXT = re.compile(
+        r"\b(?:НДС|VAT|пен[яи]|неустойк[аиу]|штраф)\b",
+        _REGEX_FLAGS,
+    )
 
     PATTERNS = [
         (
@@ -637,6 +641,18 @@ class MoneyRuRecognizer(GroupRegexRecognizer):
                 _REGEX_FLAGS,
             ),
             0.92,
+            "value",
+        ),
+        (
+            re.compile(
+                (
+                    r"(?P<value>\([^\n()]{3,140}"
+                    r"\(\s*(?:\d{1,3}(?:[ \u00A0]\d{3})+|\d+)(?:[,.]\d{1,2})?\s*\)"
+                    rf"\s*(?:{_CURRENCY})\))"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.91,
             "value",
         ),
         (
@@ -669,6 +685,8 @@ class MoneyRuRecognizer(GroupRegexRecognizer):
             value = text[result.start : result.end]
             if "%" in value:
                 window = text[max(0, result.start - 80) : min(len(text), result.end + 80)]
+                if self._NON_SECRET_PERCENT_CONTEXT.search(window):
+                    continue
                 if not self._FINANCIAL_CONTEXT.search(window):
                     continue
             filtered.append(result)
@@ -685,7 +703,9 @@ class AddressRuRecognizer(GroupRegexRecognizer):
                     r"\b(?:(?:юридический\s+адрес|почтовый\s+адрес|"
                     r"фактический\s+адрес|место\s+нахождения)\s*:?\s*|адрес\s*:\s*)"
                     r"(?P<value>(?:\d{6},\s*)?[^;\n()]{10,220}?)"
-                    r"(?=,\s*(?:именуем|далее|в лице)|\)|;|\n|$)"
+                    r"(?=,\s*(?:именуем|далее|в лице)|"
+                    r"\s*/?\s*(?:Банк|банк|ИНН|ОГРН|КПП|БИК|р/с|к/с|"
+                    r"Арендодатель|Арендатор)\s*:|\)|;|\n|$)"
                 ),
                 _REGEX_FLAGS,
             ),
@@ -697,10 +717,10 @@ class AddressRuRecognizer(GroupRegexRecognizer):
                 (
                     r"(?P<value>(?:\d{6},\s*)?(?:[^,\n;():]{2,70},\s*){0,4}"
                     r"(?:ул\.|улица|пр-т|проспект|пер\.|переулок|шоссе|наб\.|"
-                    r"площадь|пл\.)\s*[^,\n;()]{2,90},\s*"
-                    r"(?:д\.|дом)\s*[^,\n;()]{1,30}"
+                    r"площадь|пл\.)\s*[^,/\n;():]{2,90},\s*"
+                    r"(?:д\.|дом)\s*[^,/\n;():]{1,30}"
                     r"(?:,\s*(?:стр\.|строение|корп\.|корпус|оф\.|офис|пом\.|"
-                    r"помещение|кв\.|квартира)\s*[^,\n;()]{1,30})*)"
+                    r"помещение|кв\.|квартира)\s*[^,/\n;():]{1,30})*)"
                 ),
                 _REGEX_FLAGS,
             ),
@@ -727,7 +747,7 @@ class OrganizationRuRecognizer(GroupRegexRecognizer):
                     r"(?P<value>\b(?:Общество\s+с\s+ограниченной\s+ответственностью|"
                     r"Акционерное\s+общество|Публичное\s+акционерное\s+общество|"
                     r"Закрытое\s+акционерное\s+общество)\s+"
-                    r"(?:[«\"][^»\"\n]{2,120}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,120}))"
+                    r"(?:[«\"][^»\"]{2,160}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,120}))"
                 ),
                 _REGEX_FLAGS,
             ),
@@ -738,7 +758,7 @@ class OrganizationRuRecognizer(GroupRegexRecognizer):
             re.compile(
                 (
                     r"(?P<value>\b(?:ООО|ОАО|АО|ПАО|ЗАО)\s+"
-                    r"(?:[«\"][^»\"\n]{2,120}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,80}))"
+                    r"(?:[«\"][^»\"]{2,160}[»\"]|[А-ЯЁA-Z][^,\n;/()]{2,80}))"
                 ),
                 _REGEX_FLAGS,
             ),

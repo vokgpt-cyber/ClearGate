@@ -11,6 +11,7 @@ access returns 404 indistinguishably from a missing session.
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 from pathlib import Path
 from urllib.parse import quote
@@ -22,12 +23,15 @@ import structlog
 
 from app.models.api import (
     DeanonymizeDocxResult,
+    DocumentWorkflowState,
     ExportDeanonymizedRequest,
     ImportResponseResult,
+    ManualResolution,
     ParseTextRequest,
     Restoration,
     UnresolvedPlaceholder,
     UploadResponse,
+    WorkflowStageRequest,
 )
 from app.routers.auth import get_current_user
 from app.routers.sessions import get_session_manager
@@ -112,6 +116,12 @@ async def upload_document(
         )
         session.source_format = suffix
         session.source_filename = file.filename
+        session.response_docx_bytes = None
+        session.response_docx_filename = None
+        session.deanonymized_docx_bytes = None
+        session.deanonymize_result_json = None
+        session.manual_resolutions_json = None
+        session.workflow_stage = "anonymized"
         session.anonymized_text = None
         session.detected_entities.clear()
         document_id = session_id
@@ -356,6 +366,11 @@ async def import_response(
         content = copy_page_setup(original, content)
 
     session.response_docx_bytes = content
+    session.response_docx_filename = file.filename
+    session.deanonymized_docx_bytes = None
+    session.deanonymize_result_json = None
+    session.manual_resolutions_json = None
+    session.workflow_stage = "llm_response"
     sm.save_session(session_id, user_id=current_user.user_id)
 
     placeholders = scan_placeholders(result.text)
@@ -372,6 +387,105 @@ async def import_response(
         char_count=len(result.text),
         placeholder_count=len(placeholders),
     )
+
+
+def _stored_deanonymize_result(session) -> DeanonymizeDocxResult | None:  # type: ignore[no-untyped-def]
+    raw = getattr(session, "deanonymize_result_json", None)
+    if not raw:
+        return None
+    try:
+        return DeanonymizeDocxResult.model_validate_json(raw)
+    except Exception:
+        logger.warning(
+            "document.workflow_result_invalid",
+            session_id=getattr(session, "session_id", None),
+            exc_info=True,
+        )
+        return None
+
+
+def _stored_manual_resolutions(session) -> list[ManualResolution]:  # type: ignore[no-untyped-def]
+    raw = getattr(session, "manual_resolutions_json", None)
+    if not raw:
+        return []
+    try:
+        values = json.loads(raw)
+        if not isinstance(values, list):
+            return []
+        return [ManualResolution.model_validate(item) for item in values]
+    except Exception:
+        logger.warning(
+            "document.workflow_manual_resolutions_invalid",
+            session_id=getattr(session, "session_id", None),
+            exc_info=True,
+        )
+        return []
+
+
+@router.get("/{session_id}/workflow", response_model=DocumentWorkflowState)
+async def get_workflow_state(
+    session_id: str,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> DocumentWorkflowState:
+    """Return persisted LLM-response/deanonymization workflow state."""
+    session = sm.get_session(session_id, user_id=current_user.user_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+
+    response_imported = getattr(session, "response_docx_bytes", None) is not None
+    deanonymized_available = getattr(session, "deanonymized_docx_bytes", None) is not None
+    stage = getattr(session, "workflow_stage", "anonymized") or "anonymized"
+    if stage == "deanonymized" and not deanonymized_available:
+        stage = "llm_response" if response_imported else "anonymized"
+    if stage == "llm_response" and not response_imported:
+        stage = "anonymized"
+
+    return DocumentWorkflowState(
+        stage=stage,
+        response_imported=response_imported,
+        deanonymized_available=deanonymized_available,
+        response_docx_filename=getattr(session, "response_docx_filename", None),
+        deanonymize_result=_stored_deanonymize_result(session),
+        manual_resolutions=_stored_manual_resolutions(session),
+    )
+
+
+@router.post("/{session_id}/workflow-stage", response_model=DocumentWorkflowState)
+async def set_workflow_stage(
+    session_id: str,
+    payload: WorkflowStageRequest,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+) -> DocumentWorkflowState:
+    """Persist which workflow stage the user is currently viewing."""
+    session = sm.get_session(session_id, user_id=current_user.user_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or expired",
+        )
+    if payload.stage in {"llm_response", "deanonymized"} and getattr(
+        session, "response_docx_bytes", None
+    ) is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No response DOCX imported for this session",
+        )
+    if payload.stage == "deanonymized" and getattr(
+        session, "deanonymized_docx_bytes", None
+    ) is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No deanonymized DOCX available for this session",
+        )
+
+    session.workflow_stage = payload.stage
+    sm.save_session(session_id, user_id=current_user.user_id)
+    return await get_workflow_state(session_id, current_user, sm)
 
 
 class DeanonymizeRequest(BaseModel):
@@ -424,9 +538,6 @@ async def deanonymize_docx_endpoint(
         logger.error("document.deanonymize_failed", session_id=session_id, error=str(exc))
         raise HTTPException(status_code=500, detail="Deanonymization failed") from exc
 
-    session.deanonymized_docx_bytes = result.docx_bytes
-    sm.save_session(session_id, user_id=current_user.user_id)
-
     unresolved = [
         UnresolvedPlaceholder(
             raw_text=m.raw_text,
@@ -454,6 +565,21 @@ async def deanonymize_docx_endpoint(
             )
         )
 
+    response_model = DeanonymizeDocxResult(
+        unresolved=unresolved,
+        restorations=restorations,
+        total_replacements=len(result.replacements),
+        total_unresolved=len(unresolved),
+    )
+    session.deanonymized_docx_bytes = result.docx_bytes
+    session.deanonymize_result_json = response_model.model_dump_json()
+    session.manual_resolutions_json = json.dumps(
+        [r.model_dump() for r in payload.manual_resolutions],
+        ensure_ascii=False,
+    )
+    session.workflow_stage = "deanonymized"
+    sm.save_session(session_id, user_id=current_user.user_id)
+
     logger.info(
         "document.deanonymized",
         session_id=session_id,
@@ -461,12 +587,7 @@ async def deanonymize_docx_endpoint(
         unresolved=len(unresolved),
     )
 
-    return DeanonymizeDocxResult(
-        unresolved=unresolved,
-        restorations=restorations,
-        total_replacements=len(result.replacements),
-        total_unresolved=len(unresolved),
-    )
+    return response_model
 
 
 @router.post("/{session_id}/export-deanonymized")
@@ -507,7 +628,41 @@ async def export_deanonymized(
         logger.error("document.deanonymize_export_failed", session_id=session_id, error=str(exc))
         raise HTTPException(status_code=500, detail="Deanonymization export failed") from exc
 
+    unresolved = [
+        UnresolvedPlaceholder(
+            raw_text=m.raw_text,
+            normalized=m.normalized,
+            paragraph_index=m.paragraph_index,
+        )
+        for m in result.unresolved
+    ]
+    restorations: list[Restoration] = []
+    reverse = session.registry._reverse
+    for m in result.replacements:
+        if m.real_value is None:
+            continue
+        entry = reverse.get(m.normalized)
+        restorations.append(
+            Restoration(
+                placeholder=m.normalized,
+                real_value=m.real_value,
+                entity_type=entry.entity_type if entry is not None else "CUSTOM",
+                paragraph_index=m.paragraph_index,
+            )
+        )
+    response_model = DeanonymizeDocxResult(
+        unresolved=unresolved,
+        restorations=restorations,
+        total_replacements=len(result.replacements),
+        total_unresolved=len(unresolved),
+    )
     session.deanonymized_docx_bytes = result.docx_bytes
+    session.deanonymize_result_json = response_model.model_dump_json()
+    session.manual_resolutions_json = json.dumps(
+        [r.model_dump() for r in payload.manual_resolutions],
+        ensure_ascii=False,
+    )
+    session.workflow_stage = "deanonymized"
     sm.save_session(session_id, user_id=current_user.user_id)
 
     original = getattr(session, "source_filename", None) or session.docx_filename
