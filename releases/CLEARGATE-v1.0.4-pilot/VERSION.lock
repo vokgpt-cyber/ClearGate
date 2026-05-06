@@ -1,0 +1,17 @@
+CLEARGATE Pilot Release Lock
+============================
+
+Release package: CLEARGATE-v1.0.4-pilot
+Application version: 1.0.4
+Application tag: v1.0.4
+Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
+Repository: https://github.com/vokgpt-cyber/ClearGate.git
+Target deployment: Ubuntu server with NVIDIA GPU, RTX 4090/48 GB class
+Inference profile: local GPU LLM verifier via vLLM + BGE-M3 embedder
+
+Policy:
+- Application code must stay on v1.0.4 for the pilot baseline.
+- Release scripts and documentation may receive pilot-only fixes on branch
+  release/pilot-v1.0.4 without changing the application version.
+- Future application changes should bump the app version and get a new release
+  package instead of silently replacing this baseline.
