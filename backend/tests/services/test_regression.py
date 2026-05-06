@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from app.models.entities import DetectedEntity
-from app.routers.anonymize import _new_deep_scan_suggestions
+from app.routers.anonymize import _deep_scan_removal_suggestions, _new_deep_scan_suggestions
 from app.services.ner_pipeline import NERPipeline
 from app.services.regex_recognizers import (
     AddressRuRecognizer,
@@ -273,6 +273,60 @@ class TestStopwordFiltering:
 
         assert pipeline.post_process(text, entities) == []
 
+    def test_pdf_relative_durations_not_dates_after_post_process(self, pipeline):
+        text = (
+            "Срок: 11 месяцев (18.07.2024 - 17.06.2025).\n"
+            "Задержка более 10 дней. Расторжение: уведомление за 30 дней."
+        )
+        candidates = ["11 месяцев", "10 дней", "30 дней"]
+        entities = [
+            DetectedEntity(
+                text=value,
+                entity_type="RU_DATE",
+                start=text.index(value),
+                end=text.index(value) + len(value),
+                score=0.86,
+                source_layer="llm-scan",
+            )
+            for value in candidates
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
+    def test_egrul_heading_not_org_after_post_process(self, pipeline):
+        heading = "ВЫПИСКА из Единого государственного реестра юридических лиц"
+        text = f"{heading}\nОГРН: 1117847296753\nИНН: 7801456328"
+        entities = [
+            DetectedEntity(
+                text="ВЫПИСКА",
+                entity_type="ORG",
+                start=0,
+                end=len("ВЫПИСКА"),
+                score=0.9,
+                source_layer="llm-scan",
+            ),
+            DetectedEntity(
+                text=heading,
+                entity_type="ORG",
+                start=0,
+                end=len(heading),
+                score=0.84,
+                source_layer="llm-scan",
+            ),
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
+    def test_pdf_monthly_cost_without_outer_parentheses_detected(self):
+        text = "Месячная стоимость: Двести тысяч (200 000) рублей."
+
+        money = [
+            text[r.start:r.end]
+            for r in MoneyRuRecognizer().analyze(text, ["MON"])
+        ]
+
+        assert "Двести тысяч (200 000) рублей" in money
+
     def test_pdf_lease_recognizers_keep_real_values_and_bounds(self):
         text = (
             "Заключен между ООО «Промышленная\n"
@@ -353,6 +407,24 @@ class TestDeepScanQaMode:
         suggestions = _new_deep_scan_suggestions(current, processed)
 
         assert [s.text for s in suggestions] == ["Tianjin Forward Polymers Co."]
+
+    def test_deep_scan_can_propose_false_positive_removals(self, pipeline):
+        text = "ВЫПИСКА из Единого государственного реестра юридических лиц"
+        current = [
+            DetectedEntity(
+                text="ВЫПИСКА",
+                entity_type="ORG",
+                start=0,
+                end=len("ВЫПИСКА"),
+                score=0.9,
+                source_layer="llm-scan",
+            )
+        ]
+        processed = pipeline.post_process(text, current)
+
+        removals = _deep_scan_removal_suggestions(current, processed)
+
+        assert [entity.text for entity in removals] == ["ВЫПИСКА"]
 
 
 class TestContractNumber:

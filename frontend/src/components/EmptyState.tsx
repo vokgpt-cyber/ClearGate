@@ -13,11 +13,12 @@ import { useLocale } from '@/hooks/useLocale';
 
 interface EmptyStateProps {
   onFile: (file: File) => void;
+  onFiles?: (files: File[]) => void;
   isWorking?: boolean;
   error?: string | null;
 }
 
-export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
+export function EmptyState({ onFile, onFiles, isWorking, error }: EmptyStateProps) {
   const { t } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -26,19 +27,19 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragging(false);
-      const file = e.dataTransfer.files?.[0];
-      if (!file) return;
-      const lowerName = file.name.toLowerCase();
-      if (
-        !lowerName.endsWith('.docx') &&
-        !lowerName.endsWith('.pdf') &&
-        !lowerName.endsWith('.txt')
-      ) {
-        return;
-      }
-      onFile(file);
+      const files = Array.from(e.dataTransfer.files ?? []).filter((file) => {
+        const lowerName = file.name.toLowerCase();
+        return (
+          lowerName.endsWith('.docx') ||
+          lowerName.endsWith('.pdf') ||
+          lowerName.endsWith('.txt')
+        );
+      });
+      if (files.length === 0) return;
+      if (files.length === 1) onFile(files[0]);
+      else onFiles?.(files);
     },
-    [onFile],
+    [onFile, onFiles],
   );
 
   return (
@@ -68,10 +69,13 @@ export function EmptyState({ onFile, isWorking, error }: EmptyStateProps) {
           ref={inputRef}
           type="file"
           accept=".docx,.pdf,.txt"
+          multiple
           style={{ display: 'none' }}
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onFile(f);
+            const files = Array.from(e.target.files ?? []);
+            if (files.length === 1) onFile(files[0]);
+            if (files.length > 1) onFiles?.(files);
+            e.target.value = '';
           }}
         />
         <div className="cleargate-empty__hint">{t('empty.hint')}</div>

@@ -53,6 +53,37 @@ def test_txt_parse_builds_docx_preview() -> None:
     assert "INN 7801456328" in preview_text
 
 
+def test_combine_results_preserves_docx_tables_and_order() -> None:
+    first = Document()
+    first.add_paragraph("Договор поставки № 12-2024")
+    first_buffer = io.BytesIO()
+    first.save(first_buffer)
+
+    second = Document()
+    table = second.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "Наименование"
+    table.cell(0, 1).text = "Цена"
+    table.cell(1, 0).text = "Полимерные гранулы"
+    table.cell(1, 1).text = "8500 руб/т"
+    second_buffer = io.BytesIO()
+    second.save(second_buffer)
+
+    processor = DocumentProcessor()
+    combined = processor.combine_results(
+        [
+            processor.parse(first_buffer.getvalue(), "docx"),
+            processor.parse(second_buffer.getvalue(), "docx"),
+        ]
+    )
+
+    assert combined.render_docx_bytes
+    merged = Document(io.BytesIO(combined.render_docx_bytes))
+    text = "\n".join(p.text for p in merged.paragraphs)
+    assert "Договор поставки № 12-2024" in text
+    assert len(merged.tables) == 1
+    assert merged.tables[0].cell(1, 1).text == "8500 руб/т"
+
+
 def test_pdf_text_normalizer_repairs_legal_entity_line_breaks() -> None:
     raw = (
         "Заключен между ООО «Промышленная\n"

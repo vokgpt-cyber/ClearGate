@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import re
+from copy import deepcopy
 
 import structlog
 from pydantic import BaseModel, Field
@@ -60,6 +61,34 @@ class DocumentProcessor:
         if format == "pdf":
             return self._parse_pdf(content)
         raise ValueError(f"Unsupported format: {format}")
+
+    def combine_results(self, results: list[ParseResult]) -> ParseResult:
+        """Combine multiple parsed documents into one internal DOCX shape."""
+        if not results:
+            raise ValueError("No documents to combine")
+        if len(results) == 1:
+            return results[0]
+
+        render_parts = [result.render_docx_bytes for result in results]
+        if any(part is None for part in render_parts):
+            raise ValueError("All documents must have DOCX render bytes")
+
+        text = "\n\n".join(result.text.strip() for result in results if result.text.strip())
+        page_counts = [result.page_count for result in results if result.page_count is not None]
+        warnings: list[str] = []
+        for result in results:
+            warnings.extend(result.warnings)
+
+        return ParseResult(
+            text=text,
+            page_count=sum(page_counts) if page_counts else None,
+            render_docx_bytes=self._combine_docx_bytes(
+                [part for part in render_parts if part is not None]
+            ),
+            render_filename="combined_document.docx",
+            ocr_used=any(result.ocr_used for result in results),
+            warnings=warnings,
+        )
 
     def _parse_txt(self, content: bytes) -> ParseResult:
         """Parse plain text file."""
@@ -170,6 +199,34 @@ class DocumentProcessor:
     ) -> bytes:
         """Convert extracted PDF page text into a reviewable DOCX."""
         return self._pages_to_docx(pages, page_sizes or [(595.0, 842.0)])
+
+    def _combine_docx_bytes(self, documents: list[bytes]) -> bytes:
+        """Append DOCX body elements while preserving paragraph/table formatting."""
+        from docx import Document
+
+        if not documents:
+            raise ValueError("No DOCX documents to combine")
+        master = Document(io.BytesIO(documents[0]))
+        body = master.element.body
+
+        def insert_before_section(element) -> None:  # type: ignore[no-untyped-def]
+            section = body.sectPr
+            if section is None:
+                body.append(element)
+            else:
+                body.insert(body.index(section), element)
+
+        for content in documents[1:]:
+            master.add_page_break()
+            source = Document(io.BytesIO(content))
+            for child in source.element.body:
+                if child.tag.endswith("}sectPr"):
+                    continue
+                insert_before_section(deepcopy(child))
+
+        buffer = io.BytesIO()
+        master.save(buffer)
+        return buffer.getvalue()
 
     def _pages_to_docx(
         self,

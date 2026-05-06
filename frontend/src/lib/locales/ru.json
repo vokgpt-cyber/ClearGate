@@ -41,6 +41,8 @@
     "exportDocx": "Скачать DOCX",
     "exportDocxBusy": "Готовим файл…",
     "exportDocxError": "Не удалось выгрузить документ",
+    "appendDocuments": "Добавить документы",
+    "appendResetConfirm": "Добавление документов пересоберёт текущую сессию и сбросит разметку. Продолжить?",
     "importResponse": "Загрузить ответ LLM",
     "replaceResponse": "Заменить ответ LLM",
     "importResponseBusy": "Импортируем…",

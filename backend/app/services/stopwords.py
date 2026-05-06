@@ -39,7 +39,8 @@ LEGAL_ROLE_STOPWORDS: set[str] = {
     "накладная", "договор", "контракт", "соглашение",
     "счёт-фактура", "счет-фактура",
     # Legal terms that spaCy mistakes for PER
-    "заказчиком", "исполнителя",
+    "заказчиком", "исполнителя", "заключен", "заключён", "заключено",
+    "заключена", "заключили", "заключенный", "заключённый",
 }
 
 # Position titles -- not sensitive PII
@@ -104,6 +105,7 @@ ORG_STOPWORDS: set[str] = {
     "аренда", "лизинг", "кредит", "заем", "заём", "займ", "займа",
     "поставка", "подряд", "услуги", "агентирование", "дистрибуция",
     "дистрибьюторский", "дистрибьюторский договор",
+    "выписка", "выписка из егрюл",
     "rub", "rur", "usd", "eur", "cny", "cnh", "rmb", "gbp", "chf",
     "jpy", "hkd", "aed", "try", "kzt", "byn", "uah",
     "юань", "юаней", "юаня", "доллар", "доллары", "долларов", "евро",
@@ -180,6 +182,8 @@ def is_stopword(text: str, entity_type: str) -> bool:
     if entity_type == "ORG" and in_stopwords(normalized, ORG_STOPWORDS):
         return True
     if entity_type == "LOC" and in_stopwords(normalized, LOC_STOPWORDS):
+        return True
+    if entity_type == "ORG" and canonical.startswith("выписка "):
         return True
 
     # Filter "Приложение N" patterns for ORG type

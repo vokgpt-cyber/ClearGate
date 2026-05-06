@@ -41,6 +41,8 @@
     "exportDocx": "Download DOCX",
     "exportDocxBusy": "Preparing file…",
     "exportDocxError": "Could not export document",
+    "appendDocuments": "Add documents",
+    "appendResetConfirm": "Adding documents will rebuild this session and reset current markup. Continue?",
     "importResponse": "Import LLM response",
     "replaceResponse": "Replace LLM response",
     "importResponseBusy": "Importing…",

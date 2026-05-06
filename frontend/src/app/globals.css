@@ -942,6 +942,14 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
 }
 
+.cleargate-workspace__actions button {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .cleargate-workspace__export {
   padding: 6px 14px;
   border: 1px solid var(--color-brand);
@@ -1646,6 +1654,7 @@ h1, h2, h3, h4 {
 /* -- Import response & export deanonymized buttons -- */
 
 .cleargate-workspace__deep-scan,
+.cleargate-workspace__append-docs,
 .cleargate-workspace__import-response,
 .cleargate-workspace__workflow-toggle,
 .cleargate-workspace__export-deanonymized {
@@ -1661,6 +1670,7 @@ h1, h2, h3, h4 {
   transition: border-color 120ms ease, color 120ms ease;
 }
 .cleargate-workspace__deep-scan:hover:not(:disabled),
+.cleargate-workspace__append-docs:hover:not(:disabled),
 .cleargate-workspace__import-response:hover,
 .cleargate-workspace__workflow-toggle:hover,
 .cleargate-workspace__export-deanonymized:hover {
@@ -1676,6 +1686,7 @@ h1, h2, h3, h4 {
 }
 
 .cleargate-workspace__deep-scan:disabled,
+.cleargate-workspace__append-docs:disabled,
 .cleargate-workspace__workflow-toggle:disabled {
   opacity: 0.52;
   cursor: not-allowed;

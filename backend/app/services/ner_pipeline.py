@@ -87,6 +87,11 @@ _CURRENCY_CODE_VALUE = re.compile(
     r"^(?:RUB|RUR|USD|EUR|CNY|CNH|RMB|GBP|CHF|JPY|HKD|AED|TRY|KZT|BYN|UAH)$",
     re.IGNORECASE,
 )
+_RELATIVE_DURATION_VALUE = re.compile(
+    r"\b\d+\s*(?:рабочих\s+|календарных\s+)?"
+    r"(?:дн(?:я|ей|ь)?|месяц(?:ев|а)?|мес\.?|лет|год(?:а|ов)?)\b",
+    re.IGNORECASE,
+)
 _DOCUMENT_TITLE_WORDS = {
     "аренда",
     "агентский",
@@ -99,6 +104,7 @@ _DOCUMENT_TITLE_WORDS = {
     "подряд",
     "поставка",
     "услуги",
+    "выписка",
 }
 _ENTITY_TYPE_PRIORITY = {
     "RU_INN": 80,
@@ -389,6 +395,9 @@ class NERPipeline:
                         continue
             if entity.entity_type in {"ORG", "LOC"} and _CURRENCY_CODE_VALUE.fullmatch(value):
                 logger.debug("ner_pipeline.currency_code_filtered", text=entity.text)
+                continue
+            if entity.entity_type in {"DATE", "RU_DATE"} and _RELATIVE_DURATION_VALUE.search(value):
+                logger.debug("ner_pipeline.relative_duration_date_filtered", text=entity.text)
                 continue
             filtered.append(entity)
         return filtered

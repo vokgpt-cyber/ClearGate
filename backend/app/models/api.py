@@ -93,11 +93,16 @@ class DeepScanResponse(AnonymizeResponse):
 
     The base anonymization result remains the current accepted workspace
     state. ``suggestions`` contains additive candidates found by the local
-    LLM verifier; clients decide whether to apply them.
+    LLM verifier. ``removals`` contains current entities that the shared
+    post-processor would now drop as false positives. Clients decide whether
+    to enable this QA layer and can disable it again without losing the base
+    markup.
     """
 
     suggestions: list[DetectedEntity] = Field(default_factory=list)
     suggestion_count: int = 0
+    removals: list[DetectedEntity] = Field(default_factory=list)
+    removal_count: int = 0
 
 
 class DeanonymizeRequest(BaseModel):

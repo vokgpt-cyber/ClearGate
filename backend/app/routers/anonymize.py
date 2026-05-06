@@ -130,6 +130,21 @@ def _new_deep_scan_suggestions(
     return suggestions
 
 
+def _deep_scan_removal_suggestions(
+    current_entities: list[DetectedEntity],
+    processed_entities: list[DetectedEntity],
+) -> list[DetectedEntity]:
+    """Return current entities that post-processing identifies as false positives."""
+    processed_signatures = {_entity_signature(entity) for entity in processed_entities}
+    removals: list[DetectedEntity] = []
+    for entity in current_entities:
+        if (entity.metadata or {}).get("state") == "rejected":
+            continue
+        if _entity_signature(entity) not in processed_signatures:
+            removals.append(entity)
+    return removals
+
+
 @router.post("/anonymize", response_model=AnonymizeResponse)
 async def anonymize(
     session_id: str,
@@ -182,12 +197,7 @@ async def deep_scan(
     current_user: Annotated[UserRecord, Depends(get_current_user)],
     sm: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> DeepScanResponse:
-    """Run local LLM verification as a conservative QA pass.
-
-    v0.9 deliberately keeps Deep Scan additive. The endpoint preserves the
-    current workspace entities and returns LLM-found misses as suggestions.
-    The frontend can show them to the user and apply them explicitly.
-    """
+    """Run local LLM verification as a reversible QA pass."""
     session = sm.get_session(session_id, user_id=current_user.user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -219,8 +229,10 @@ async def deep_scan(
 
     processed = session.pipeline.post_process(request.text, [*candidates, *aligned])
     suggestions = _new_deep_scan_suggestions(candidates, processed)
+    removals = _deep_scan_removal_suggestions(candidates, processed)
     entities = _prepare_response_entities(session, current_entities, previous=current_entities)
     suggestions = _prepare_response_entities(session, suggestions)
+    removals = _prepare_response_entities(session, removals, previous=current_entities)
     anonymized = session.registry.anonymize_text(request.text, entities)
     session.anonymized_text = anonymized
     session.detected_entities = entities
@@ -231,6 +243,7 @@ async def deep_scan(
         session_id=session_id,
         entity_count=len(entities),
         suggestion_count=len(suggestions),
+        removal_count=len(removals),
         stats=stats,
     )
     sm.save_session(session_id, user_id=current_user.user_id)
@@ -241,6 +254,8 @@ async def deep_scan(
         stats=stats,
         suggestions=suggestions,
         suggestion_count=len(suggestions),
+        removals=removals,
+        removal_count=len(removals),
     )
 
 

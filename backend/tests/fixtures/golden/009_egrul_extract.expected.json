@@ -1,0 +1,28 @@
+{
+  "id": "009_egrul_extract",
+  "text_file": "009_egrul_extract.txt",
+  "description": "EGRUL extract heading, identifiers, address and director.",
+  "expected_entities": [
+    {"text": "1117847296753", "entity_type": "RU_OGRN"},
+    {"text": "7801456328", "entity_type": "RU_INN"},
+    {"text": "780101001", "entity_type": "RU_KPP"},
+    {"text": "Акционерное общество «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
+    {"text": "190103, Санкт-Петербург, ул. Промышленная, д. 15, литер А", "entity_type": "ADDR"},
+    {"text": "Петров Сергей Игоревич", "entity_type": "PER"},
+    {"text": "11 сентября 2011", "entity_type": "RU_DATE"},
+    {"text": "12 февраля 2026", "entity_type": "RU_DATE"}
+  ],
+  "forbidden_entities": [
+    {"text": "ВЫПИСКА", "entity_type": "ORG"},
+    {"text": "ВЫПИСКА из Единого государственного реестра юридических лиц", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 2},
+    "ADDR": {"min": 1},
+    "PER": {"min": 1}
+  },
+  "llm_false_positives": [
+    {"text": "ВЫПИСКА", "entity_type": "ORG", "score": 0.9}
+  ]
+}

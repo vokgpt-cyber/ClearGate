@@ -657,6 +657,18 @@ class MoneyRuRecognizer(GroupRegexRecognizer):
         ),
         (
             re.compile(
+                (
+                    r"(?P<value>\b(?:[а-яё]+(?:[ \u00A0-]+)){1,12}"
+                    r"\(\s*(?:\d{1,3}(?:[ \u00A0]\d{3})+|\d+)(?:[,.]\d{1,2})?\s*\)"
+                    rf"\s*(?:{_CURRENCY}))"
+                ),
+                _REGEX_FLAGS,
+            ),
+            0.91,
+            "value",
+        ),
+        (
+            re.compile(
                 r"(?P<value>(?<!\d)\d{1,3}(?:[,.]\d{1,2})?\s*%\s*(?:\([^\)\n]{3,100}\))?)",
                 _REGEX_FLAGS,
             ),

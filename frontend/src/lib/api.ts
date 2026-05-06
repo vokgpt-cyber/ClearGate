@@ -111,6 +111,52 @@ export async function uploadDocument(
   return response.json();
 }
 
+export async function uploadDocuments(
+  sessionId: string,
+  files: File[],
+  mode: 'replace' | 'append' = 'replace',
+): Promise<{
+  text: string;
+  format: string;
+  page_count: number | null;
+  char_count: number;
+  document_id: string | null;
+}> {
+  if (files.length === 0) {
+    throw new Error('No files selected');
+  }
+  for (const file of files) {
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.docx') && !lowerName.endsWith('.pdf') && !lowerName.endsWith('.txt')) {
+      throw new Error('Only .docx, .pdf, and .txt files are supported');
+    }
+  }
+
+  if (files.length === 1 && mode === 'replace') {
+    return uploadDocument(sessionId, files[0]);
+  }
+
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+
+  const params = new URLSearchParams({
+    session_id: sessionId,
+    mode,
+  });
+  const response = await fetch(`${API_URL}/api/documents/upload-batch?${params.toString()}`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Upload failed (${response.status}): ${error}`);
+  }
+  return response.json();
+}
+
 /**
  * URL at which the raw DOCX bytes for a given session can be fetched.
  * Used by DocxViewer to stream the file into docx-preview.
@@ -152,6 +198,8 @@ export async function deepScanText(
   stats: Record<string, number>;
   suggestions?: unknown[];
   suggestion_count?: number;
+  removals?: unknown[];
+  removal_count?: number;
 }> {
   const cleanEntities = entities
     .filter((entity): entity is Record<string, unknown> => (

@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { SplitWorkspace } from '@/components/SplitWorkspace';
 import { CommandPalette } from '@/components/CommandPalette';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
-import { closeSession, createSession, listSessions, uploadDocument } from '@/lib/api';
+import { closeSession, createSession, listSessions, uploadDocuments } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocale } from '@/hooks/useLocale';
 import type { InteractiveEntity } from '@/lib/entity-overlay';
@@ -34,6 +34,7 @@ interface LoadedDoc {
   sessionId: string;
   name: string;
   openedAt: number;
+  revision: number;
 }
 
 export default function Home() {
@@ -81,6 +82,7 @@ export default function Home() {
             sessionId: m.session_id,
             name: m.docx_filename ?? 'Untitled',
             openedAt: new Date(m.created_at).getTime(),
+            revision: 0,
           }));
         if (restored.length > 0) {
           setSessions(restored);
@@ -93,16 +95,25 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [isAuthed]);
 
-  const handleFile = useCallback(async (file: File) => {
+  const bundleName = useCallback((files: File[]) => {
+    if (files.length === 1) return files[0].name;
+    const first = files[0].name.replace(/\.[^.]+$/, '');
+    const suffix = files.length === 2 ? 'файл' : 'файла';
+    return `${first} + ${files.length - 1} ${suffix}.docx`;
+  }, []);
+
+  const handleFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
     setWorking(true);
     setError(null);
     try {
       const session = await createSession('ru');
-      await uploadDocument(session.session_id, file);
+      await uploadDocuments(session.session_id, files);
       const doc: LoadedDoc = {
         sessionId: session.session_id,
-        name: file.name,
+        name: bundleName(files),
         openedAt: Date.now(),
+        revision: 0,
       };
       setSessions((prev) => [doc, ...prev]);
       setActiveId(doc.sessionId);
@@ -112,7 +123,48 @@ export default function Home() {
     } finally {
       setWorking(false);
     }
-  }, []);
+  }, [bundleName]);
+
+  const handleFile = useCallback((file: File) => {
+    void handleFiles([file]);
+  }, [handleFiles]);
+
+  const handleAppendFiles = useCallback(async (sessionId: string, files: File[]) => {
+    if (files.length === 0) return;
+    const hasMarkup = (entityCache[sessionId]?.length ?? 0) > 0;
+    if (hasMarkup && !window.confirm(t('workspace.appendResetConfirm'))) {
+      return;
+    }
+    setWorking(true);
+    setError(null);
+    try {
+      await uploadDocuments(sessionId, files, 'append');
+      setEntityCache((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+      setSessions((prev) =>
+        prev.map((doc) =>
+          doc.sessionId === sessionId
+            ? {
+                ...doc,
+                name: `${doc.name.replace(/\.[^.]+$/, '')} + ${files.length} ${
+                  files.length === 1 ? 'файл' : 'файла'
+                }.docx`,
+                revision: doc.revision + 1,
+              }
+            : doc,
+        ),
+      );
+      setActiveId(sessionId);
+      setIsPicking(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWorking(false);
+    }
+  }, [entityCache, t]);
 
   const handleNewDocument = useCallback(() => {
     setIsPicking(true);
@@ -196,16 +248,18 @@ export default function Home() {
         <div className="cleargate-app__content">
           {showWorkspace ? (
             <SplitWorkspace
-              key={activeDoc.sessionId}
+              key={`${activeDoc.sessionId}-${activeDoc.revision}`}
               documentId={activeDoc.sessionId}
               documentName={activeDoc.name}
               onClose={handleClose}
+              onAppendFiles={(files) => handleAppendFiles(activeDoc.sessionId, files)}
               initialEntities={entityCache[activeDoc.sessionId] ?? []}
               onAnonymizationComplete={handleAnonymizationComplete}
             />
           ) : (
             <EmptyState
               onFile={handleFile}
+              onFiles={handleFiles}
               isWorking={isWorking}
               error={error}
             />

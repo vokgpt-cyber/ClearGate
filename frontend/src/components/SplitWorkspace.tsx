@@ -75,6 +75,7 @@ interface SplitWorkspaceProps {
   documentId: string;
   documentName: string;
   onClose: () => void;
+  onAppendFiles?: (files: File[]) => Promise<void> | void;
   /** Pre-existing entities for this session (from page-level cache).
    *  When non-empty, we skip the auto-anonymize step on mount and render
    *  these directly. Lets the user re-open a document without re-firing
@@ -104,6 +105,7 @@ type DeepScanSummary = {
 type DeepScanLayer = {
   base: InteractiveEntity[];
   suggestions: InteractiveEntity[];
+  removals: InteractiveEntity[];
 } | null;
 
 type CompareMutation =
@@ -207,6 +209,7 @@ export function SplitWorkspace({
   documentId,
   documentName,
   onClose,
+  onAppendFiles,
   // initialEntities + onAnonymizationComplete are part of the v0.4.0
   // page-level entity cache contract. They're optional so the component
   // still works for callers that don't care about cross-session caching;
@@ -260,6 +263,8 @@ export function SplitWorkspace({
 
   // Phase 1 round-trip: import response -> deanonymize -> export
   const responseFileRef = useRef<HTMLInputElement | null>(null);
+  const appendFileRef = useRef<HTMLInputElement | null>(null);
+  const [appendBusy, setAppendBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [responseImported, setResponseImported] = useState(false);
@@ -487,6 +492,7 @@ export function SplitWorkspace({
     setRightPaneUrl(null);
     setDeanonymizeResult(null);
     setDeanonymizeError(null);
+    setAppendBusy(false);
     setDeepScanBusy(false);
     setDeepScanError(null);
     setDeepScanProgress(0);
@@ -817,25 +823,27 @@ export function SplitWorkspace({
     (enabled: boolean) => {
       if (!deepScanLayer) return;
       setDeepScanActive(enabled);
-      const suggestionKeys = new Set(
-        deepScanLayer.suggestions.map(entitySignature),
-      );
+      const removalKeys = new Set(deepScanLayer.removals.map(entitySignature));
       const next = enabled
-        ? mergeDeepScanSuggestions(entities, deepScanLayer.suggestions)
-        : entities.filter((entity) => !suggestionKeys.has(entitySignature(entity)));
+        ? mergeDeepScanSuggestions(
+            deepScanLayer.base.filter(
+              (entity) => !removalKeys.has(entitySignature(entity)),
+            ),
+            deepScanLayer.suggestions,
+          )
+        : deepScanLayer.base;
       applyEntities(next);
       onAnonymizationComplete?.(documentId, next);
       setDeepScanSummary({
         added: enabled ? deepScanLayer.suggestions.length : 0,
-        removed: enabled ? 0 : deepScanLayer.suggestions.length,
-        suggestions: deepScanLayer.suggestions.length,
+        removed: enabled ? deepScanLayer.removals.length : 0,
+        suggestions: deepScanLayer.suggestions.length + deepScanLayer.removals.length,
       });
     },
     [
       applyEntities,
       deepScanLayer,
       documentId,
-      entities,
       mergeDeepScanSuggestions,
       onAnonymizationComplete,
     ],
@@ -866,16 +874,26 @@ export function SplitWorkspace({
       const suggestions = toInteractiveEntities(
         (response.suggestions as OverlayEntity[] | undefined) ?? [],
       );
-      const layer = { base: entities, suggestions };
+      const removals = toInteractiveEntities(
+        (response.removals as OverlayEntity[] | undefined) ?? [],
+      );
+      const layer = { base: entities, suggestions, removals };
       setDeepScanLayer(layer);
       setDeepScanActive(true);
       setDeepScanSummary({
         added: suggestions.length,
-        removed: 0,
-        suggestions: response.suggestion_count ?? suggestions.length,
+        removed: removals.length,
+        suggestions: (
+          (response.suggestion_count ?? suggestions.length) +
+          (response.removal_count ?? removals.length)
+        ),
       });
-      if (suggestions.length > 0) {
-        const merged = mergeDeepScanSuggestions(entities, suggestions);
+      if (suggestions.length > 0 || removals.length > 0) {
+        const removalKeys = new Set(removals.map(entitySignature));
+        const merged = mergeDeepScanSuggestions(
+          entities.filter((entity) => !removalKeys.has(entitySignature(entity))),
+          suggestions,
+        );
         applyEntities(merged);
         onAnonymizationComplete?.(documentId, merged);
       }
@@ -884,6 +902,7 @@ export function SplitWorkspace({
       console.info('[Cleargate] deep scan response', {
         entities: response.entities?.length ?? 0,
         suggestions: suggestions.length,
+        removals: removals.length,
       });
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 700);
@@ -935,16 +954,13 @@ export function SplitWorkspace({
 
   const deepScanSummaryLabel = useMemo(() => {
     if (!deepScanSummary) return null;
-    if (deepScanSummary.suggestions > 0) {
-      if (deepScanActive) {
-        return `${t('workspace.deepScanApplied')}: +${deepScanSummary.suggestions}`;
-      }
-      return `${t('workspace.deepScanDisabled')}: -${deepScanSummary.suggestions}`;
-    }
     if (deepScanSummary.added === 0 && deepScanSummary.removed === 0) {
       return t('workspace.deepScanNoChanges');
     }
-    return `${t('workspace.deepScanDone')}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
+    const prefix = deepScanActive
+      ? t('workspace.deepScanApplied')
+      : t('workspace.deepScanDisabled');
+    return `${prefix}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
   }, [deepScanActive, deepScanSummary, t]);
 
   // ─── rerender on filter / state changes (NOT initial detection) ──
@@ -1323,6 +1339,19 @@ export function SplitWorkspace({
     window.getSelection()?.removeAllRanges();
   }, []);
 
+  const handleAppendFiles = useCallback(
+    async (files: File[]) => {
+      if (!onAppendFiles || files.length === 0 || appendBusy) return;
+      setAppendBusy(true);
+      try {
+        await onAppendFiles(files);
+      } finally {
+        setAppendBusy(false);
+      }
+    },
+    [appendBusy, onAppendFiles],
+  );
+
   // ─── export anonymized DOCX ──────────────────────────────────────
   //
   // Simple demo exporter: POST current entities to the backend, get
@@ -1500,6 +1529,31 @@ export function SplitWorkspace({
           </span>
         </div>
         <div className="cleargate-workspace__actions">
+          {onAppendFiles && !responseViewActive && (
+            <>
+              <button
+                type="button"
+                className="cleargate-workspace__append-docs"
+                onClick={() => appendFileRef.current?.click()}
+                disabled={appendBusy || status === 'detecting'}
+                title={t('workspace.appendDocuments')}
+              >
+                {appendBusy ? t('empty.working') : t('workspace.appendDocuments')}
+              </button>
+              <input
+                ref={appendFileRef}
+                type="file"
+                accept=".docx,.pdf,.txt"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) void handleAppendFiles(files);
+                  e.target.value = '';
+                }}
+              />
+            </>
+          )}
           <button
             type="button"
             className="cleargate-workspace__export"
@@ -1755,7 +1809,7 @@ export function SplitWorkspace({
       )}
 
       {/* Unresolved placeholders panel with manual input */}
-      {deanonymizeResult && deanonymizeResult.total_unresolved > 0 && (
+      {!compareMode && deanonymizeResult && deanonymizeResult.total_unresolved > 0 && (
         <div className="cleargate-workspace__unresolved">
           <div className="cleargate-workspace__unresolved-header">
             {t('workspace.unresolvedTitle')} ({deanonymizeResult.total_unresolved})
@@ -1820,7 +1874,7 @@ export function SplitWorkspace({
       )}
 
       {/* Deanonymize stats */}
-      {deanonymizeResult && (
+      {!compareMode && deanonymizeResult && (
         <div className="cleargate-workspace__deanonymize-stats">
           <span>{t('workspace.replacementsDone')}: {deanonymizeResult.total_replacements}</span>
           {deanonymizeResult.total_unresolved > 0 && (

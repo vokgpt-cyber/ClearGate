@@ -12,11 +12,11 @@ access returns 404 indistinguishably from a missing session.
 from __future__ import annotations
 
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
 import structlog
@@ -35,7 +35,7 @@ from app.models.api import (
 )
 from app.routers.auth import get_current_user
 from app.routers.sessions import get_session_manager
-from app.services.doc_processor import DocumentProcessor
+from app.services.doc_processor import DocumentProcessor, ParseResult
 from app.services.docx_deanonymize import deanonymize_docx, scan_placeholders
 from app.services.docx_export import EntitySubstitution, export_anonymized_docx
 from app.services.docx_utils import copy_page_setup
@@ -61,21 +61,27 @@ def _download_stem(filename: str | None, fallback: str = "document") -> str:
     return stem or fallback
 
 
-@router.post("/upload", response_model=UploadResponse)
-async def upload_document(
+def _bundle_filename(filenames: list[str]) -> str:
+    """Human-readable filename for a multi-file session bundle."""
+    clean = [name for name in filenames if name]
+    if not clean:
+        return "Пакет документов.docx"
+    if len(clean) == 1:
+        return (
+            clean[0]
+            if clean[0].lower().endswith(".docx")
+            else f"{_download_stem(clean[0])}.docx"
+        )
+    first = _download_stem(clean[0])
+    suffix = "файл" if len(clean) == 2 else "файла"
+    return f"{first} + {len(clean) - 1} {suffix}.docx"
+
+
+async def _parse_upload_part(
     file: UploadFile,
-    current_user: Annotated[UserRecord, Depends(get_current_user)],
-    sm: Annotated[SessionManager, Depends(get_session_manager)],
-    session_id: str | None = Query(
-        default=None,
-        description=(
-            "Optional session to attach the document to. Required for DOCX "
-            "rendering -- the raw bytes are stored inside the session so the "
-            "frontend can render the document with Word-like fidelity."
-        ),
-    ),
-) -> UploadResponse:
-    """Parse uploaded document (DOCX/PDF/TXT) and return plain text."""
+    processor: DocumentProcessor,
+) -> tuple[str, str, int, ParseResult]:
+    """Validate and parse one uploaded file."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -91,8 +97,38 @@ async def upload_document(
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
+    return suffix, file.filename, len(content), processor.parse(content, format=suffix)
+
+
+def _reset_document_workflow(session) -> None:  # type: ignore[no-untyped-def]
+    """Clear derived state after replacing/appending source documents."""
+    session.response_docx_bytes = None
+    session.response_docx_filename = None
+    session.deanonymized_docx_bytes = None
+    session.deanonymize_result_json = None
+    session.manual_resolutions_json = None
+    session.workflow_stage = "anonymized"
+    session.anonymized_text = None
+    session.detected_entities.clear()
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_document(
+    file: UploadFile,
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+    session_id: str | None = Query(
+        default=None,
+        description=(
+            "Optional session to attach the document to. Required for DOCX "
+            "rendering -- the raw bytes are stored inside the session so the "
+            "frontend can render the document with Word-like fidelity."
+        ),
+    ),
+) -> UploadResponse:
+    """Parse uploaded document (DOCX/PDF/TXT) and return plain text."""
     processor = DocumentProcessor()
-    result = processor.parse(content, format=suffix)
+    suffix, filename, byte_count, result = await _parse_upload_part(file, processor)
 
     document_id: str | None = None
     if session_id is not None:
@@ -110,28 +146,21 @@ async def upload_document(
             )
         session.docx_bytes = render_bytes
         session.docx_filename = (
-            file.filename
+            filename
             if suffix == "docx"
-            else f"{_download_stem(file.filename)}.docx"
+            else f"{_download_stem(filename)}.docx"
         )
         session.source_format = suffix
-        session.source_filename = file.filename
-        session.response_docx_bytes = None
-        session.response_docx_filename = None
-        session.deanonymized_docx_bytes = None
-        session.deanonymize_result_json = None
-        session.manual_resolutions_json = None
-        session.workflow_stage = "anonymized"
-        session.anonymized_text = None
-        session.detected_entities.clear()
+        session.source_filename = filename
+        _reset_document_workflow(session)
         document_id = session_id
         sm.save_session(session_id, user_id=current_user.user_id)
         logger.info(
             "document.attached_to_session",
             session_id=session_id,
-            filename=file.filename,
+            filename=filename,
             source_format=suffix,
-            bytes=len(content),
+            bytes=byte_count,
         )
 
     logger.info(
@@ -147,6 +176,79 @@ async def upload_document(
         format=suffix,
         page_count=result.page_count,
         char_count=len(result.text),
+        document_id=document_id,
+    )
+
+
+@router.post("/upload-batch", response_model=UploadResponse)
+async def upload_document_batch(
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
+    sm: Annotated[SessionManager, Depends(get_session_manager)],
+    files: list[UploadFile] = File(...),
+    session_id: str | None = Query(default=None),
+    mode: Literal["replace", "append"] = Query(default="replace"),
+) -> UploadResponse:
+    """Parse and combine multiple DOCX/PDF/TXT files into one session document."""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    processor = DocumentProcessor()
+    session = None
+    existing_names: list[str] = []
+    results: list[ParseResult] = []
+
+    if session_id is not None:
+        session = sm.get_session(session_id, user_id=current_user.user_id)
+        if session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session {session_id} not found or expired",
+            )
+        if mode == "append" and session.docx_bytes is not None:
+            results.append(processor.parse(session.docx_bytes, format="docx"))
+            existing_names.append(session.source_filename or session.docx_filename or "document.docx")
+
+    filenames: list[str] = []
+    formats: list[str] = []
+    total_bytes = 0
+    for file in files:
+        suffix, filename, byte_count, result = await _parse_upload_part(file, processor)
+        filenames.append(filename)
+        formats.append(suffix)
+        total_bytes += byte_count
+        results.append(result)
+
+    combined = processor.combine_results(results)
+    all_names = [*existing_names, *filenames]
+    bundle_name = _bundle_filename(all_names)
+
+    document_id: str | None = None
+    if session is not None:
+        if combined.render_docx_bytes is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Documents cannot be rendered as DOCX",
+            )
+        session.docx_bytes = combined.render_docx_bytes
+        session.docx_filename = bundle_name
+        session.source_format = formats[0] if len(set(formats)) == 1 and not existing_names else "batch"
+        session.source_filename = bundle_name
+        _reset_document_workflow(session)
+        document_id = session_id
+        sm.save_session(session_id, user_id=current_user.user_id)
+        logger.info(
+            "document.batch_attached_to_session",
+            session_id=session_id,
+            files=len(files),
+            mode=mode,
+            bytes=total_bytes,
+        )
+
+    return UploadResponse(
+        text=combined.text,
+        format="docx",
+        page_count=combined.page_count,
+        char_count=len(combined.text),
         document_id=document_id,
     )
 
