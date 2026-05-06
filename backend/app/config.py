@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     ldap_timeout_seconds: int = 5     # connect timeout, prevents hangs
 
     # Version (not from env -- hardcoded to match pyproject.toml)
-    version: str = "1.0.3"
+    version: str = "1.0.4"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

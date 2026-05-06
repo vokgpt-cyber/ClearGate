@@ -193,6 +193,10 @@ function moveSimilarity(a: string, b: string): number {
   return intersection / Math.max(aTokens.size, bTokens.size);
 }
 
+const MOVE_BLOCK_MIN_NORMALIZED_LENGTH = 80;
+const FUZZY_MOVE_MIN_NORMALIZED_LENGTH = 120;
+const MOVE_BLOCK_MIN_TOKENS = 10;
+
 type TextBlock = {
   text: string;
   start: number;
@@ -201,42 +205,111 @@ type TextBlock = {
   normalized: string;
 };
 
+type RawTextLine = {
+  text: string;
+  start: number;
+  end: number;
+  trimmed: string;
+  trimStart: number;
+  trimEnd: number;
+};
+
+function splitTextLines(text: string): RawTextLine[] {
+  const lines: RawTextLine[] = [];
+  let start = 0;
+  const parts = text.split('\n');
+  for (const part of parts) {
+    const end = start + part.length;
+    const leading = part.match(/^\s*/)?.[0].length ?? 0;
+    const trailing = part.match(/\s*$/)?.[0].length ?? 0;
+    lines.push({
+      text: part,
+      start,
+      end,
+      trimmed: part.trim(),
+      trimStart: start + leading,
+      trimEnd: end - trailing,
+    });
+    start = end + 1;
+  }
+  return lines;
+}
+
+function isTopLevelNumberedLine(trimmed: string): boolean {
+  return /^\d+\.(?!\d)\s+\S/u.test(trimmed) || /^\d+\.$/u.test(trimmed);
+}
+
+function isSubClauseLine(trimmed: string): boolean {
+  return /^\d+\.\d+(?:\.\d+)*\s+\S/u.test(trimmed);
+}
+
+function normalizedTokenCount(normalized: string): number {
+  return normalized.split(' ').filter(Boolean).length;
+}
+
+function pushLogicalMoveBlock(
+  blocks: TextBlock[],
+  text: string,
+  lines: RawTextLine[],
+  startLine: number,
+  endLineExclusive: number,
+) {
+  const meaningfulLines = lines
+    .slice(startLine, endLineExclusive)
+    .filter((line) => line.trimmed.length > 0);
+  if (meaningfulLines.length === 0) return;
+
+  const blockStart = meaningfulLines[0].trimStart;
+  const blockEnd = meaningfulLines[meaningfulLines.length - 1].trimEnd;
+  if (blockEnd <= blockStart) return;
+
+  const blockText = text.slice(blockStart, blockEnd);
+  const normalized = normalizeMovedText(blockText);
+  const hasSubClause = meaningfulLines.some((line) => isSubClauseLine(line.trimmed));
+  const enoughBody =
+    normalized.length >= MOVE_BLOCK_MIN_NORMALIZED_LENGTH &&
+    normalizedTokenCount(normalized) >= MOVE_BLOCK_MIN_TOKENS;
+  if (!hasSubClause || !enoughBody) return;
+
+  blocks.push({
+    text: blockText,
+    start: blockStart,
+    end: blockEnd,
+    index: blocks.length,
+    normalized,
+  });
+}
+
 function collectTextBlocks(text: string): TextBlock[] {
   const blocks: TextBlock[] = [];
-  const re = /[^\n]+/g;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    const raw = match[0];
-    const leading = raw.match(/^\s*/)?.[0].length ?? 0;
-    const trailing = raw.match(/\s*$/)?.[0].length ?? 0;
-    const start = match.index + leading;
-    const end = match.index + raw.length - trailing;
-    if (end <= start) continue;
-    const blockText = text.slice(start, end);
-    const normalized = normalizeMovedText(blockText);
-    if (normalized.length >= 28) {
-      blocks.push({
-        text: blockText,
-        start,
-        end,
-        index: blocks.length,
-        normalized,
-      });
+  const lines = splitTextLines(text);
+  let index = 0;
+  while (index < lines.length) {
+    if (!isTopLevelNumberedLine(lines[index].trimmed)) {
+      index++;
+      continue;
     }
+    const startLine = index;
+    index++;
+    while (
+      index < lines.length &&
+      !isTopLevelNumberedLine(lines[index].trimmed)
+    ) {
+      index++;
+    }
+    pushLogicalMoveBlock(blocks, text, lines, startLine, index);
   }
   return blocks;
 }
 
-function findStableAnchor(
+function findMoveSourceAnchor(
   oldBlocks: TextBlock[],
   newByNorm: Map<string, TextBlock[]>,
-  movedNorms: Set<string>,
   oldIndex: number,
   newTextLength: number,
 ): number {
   for (let i = oldIndex - 1; i >= 0; i--) {
     const block = oldBlocks[i];
-    if (movedNorms.has(block.normalized)) continue;
     const newMatches = newByNorm.get(block.normalized);
     if (newMatches?.length === 1) {
       return Math.min(newMatches[0].end + 1, newTextLength);
@@ -244,13 +317,49 @@ function findStableAnchor(
   }
   for (let i = oldIndex + 1; i < oldBlocks.length; i++) {
     const block = oldBlocks[i];
-    if (movedNorms.has(block.normalized)) continue;
     const newMatches = newByNorm.get(block.normalized);
     if (newMatches?.length === 1) {
       return Math.max(0, newMatches[0].start - 1);
     }
   }
   return 0;
+}
+
+function hasOrderInversion(
+  oldBlock: TextBlock,
+  newBlock: TextBlock,
+  oldBlocks: TextBlock[],
+  oldByNorm: Map<string, TextBlock[]>,
+  newByNorm: Map<string, TextBlock[]>,
+): boolean {
+  for (let i = oldBlock.index - 1; i >= 0; i--) {
+    const previous = oldBlocks[i];
+    if (oldByNorm.get(previous.normalized)?.length !== 1) continue;
+    const previousNew = newByNorm.get(previous.normalized);
+    if (previousNew?.length === 1) {
+      return previousNew[0].index > newBlock.index;
+    }
+  }
+  for (let i = oldBlock.index + 1; i < oldBlocks.length; i++) {
+    const next = oldBlocks[i];
+    if (oldByNorm.get(next.normalized)?.length !== 1) continue;
+    const nextNew = newByNorm.get(next.normalized);
+    if (nextNew?.length === 1) {
+      return nextNew[0].index < newBlock.index;
+    }
+  }
+  return false;
+}
+
+function overlapsRange(start: number, end: number, rangeStart: number, rangeEnd: number): boolean {
+  return start < rangeEnd && end > rangeStart;
+}
+
+function isSubstantialMoveText(normalized: string, minLength = MOVE_BLOCK_MIN_NORMALIZED_LENGTH): boolean {
+  return (
+    normalized.length >= minLength &&
+    normalizedTokenCount(normalized) >= MOVE_BLOCK_MIN_TOKENS
+  );
 }
 
 function findMovedBlockRanges(
@@ -269,54 +378,42 @@ function findMovedBlockRanges(
     newByNorm.set(block.normalized, [...(newByNorm.get(block.normalized) ?? []), block]);
   }
 
-  const overlapsExistingChange = (start: number, end: number) =>
-    existingMutations.some((mutation) => {
-      if (mutation.kind !== 'ins' && mutation.kind !== 'move-ins') return false;
-      return start < mutation.end && end > mutation.start;
-    });
-
   const hasExistingMovedSource = (normalized: string) =>
     existingMutations.some((mutation) => (
-      (mutation.kind === 'del' || mutation.kind === 'move-del') &&
+      mutation.kind === 'move-del' &&
       normalizeMovedText(mutation.text) === normalized
     ));
 
   const candidates: Array<{ oldBlock: TextBlock; newBlock: TextBlock }> = [];
-  const movedNorms = new Set<string>();
   for (const [normalized, oldMatches] of oldByNorm) {
     const newMatches = newByNorm.get(normalized);
     if (!newMatches || oldMatches.length !== 1 || newMatches.length !== 1) continue;
     const oldBlock = oldMatches[0];
     const newBlock = newMatches[0];
     const positionDelta = Math.abs(oldBlock.start - newBlock.start);
-    const orderDelta = Math.abs(oldBlock.index - newBlock.index);
     if (
-      positionDelta < Math.max(80, newBlock.text.length * 1.5) &&
-      orderDelta < 2
+      positionDelta < 60 ||
+      !hasOrderInversion(oldBlock, newBlock, oldBlocks, oldByNorm, newByNorm)
     ) {
       continue;
     }
     candidates.push({ oldBlock, newBlock });
-    movedNorms.add(normalized);
   }
 
   const moves: CompareMutation[] = [];
   for (const { oldBlock, newBlock } of candidates) {
-    if (!overlapsExistingChange(newBlock.start, newBlock.end)) {
-      moves.push({
-        kind: 'move-ins',
-        start: newBlock.start,
-        end: newBlock.end,
-        text: newBlock.text,
-      });
-    }
+    moves.push({
+      kind: 'move-ins',
+      start: newBlock.start,
+      end: newBlock.end,
+      text: newBlock.text,
+    });
     if (!hasExistingMovedSource(oldBlock.normalized)) {
       moves.push({
         kind: 'move-del',
-        at: findStableAnchor(
+        at: findMoveSourceAnchor(
           oldBlocks,
           newByNorm,
-          movedNorms,
           oldBlock.index,
           newText.length,
         ),
@@ -327,17 +424,51 @@ function findMovedBlockRanges(
   return moves;
 }
 
+function filterMutationsCoveredBySemanticMoves(mutations: CompareMutation[]): CompareMutation[] {
+  const moveInsertRanges = mutations
+    .filter((mutation): mutation is Extract<CompareMutation, { kind: 'move-ins' }> =>
+      mutation.kind === 'move-ins',
+    )
+    .map((mutation) => ({ start: mutation.start, end: mutation.end }));
+  const moveSourceNorms = mutations
+    .filter((mutation): mutation is Extract<CompareMutation, { kind: 'move-del' }> =>
+      mutation.kind === 'move-del',
+    )
+    .map((mutation) => normalizeMovedText(mutation.text))
+    .filter((normalized) => isSubstantialMoveText(normalized));
+
+  if (moveInsertRanges.length === 0 && moveSourceNorms.length === 0) return mutations;
+
+  return mutations.filter((mutation) => {
+    if (mutation.kind === 'ins') {
+      return !moveInsertRanges.some((range) =>
+        overlapsRange(mutation.start, mutation.end, range.start, range.end),
+      );
+    }
+    if (mutation.kind === 'del') {
+      const normalized = normalizeMovedText(mutation.text);
+      if (!normalized) return true;
+      return !moveSourceNorms.some((sourceNorm) => (
+        sourceNorm.includes(normalized) || normalized.includes(sourceNorm)
+      ));
+    }
+    return true;
+  });
+}
+
 function markLikelyMoves(mutations: CompareMutation[]): CompareMutation[] {
   const next = mutations.map((mutation) => ({ ...mutation }));
   const deletions = next
     .map((mutation, index) => ({ mutation, index }))
     .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'del' }>; index: number } =>
-      item.mutation.kind === 'del' && normalizeMovedText(item.mutation.text).length >= 28,
+      item.mutation.kind === 'del' &&
+      isSubstantialMoveText(normalizeMovedText(item.mutation.text), FUZZY_MOVE_MIN_NORMALIZED_LENGTH),
     );
   const insertions = next
     .map((mutation, index) => ({ mutation, index }))
     .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'ins' }>; index: number } =>
-      item.mutation.kind === 'ins' && normalizeMovedText(item.mutation.text).length >= 28,
+      item.mutation.kind === 'ins' &&
+      isSubstantialMoveText(normalizeMovedText(item.mutation.text), FUZZY_MOVE_MIN_NORMALIZED_LENGTH),
     );
   const usedInsertions = new Set<number>();
 
@@ -403,7 +534,7 @@ function applyFormattedCompareDiff(
   mutations.push(...findMovedBlockRanges(oldText, newText, mutations));
 
   let applied = 0;
-  const ordered = markLikelyMoves(mutations).sort(
+  const ordered = markLikelyMoves(filterMutationsCoveredBySemanticMoves(mutations)).sort(
     (a, b) => comparePosition(b) - comparePosition(a),
   );
   for (const mutation of ordered) {
