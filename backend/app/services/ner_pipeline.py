@@ -59,7 +59,10 @@ _LEGAL_FORM_HINT = re.compile(
     re.IGNORECASE,
 )
 _DOCUMENT_CUE = re.compile(
-    r"(?:№|N\s*)\s*[\wА-Яа-яЁё/-]{2,}|от\s+\d{2}\.\d{2}\.\d{2,4}|договор",
+    r"(?:№|N\s*)\s*[\wА-Яа-яЁё/-]{2,}|"
+    r"от\s+\d{2}\.\d{2}\.\d{2,4}|"
+    r"от\s+\d{1,2}\s+[а-яё]+\s+\d{4}\s*г?\.?|"
+    r"договор|между\s*:",
     re.IGNORECASE,
 )
 _FINANCIAL_CUE = re.compile(
@@ -105,6 +108,14 @@ _DOCUMENT_TITLE_WORDS = {
     "поставка",
     "услуги",
     "выписка",
+    "акт",
+    "сверка",
+    "сверки",
+    "расчет",
+    "расчеты",
+    "расчетов",
+    "расчёты",
+    "расчётов",
 }
 _ENTITY_TYPE_PRIORITY = {
     "RU_INN": 80,

@@ -596,7 +596,7 @@ async def set_workflow_stage(
 class DeanonymizeRequest(BaseModel):
     """Optional body for the deanonymize endpoint."""
 
-    manual_resolutions: list[dict] = Field(
+    manual_resolutions: list[ManualResolution] = Field(
         default_factory=list,
         description="List of {placeholder, value} pairs for unresolved placeholders",
     )
@@ -632,8 +632,8 @@ async def deanonymize_docx_endpoint(
 
     manual: dict[str, str] = {}
     for res in payload.manual_resolutions:
-        ph = res.get("placeholder", "")
-        val = res.get("value", "")
+        ph = res.placeholder
+        val = res.value
         if ph and val:
             manual[ph] = val
 

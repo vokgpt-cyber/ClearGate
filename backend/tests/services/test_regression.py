@@ -139,6 +139,26 @@ class TestStopwordFiltering:
 
         assert pipeline.post_process(text, entities) == []
 
+    def test_reconciliation_act_title_not_org_after_post_process(self, pipeline):
+        title = "\u0410\u041a\u0422 \u0412\u0417\u0410\u0418\u041c\u041d\u041e\u0419 \u0421\u0412\u0415\u0420\u041a\u0418"
+        text = (
+            f"{title} \u0420\u0410\u0421\u0427\u0401\u0422\u041e\u0412\n"
+            "\u043e\u0442 31 \u0434\u0435\u043a\u0430\u0431\u0440\u044f 2024 \u0433.\n\n"
+            "\u041c\u0415\u0416\u0414\u0423: \u0410\u041e \u00ab\u041d\u043e\u0440\u0434-\u0425\u0438\u043c\u00bb \u0438 \u041e\u041e\u041e \u00ab\u041f\u043e\u043b\u0438\u043c\u0435\u0440-\u0422\u0440\u0435\u0439\u0434\u00bb"
+        )
+        entities = [
+            DetectedEntity(
+                text=title,
+                entity_type="ORG",
+                start=0,
+                end=len(title),
+                score=0.93,
+                source_layer="llm",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
     def test_pdf_delayed_title_not_org_after_post_process(self, pipeline):
         prefix = "\n" * 30 + (" " * 420)
         title = "\u0414\u0418\u0421\u0422\u0420\u0418\u0411\u0423\u0426\u0418\u042f"

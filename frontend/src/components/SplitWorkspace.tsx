@@ -193,17 +193,98 @@ function moveSimilarity(a: string, b: string): number {
   return intersection / Math.max(aTokens.size, bTokens.size);
 }
 
+type TextBlock = {
+  text: string;
+  start: number;
+  end: number;
+  index: number;
+  normalized: string;
+};
+
+function collectTextBlocks(text: string): TextBlock[] {
+  const blocks: TextBlock[] = [];
+  const re = /[^\n]+/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const raw = match[0];
+    const leading = raw.match(/^\s*/)?.[0].length ?? 0;
+    const trailing = raw.match(/\s*$/)?.[0].length ?? 0;
+    const start = match.index + leading;
+    const end = match.index + raw.length - trailing;
+    if (end <= start) continue;
+    const blockText = text.slice(start, end);
+    const normalized = normalizeMovedText(blockText);
+    if (normalized.length >= 28) {
+      blocks.push({
+        text: blockText,
+        start,
+        end,
+        index: blocks.length,
+        normalized,
+      });
+    }
+  }
+  return blocks;
+}
+
+function findMovedDestinationRanges(
+  oldText: string,
+  newText: string,
+  existingMutations: CompareMutation[],
+): CompareMutation[] {
+  const oldBlocks = collectTextBlocks(oldText);
+  const newBlocks = collectTextBlocks(newText);
+  const oldByNorm = new Map<string, TextBlock[]>();
+  const newByNorm = new Map<string, TextBlock[]>();
+  for (const block of oldBlocks) {
+    oldByNorm.set(block.normalized, [...(oldByNorm.get(block.normalized) ?? []), block]);
+  }
+  for (const block of newBlocks) {
+    newByNorm.set(block.normalized, [...(newByNorm.get(block.normalized) ?? []), block]);
+  }
+
+  const overlapsExistingChange = (start: number, end: number) =>
+    existingMutations.some((mutation) => {
+      if (mutation.kind !== 'ins' && mutation.kind !== 'move-ins') return false;
+      return start < mutation.end && end > mutation.start;
+    });
+
+  const moves: CompareMutation[] = [];
+  for (const [normalized, oldMatches] of oldByNorm) {
+    const newMatches = newByNorm.get(normalized);
+    if (!newMatches || oldMatches.length !== 1 || newMatches.length !== 1) continue;
+    const oldBlock = oldMatches[0];
+    const newBlock = newMatches[0];
+    const positionDelta = Math.abs(oldBlock.start - newBlock.start);
+    const orderDelta = Math.abs(oldBlock.index - newBlock.index);
+    if (
+      positionDelta < Math.max(80, newBlock.text.length * 1.5) &&
+      orderDelta < 2
+    ) {
+      continue;
+    }
+    if (overlapsExistingChange(newBlock.start, newBlock.end)) continue;
+    moves.push({
+      kind: 'move-ins',
+      start: newBlock.start,
+      end: newBlock.end,
+      text: newBlock.text,
+    });
+  }
+  return moves;
+}
+
 function markLikelyMoves(mutations: CompareMutation[]): CompareMutation[] {
   const next = mutations.map((mutation) => ({ ...mutation }));
   const deletions = next
     .map((mutation, index) => ({ mutation, index }))
     .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'del' }>; index: number } =>
-      item.mutation.kind === 'del' && normalizeMovedText(item.mutation.text).length >= 48,
+      item.mutation.kind === 'del' && normalizeMovedText(item.mutation.text).length >= 28,
     );
   const insertions = next
     .map((mutation, index) => ({ mutation, index }))
     .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'ins' }>; index: number } =>
-      item.mutation.kind === 'ins' && normalizeMovedText(item.mutation.text).length >= 48,
+      item.mutation.kind === 'ins' && normalizeMovedText(item.mutation.text).length >= 28,
     );
   const usedInsertions = new Set<number>();
 
@@ -265,6 +346,8 @@ function applyFormattedCompareDiff(
       oldOffset += op.text.length;
     }
   }
+
+  mutations.push(...findMovedDestinationRanges(oldText, newText, mutations));
 
   let applied = 0;
   const ordered = markLikelyMoves(mutations).sort(
@@ -365,6 +448,22 @@ export function SplitWorkspace({
   const [manualResolutions, setManualResolutions] = useState<
     Array<{ placeholder: string; value: string }>
   >([]);
+  const [unresolvedValues, setUnresolvedValues] = useState<Record<string, string>>({});
+
+  const cacheManualResolutions = useCallback(
+    (resolutions: Array<{ placeholder: string; value: string }>) => {
+      setManualResolutions(resolutions);
+      setUnresolvedValues(
+        Object.fromEntries(
+          resolutions.map((resolution) => [
+            resolution.placeholder,
+            resolution.value,
+          ]),
+        ),
+      );
+    },
+    [],
+  );
   // URL override for right pane: after deanonymize, show the deanonymized doc
   const [rightPaneUrl, setRightPaneUrl] = useState<string | null>(null);
   const rightPaneUrlRef = useRef<string | null>(null);
@@ -567,7 +666,7 @@ export function SplitWorkspace({
     rightPaneRef.current = null;
     restorationsRef.current = [];
     setDocScale(1);
-    setManualResolutions([]);
+    cacheManualResolutions([]);
     setCompareMode(false);
     setWorkflowStage('anonymized');
     setResponseImported(false);
@@ -724,7 +823,7 @@ export function SplitWorkspace({
       const state = await setDocumentWorkflowStage(documentId, 'anonymized');
       setWorkflowStage(state.stage);
       setResponseImported(state.response_imported);
-      setManualResolutions(state.manual_resolutions ?? []);
+      cacheManualResolutions(state.manual_resolutions ?? []);
       if (state.deanonymize_result) {
         setDeanonymizeResult(state.deanonymize_result);
         restorationsRef.current = state.deanonymize_result.restorations ?? [];
@@ -747,7 +846,7 @@ export function SplitWorkspace({
       }
       setWorkflowStage(state.stage);
       setResponseImported(true);
-      setManualResolutions(state.manual_resolutions ?? []);
+      cacheManualResolutions(state.manual_resolutions ?? []);
       setDeanonymizeResult(result);
       restorationsRef.current = result.restorations ?? [];
       setResponseViewActive(true);
@@ -819,7 +918,7 @@ export function SplitWorkspace({
         if (cancelled || !state) return;
         setWorkflowStage(state.stage);
         setResponseImported(state.response_imported);
-        setManualResolutions(state.manual_resolutions ?? []);
+        cacheManualResolutions(state.manual_resolutions ?? []);
         if (state.deanonymize_result) {
           setDeanonymizeResult(state.deanonymize_result);
           restorationsRef.current = state.deanonymize_result.restorations ?? [];
@@ -1556,7 +1655,7 @@ export function SplitWorkspace({
           placeholders: result.placeholder_count,
         });
         leaveCompareMode();
-        setManualResolutions([]);
+        cacheManualResolutions([]);
         setResponseImported(true);
         setResponseViewActive(false);
         setWorkflowStage('llm_response');
@@ -2034,27 +2133,44 @@ export function SplitWorkspace({
                   type="text"
                   className="cleargate-workspace__unresolved-input"
                   placeholder={t('workspace.unresolvedValue')}
-                  data-placeholder={u.normalized}
-                  defaultValue=""
+                  value={unresolvedValues[u.normalized] ?? ''}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    setUnresolvedValues((current) => ({
+                      ...current,
+                      [u.normalized]: value,
+                    }));
+                  }}
                 />
               </li>
             ))}
           </ul>
+          {deanonymizeError && (
+            <div className="cleargate-workspace__unresolved-error">
+              {deanonymizeError}
+            </div>
+          )}
           <button
             type="button"
             className="cleargate-workspace__unresolved-apply"
             onClick={() => {
-              const inputs = document.querySelectorAll<HTMLInputElement>(
-                '.cleargate-workspace__unresolved-input',
+              const nextManual = new Map(
+                manualResolutions.map((resolution) => [
+                  resolution.placeholder,
+                  resolution.value,
+                ]),
               );
-              const resolutions: Array<{ placeholder: string; value: string }> = [];
-              inputs.forEach((input) => {
-                const val = input.value.trim();
-                const ph = input.dataset.placeholder;
-                if (val && ph) resolutions.push({ placeholder: ph, value: val });
-              });
+              for (const unresolved of deanonymizeResult.unresolved) {
+                const value = (unresolvedValues[unresolved.normalized] ?? '').trim();
+                if (value) {
+                  nextManual.set(unresolved.normalized, value);
+                }
+              }
+              const resolutions = Array.from(nextManual.entries()).map(
+                ([placeholder, value]) => ({ placeholder, value }),
+              );
               if (resolutions.length === 0) return;
-              setManualResolutions(resolutions);
+              cacheManualResolutions(resolutions);
               setManualResolutionBusy(true);
               setDeanonymizeError(null);
               deanonymizeDocx(documentId, resolutions)

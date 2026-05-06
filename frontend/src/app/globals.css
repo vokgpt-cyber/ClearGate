@@ -1981,12 +1981,6 @@ h1, h2, h3, h4 {
   font-size: 0.75rem;
 }
 .cleargate-workspace__unresolved-input {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-.cleargate-workspace__unresolved-input input {
   flex: 1;
   padding: 3px 6px;
   border: 1px solid var(--border);
@@ -1995,6 +1989,12 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
   font: inherit;
   font-size: 0.75rem;
+}
+.cleargate-workspace__unresolved-error {
+  margin-top: 8px;
+  color: var(--error);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 .cleargate-workspace__unresolved-apply {
   padding: 5px 14px;
