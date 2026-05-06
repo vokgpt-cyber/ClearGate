@@ -1,6 +1,6 @@
 [project]
 name = "cleargate-backend"
-version = "1.0.2"
+version = "1.0.3"
 description = "CLEARGATE — On-premise anonymization gateway for legal AI workflows at EPAM"
 authors = [{ name = "EPAM Legal", email = "dev@epam.ru" }]
 readme = "README.md"

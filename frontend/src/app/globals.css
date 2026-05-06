@@ -1932,11 +1932,11 @@ h1, h2, h3, h4 {
   border-radius: var(--radius-sm);
 }
 .cleargate-compare .cleargate-diff-move[data-diff-move="from"]::before {
-  content: "↷ ";
+  content: "↷ из: ";
   font-weight: 700;
 }
 .cleargate-compare .cleargate-diff-move[data-diff-move="to"]::before {
-  content: "↳ ";
+  content: "↳ сюда: ";
   font-weight: 700;
 }
 :root[data-theme="dark"] .cleargate-compare ins.cleargate-diff-ins {

@@ -227,7 +227,33 @@ function collectTextBlocks(text: string): TextBlock[] {
   return blocks;
 }
 
-function findMovedDestinationRanges(
+function findStableAnchor(
+  oldBlocks: TextBlock[],
+  newByNorm: Map<string, TextBlock[]>,
+  movedNorms: Set<string>,
+  oldIndex: number,
+  newTextLength: number,
+): number {
+  for (let i = oldIndex - 1; i >= 0; i--) {
+    const block = oldBlocks[i];
+    if (movedNorms.has(block.normalized)) continue;
+    const newMatches = newByNorm.get(block.normalized);
+    if (newMatches?.length === 1) {
+      return Math.min(newMatches[0].end + 1, newTextLength);
+    }
+  }
+  for (let i = oldIndex + 1; i < oldBlocks.length; i++) {
+    const block = oldBlocks[i];
+    if (movedNorms.has(block.normalized)) continue;
+    const newMatches = newByNorm.get(block.normalized);
+    if (newMatches?.length === 1) {
+      return Math.max(0, newMatches[0].start - 1);
+    }
+  }
+  return 0;
+}
+
+function findMovedBlockRanges(
   oldText: string,
   newText: string,
   existingMutations: CompareMutation[],
@@ -249,7 +275,14 @@ function findMovedDestinationRanges(
       return start < mutation.end && end > mutation.start;
     });
 
-  const moves: CompareMutation[] = [];
+  const hasExistingMovedSource = (normalized: string) =>
+    existingMutations.some((mutation) => (
+      (mutation.kind === 'del' || mutation.kind === 'move-del') &&
+      normalizeMovedText(mutation.text) === normalized
+    ));
+
+  const candidates: Array<{ oldBlock: TextBlock; newBlock: TextBlock }> = [];
+  const movedNorms = new Set<string>();
   for (const [normalized, oldMatches] of oldByNorm) {
     const newMatches = newByNorm.get(normalized);
     if (!newMatches || oldMatches.length !== 1 || newMatches.length !== 1) continue;
@@ -263,13 +296,33 @@ function findMovedDestinationRanges(
     ) {
       continue;
     }
-    if (overlapsExistingChange(newBlock.start, newBlock.end)) continue;
-    moves.push({
-      kind: 'move-ins',
-      start: newBlock.start,
-      end: newBlock.end,
-      text: newBlock.text,
-    });
+    candidates.push({ oldBlock, newBlock });
+    movedNorms.add(normalized);
+  }
+
+  const moves: CompareMutation[] = [];
+  for (const { oldBlock, newBlock } of candidates) {
+    if (!overlapsExistingChange(newBlock.start, newBlock.end)) {
+      moves.push({
+        kind: 'move-ins',
+        start: newBlock.start,
+        end: newBlock.end,
+        text: newBlock.text,
+      });
+    }
+    if (!hasExistingMovedSource(oldBlock.normalized)) {
+      moves.push({
+        kind: 'move-del',
+        at: findStableAnchor(
+          oldBlocks,
+          newByNorm,
+          movedNorms,
+          oldBlock.index,
+          newText.length,
+        ),
+        text: oldBlock.text,
+      });
+    }
   }
   return moves;
 }
@@ -347,7 +400,7 @@ function applyFormattedCompareDiff(
     }
   }
 
-  mutations.push(...findMovedDestinationRanges(oldText, newText, mutations));
+  mutations.push(...findMovedBlockRanges(oldText, newText, mutations));
 
   let applied = 0;
   const ordered = markLikelyMoves(mutations).sort(
