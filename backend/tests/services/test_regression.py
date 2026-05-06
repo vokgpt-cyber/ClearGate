@@ -122,6 +122,23 @@ class TestStopwordFiltering:
 
         assert pipeline.post_process(text, entities) == []
 
+    def test_rospatent_not_org_after_post_process(self, pipeline):
+        text = "\u0421\u0432\u0438\u0434\u0435\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u043e \u0420\u043e\u0441\u043f\u0430\u0442\u0435\u043d\u0442\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u043e."
+        target = "\u0420\u043e\u0441\u043f\u0430\u0442\u0435\u043d\u0442"
+        start = text.index(target)
+        entities = [
+            DetectedEntity(
+                text=target,
+                entity_type="ORG",
+                start=start,
+                end=start + len(target),
+                score=0.91,
+                source_layer="llm-scan",
+            )
+        ]
+
+        assert pipeline.post_process(text, entities) == []
+
     def test_pdf_delayed_title_not_org_after_post_process(self, pipeline):
         prefix = "\n" * 30 + (" " * 420)
         title = "\u0414\u0418\u0421\u0422\u0420\u0418\u0411\u0423\u0426\u0418\u042f"

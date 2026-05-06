@@ -73,8 +73,7 @@ def _bundle_filename(filenames: list[str]) -> str:
             else f"{_download_stem(clean[0])}.docx"
         )
     first = _download_stem(clean[0])
-    suffix = "файл" if len(clean) == 2 else "файла"
-    return f"{first} + {len(clean) - 1} {suffix}.docx"
+    return f"{first}_1.docx"
 
 
 async def _parse_upload_part(
@@ -220,7 +219,11 @@ async def upload_document_batch(
 
     combined = processor.combine_results(results)
     all_names = [*existing_names, *filenames]
-    bundle_name = _bundle_filename(all_names)
+    bundle_name = (
+        existing_names[0]
+        if mode == "append" and existing_names
+        else _bundle_filename(all_names)
+    )
 
     document_id: str | None = None
     if session is not None:

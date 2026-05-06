@@ -98,8 +98,7 @@ export default function Home() {
   const bundleName = useCallback((files: File[]) => {
     if (files.length === 1) return files[0].name;
     const first = files[0].name.replace(/\.[^.]+$/, '');
-    const suffix = files.length === 2 ? 'файл' : 'файла';
-    return `${first} + ${files.length - 1} ${suffix}.docx`;
+    return `${first}_1.docx`;
   }, []);
 
   const handleFiles = useCallback(async (files: File[]) => {
@@ -149,9 +148,6 @@ export default function Home() {
           doc.sessionId === sessionId
             ? {
                 ...doc,
-                name: `${doc.name.replace(/\.[^.]+$/, '')} + ${files.length} ${
-                  files.length === 1 ? 'файл' : 'файла'
-                }.docx`,
                 revision: doc.revision + 1,
               }
             : doc,

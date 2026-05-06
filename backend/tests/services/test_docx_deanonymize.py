@@ -285,6 +285,22 @@ class TestDeanonymizeDocx:
         assert "Петров Пётр" in text
         assert "[ЛИЦО_5]" not in text
 
+    def test_manual_resolution_for_custom_placeholder_with_fuzzy_key(self):
+        reg = _make_registry(entities=[("\u0418\u0432\u0430\u043d\u043e\u0432", "PER")])
+        docx_bytes = _make_docx(["\u0414\u043e\u0433\u043e\u0432\u043e\u0440 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 [\u0421\u0420\u041e\u041a_1] \u043b\u0435\u0442."])
+
+        result = deanonymize_docx(
+            docx_bytes,
+            reg,
+            manual_resolutions={"\u0421\u0420\u041e\u041a 1": "25"},
+        )
+
+        doc = Document(io.BytesIO(result.docx_bytes))
+        text = doc.paragraphs[0].text
+        assert "25" in text
+        assert "[\u0421\u0420\u041e\u041a_1]" not in text
+        assert len(result.unresolved) == 0
+
     def test_fuzzy_matching_in_docx(self):
         """LLM distortions are resolved in actual DOCX replacement."""
         reg = _make_registry(entities=[("Иванов", "PER")])

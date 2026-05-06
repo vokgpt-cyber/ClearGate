@@ -102,30 +102,47 @@ type DeepScanSummary = {
   suggestions: number;
 };
 
+type DeepScanAction = 'add' | 'remove';
+
 type DeepScanLayer = {
   base: InteractiveEntity[];
   suggestions: InteractiveEntity[];
   removals: InteractiveEntity[];
+  enabledSuggestionKeys: Set<string>;
+  enabledRemovalKeys: Set<string>;
 } | null;
 
 type CompareMutation =
   | { kind: 'ins'; start: number; end: number; text: string }
-  | { kind: 'del'; at: number; text: string };
+  | { kind: 'move-ins'; start: number; end: number; text: string }
+  | { kind: 'del'; at: number; text: string }
+  | { kind: 'move-del'; at: number; text: string };
 
 const entitySignature = (
   entity: Pick<InteractiveEntity, 'start' | 'end' | 'entity_type' | 'text'>,
 ) => `${entity.start}:${entity.end}:${entity.entity_type}:${entity.text}`;
 
 function comparePosition(mutation: CompareMutation): number {
-  return mutation.kind === 'ins' ? mutation.start : mutation.at;
+  return mutation.kind === 'ins' || mutation.kind === 'move-ins'
+    ? mutation.start
+    : mutation.at;
 }
 
-function wrapRangeWithDiffMarker(range: Range, kind: 'ins' | 'del'): boolean {
+function diffMarkerClass(kind: CompareMutation['kind']): string {
+  if (kind === 'ins') return 'cleargate-diff-ins';
+  if (kind === 'del') return 'cleargate-diff-del';
+  return 'cleargate-diff-move';
+}
+
+function wrapRangeWithDiffMarker(
+  range: Range,
+  kind: Extract<CompareMutation['kind'], 'ins' | 'move-ins'>,
+): boolean {
   const doc = range.startContainer.ownerDocument;
   if (!doc) return false;
-  const marker = doc.createElement(kind);
-  marker.className =
-    kind === 'ins' ? 'cleargate-diff-ins' : 'cleargate-diff-del';
+  const marker = doc.createElement(kind === 'ins' ? 'ins' : 'span');
+  marker.className = diffMarkerClass(kind);
+  if (kind === 'move-ins') marker.dataset.diffMove = 'to';
   const fragment = range.extractContents();
   marker.appendChild(fragment);
   range.insertNode(marker);
@@ -137,19 +154,84 @@ function insertDeletedDiffMarker(
   at: number,
   text: string,
   pane: DocxPane,
+  kind: Extract<CompareMutation['kind'], 'del' | 'move-del'> = 'del',
 ): boolean {
   const map = pane.getAnchorMap();
   const pos = map.toDomPosition(Math.min(at, map.plainText.length));
   if (!pos) return false;
   const doc = container.ownerDocument;
-  const marker = doc.createElement('del');
-  marker.className = 'cleargate-diff-del';
+  const marker = doc.createElement(kind === 'del' ? 'del' : 'span');
+  marker.className = diffMarkerClass(kind);
+  if (kind === 'move-del') marker.dataset.diffMove = 'from';
   marker.textContent = text;
   const range = doc.createRange();
   range.setStart(pos.node, pos.offset);
   range.collapse(true);
   range.insertNode(marker);
   return true;
+}
+
+function normalizeMovedText(text: string): string {
+  return text
+    .split(/\n+/)
+    .map((line) => line.replace(/^\s*\d+(?:\.\d+)*\.?\s*/, ''))
+    .join(' ')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function moveSimilarity(a: string, b: string): number {
+  const aTokens = new Set(a.split(' ').filter((token) => token.length > 2));
+  const bTokens = new Set(b.split(' ').filter((token) => token.length > 2));
+  if (aTokens.size === 0 || bTokens.size === 0) return 0;
+  let intersection = 0;
+  for (const token of aTokens) {
+    if (bTokens.has(token)) intersection++;
+  }
+  return intersection / Math.max(aTokens.size, bTokens.size);
+}
+
+function markLikelyMoves(mutations: CompareMutation[]): CompareMutation[] {
+  const next = mutations.map((mutation) => ({ ...mutation }));
+  const deletions = next
+    .map((mutation, index) => ({ mutation, index }))
+    .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'del' }>; index: number } =>
+      item.mutation.kind === 'del' && normalizeMovedText(item.mutation.text).length >= 48,
+    );
+  const insertions = next
+    .map((mutation, index) => ({ mutation, index }))
+    .filter((item): item is { mutation: Extract<CompareMutation, { kind: 'ins' }>; index: number } =>
+      item.mutation.kind === 'ins' && normalizeMovedText(item.mutation.text).length >= 48,
+    );
+  const usedInsertions = new Set<number>();
+
+  for (const deletion of deletions.sort(
+    (a, b) => normalizeMovedText(b.mutation.text).length - normalizeMovedText(a.mutation.text).length,
+  )) {
+    const delNorm = normalizeMovedText(deletion.mutation.text);
+    let bestIndex = -1;
+    let bestScore = 0;
+    for (const insertion of insertions) {
+      if (usedInsertions.has(insertion.index)) continue;
+      const insNorm = normalizeMovedText(insertion.mutation.text);
+      const exact = delNorm === insNorm;
+      const score = exact ? 1 : moveSimilarity(delNorm, insNorm);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = insertion.index;
+      }
+    }
+    if (bestIndex !== -1 && bestScore >= 0.82) {
+      next[deletion.index] = { ...deletion.mutation, kind: 'move-del' };
+      const insertion = next[bestIndex] as Extract<CompareMutation, { kind: 'ins' }>;
+      next[bestIndex] = { ...insertion, kind: 'move-ins' };
+      usedInsertions.add(bestIndex);
+    }
+  }
+
+  return next;
 }
 
 function applyFormattedCompareDiff(
@@ -185,16 +267,16 @@ function applyFormattedCompareDiff(
   }
 
   let applied = 0;
-  const ordered = mutations.sort(
+  const ordered = markLikelyMoves(mutations).sort(
     (a, b) => comparePosition(b) - comparePosition(a),
   );
   for (const mutation of ordered) {
     try {
-      if (mutation.kind === 'ins') {
+      if (mutation.kind === 'ins' || mutation.kind === 'move-ins') {
         const map = pane.getAnchorMap();
         const range = map.toRange(mutation.start, mutation.end);
-        if (range && wrapRangeWithDiffMarker(range, 'ins')) applied++;
-      } else if (insertDeletedDiffMarker(container, mutation.at, mutation.text, pane)) {
+        if (range && wrapRangeWithDiffMarker(range, mutation.kind)) applied++;
+      } else if (insertDeletedDiffMarker(container, mutation.at, mutation.text, pane, mutation.kind)) {
         applied++;
       }
     } catch (e) {
@@ -271,6 +353,7 @@ export function SplitWorkspace({
   const [responseViewActive, setResponseViewActive] = useState(false);
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('anonymized');
   const [deanonymizeBusy, setDeanonymizeBusy] = useState(false);
+  const [manualResolutionBusy, setManualResolutionBusy] = useState(false);
   const [deanonymizeError, setDeanonymizeError] = useState<string | null>(null);
   const [deanonymizeResult, setDeanonymizeResult] =
     useState<DeanonymizeDocxResult | null>(null);
@@ -492,6 +575,7 @@ export function SplitWorkspace({
     setRightPaneUrl(null);
     setDeanonymizeResult(null);
     setDeanonymizeError(null);
+    setManualResolutionBusy(false);
     setAppendBusy(false);
     setDeepScanBusy(false);
     setDeepScanError(null);
@@ -819,34 +903,88 @@ export function SplitWorkspace({
     [],
   );
 
+  const activeDeepScanCounts = useCallback((layer: NonNullable<DeepScanLayer>) => ({
+    added: layer.enabledSuggestionKeys.size,
+    removed: layer.enabledRemovalKeys.size,
+    suggestions: layer.suggestions.length + layer.removals.length,
+  }), []);
+
+  const buildDeepScanEntities = useCallback(
+    (layer: NonNullable<DeepScanLayer>) => {
+      const removalKeys = layer.enabledRemovalKeys;
+      const enabledSuggestions = layer.suggestions.filter((suggestion) =>
+        layer.enabledSuggestionKeys.has(entitySignature(suggestion)),
+      );
+      return mergeDeepScanSuggestions(
+        layer.base.filter((entity) => !removalKeys.has(entitySignature(entity))),
+        enabledSuggestions,
+      );
+    },
+    [mergeDeepScanSuggestions],
+  );
+
+  const applyDeepScanLayer = useCallback(
+    (layer: NonNullable<DeepScanLayer>, enabled: boolean) => {
+      const next = enabled ? buildDeepScanEntities(layer) : layer.base;
+      applyEntities(next);
+      onAnonymizationComplete?.(documentId, next);
+      setDeepScanSummary(enabled ? activeDeepScanCounts(layer) : {
+        added: 0,
+        removed: 0,
+        suggestions: layer.suggestions.length + layer.removals.length,
+      });
+    },
+    [
+      activeDeepScanCounts,
+      applyEntities,
+      buildDeepScanEntities,
+      documentId,
+      onAnonymizationComplete,
+    ],
+  );
+
   const setDeepScanLayerEnabled = useCallback(
     (enabled: boolean) => {
       if (!deepScanLayer) return;
       setDeepScanActive(enabled);
-      const removalKeys = new Set(deepScanLayer.removals.map(entitySignature));
-      const next = enabled
-        ? mergeDeepScanSuggestions(
-            deepScanLayer.base.filter(
-              (entity) => !removalKeys.has(entitySignature(entity)),
-            ),
-            deepScanLayer.suggestions,
-          )
-        : deepScanLayer.base;
-      applyEntities(next);
-      onAnonymizationComplete?.(documentId, next);
-      setDeepScanSummary({
-        added: enabled ? deepScanLayer.suggestions.length : 0,
-        removed: enabled ? deepScanLayer.removals.length : 0,
-        suggestions: deepScanLayer.suggestions.length + deepScanLayer.removals.length,
-      });
+      applyDeepScanLayer(deepScanLayer, enabled);
     },
     [
-      applyEntities,
+      applyDeepScanLayer,
       deepScanLayer,
-      documentId,
-      mergeDeepScanSuggestions,
-      onAnonymizationComplete,
     ],
+  );
+
+  const toggleDeepScanProposal = useCallback(
+    (action: DeepScanAction, entity: InteractiveEntity) => {
+      if (!deepScanLayer) return;
+      const key = entitySignature(entity);
+      const nextLayer: NonNullable<DeepScanLayer> = {
+        ...deepScanLayer,
+        enabledSuggestionKeys: new Set(deepScanLayer.enabledSuggestionKeys),
+        enabledRemovalKeys: new Set(deepScanLayer.enabledRemovalKeys),
+      };
+      const target =
+        action === 'add'
+          ? nextLayer.enabledSuggestionKeys
+          : nextLayer.enabledRemovalKeys;
+      if (target.has(key)) {
+        target.delete(key);
+      } else {
+        target.add(key);
+      }
+      setDeepScanLayer(nextLayer);
+      if (deepScanActive) {
+        applyDeepScanLayer(nextLayer, true);
+      } else {
+        setDeepScanSummary({
+          added: 0,
+          removed: 0,
+          suggestions: nextLayer.suggestions.length + nextLayer.removals.length,
+        });
+      }
+    },
+    [applyDeepScanLayer, deepScanActive, deepScanLayer],
   );
 
   const runDeepScan = useCallback(async () => {
@@ -873,27 +1011,35 @@ export function SplitWorkspace({
       const response = await deepScanText(documentId, plainText, entities);
       const suggestions = toInteractiveEntities(
         (response.suggestions as OverlayEntity[] | undefined) ?? [],
-      );
+      ).map((entity) => ({
+        ...entity,
+        source_layer: 'deep_scan',
+        metadata: {
+          ...entity.metadata,
+          deepScanAction: 'add',
+        },
+      }));
       const removals = toInteractiveEntities(
         (response.removals as OverlayEntity[] | undefined) ?? [],
-      );
-      const layer = { base: entities, suggestions, removals };
+      ).map((entity) => ({
+        ...entity,
+        metadata: {
+          ...entity.metadata,
+          deepScanAction: 'remove',
+        },
+      }));
+      const layer: NonNullable<DeepScanLayer> = {
+        base: entities,
+        suggestions,
+        removals,
+        enabledSuggestionKeys: new Set(suggestions.map(entitySignature)),
+        enabledRemovalKeys: new Set(removals.map(entitySignature)),
+      };
       setDeepScanLayer(layer);
       setDeepScanActive(true);
-      setDeepScanSummary({
-        added: suggestions.length,
-        removed: removals.length,
-        suggestions: (
-          (response.suggestion_count ?? suggestions.length) +
-          (response.removal_count ?? removals.length)
-        ),
-      });
+      setDeepScanSummary(activeDeepScanCounts(layer));
       if (suggestions.length > 0 || removals.length > 0) {
-        const removalKeys = new Set(removals.map(entitySignature));
-        const merged = mergeDeepScanSuggestions(
-          entities.filter((entity) => !removalKeys.has(entitySignature(entity))),
-          suggestions,
-        );
+        const merged = buildDeepScanEntities(layer);
         applyEntities(merged);
         onAnonymizationComplete?.(documentId, merged);
       }
@@ -917,13 +1063,14 @@ export function SplitWorkspace({
     }
   }, [
     applyEntities,
+    activeDeepScanCounts,
     bothReady,
+    buildDeepScanEntities,
     deepScanActive,
     deepScanBusy,
     deepScanLayer,
     documentId,
     entities,
-    mergeDeepScanSuggestions,
     onAnonymizationComplete,
     setDeepScanLayerEnabled,
     status,
@@ -962,6 +1109,22 @@ export function SplitWorkspace({
       : t('workspace.deepScanDisabled');
     return `${prefix}: +${deepScanSummary.added} / -${deepScanSummary.removed}`;
   }, [deepScanActive, deepScanSummary, t]);
+
+  const deepScanReviewItems = useMemo(() => {
+    if (!deepScanLayer) return [];
+    return [
+      ...deepScanLayer.suggestions.map((entity) => ({
+        action: 'add' as const,
+        entity,
+        enabled: deepScanLayer.enabledSuggestionKeys.has(entitySignature(entity)),
+      })),
+      ...deepScanLayer.removals.map((entity) => ({
+        action: 'remove' as const,
+        entity,
+        enabled: deepScanLayer.enabledRemovalKeys.has(entitySignature(entity)),
+      })),
+    ];
+  }, [deepScanLayer]);
 
   // ─── rerender on filter / state changes (NOT initial detection) ──
   //
@@ -1624,7 +1787,13 @@ export function SplitWorkspace({
             type="button"
             className="cleargate-workspace__import-response"
             onClick={() => responseFileRef.current?.click()}
-            disabled={importBusy || deanonymizeBusy || !bothReady || entities.length === 0}
+            disabled={
+              importBusy ||
+              deanonymizeBusy ||
+              manualResolutionBusy ||
+              !bothReady ||
+              entities.length === 0
+            }
             title={importResponseTitle}
           >
             {importBusy
@@ -1655,7 +1824,7 @@ export function SplitWorkspace({
                   ? showAnonymizedWorkflow
                   : showDeanonymizedWorkflow
               }
-              disabled={deanonymizeBusy}
+              disabled={deanonymizeBusy || manualResolutionBusy}
               aria-pressed={workflowStage === 'deanonymized' && responseViewActive}
               title={
                 responseViewActive
@@ -1674,7 +1843,7 @@ export function SplitWorkspace({
               type="button"
               className="cleargate-workspace__compare"
               onClick={toggleCompareMode}
-              disabled={deanonymizeBusy}
+              disabled={deanonymizeBusy || manualResolutionBusy}
               aria-pressed={compareMode}
               title={
                 compareMode
@@ -1694,7 +1863,7 @@ export function SplitWorkspace({
               type="button"
               className="cleargate-workspace__export-deanonymized"
               onClick={handleExportDeanonymized}
-              disabled={exportDeanonymizedBusy || deanonymizeBusy}
+              disabled={exportDeanonymizedBusy || deanonymizeBusy || manualResolutionBusy}
               title={
                 exportDeanonymizedError ??
                 (exportDeanonymizedBusy
@@ -1793,6 +1962,45 @@ export function SplitWorkspace({
         {Math.round(docScale * 100)}%
       </button>
 
+      {!responseViewActive && deepScanLayer && deepScanReviewItems.length > 0 && (
+        <section className="cleargate-workspace__deep-review" aria-label={t('workspace.deepScanReviewTitle')}>
+          <div className="cleargate-workspace__deep-review-head">
+            <span>{t('workspace.deepScanReviewTitle')}</span>
+            <span>{deepScanSummaryLabel}</span>
+          </div>
+          <div className="cleargate-workspace__deep-review-list">
+            {deepScanReviewItems.map(({ action, entity, enabled }) => {
+              const key = entitySignature(entity);
+              return (
+                <label
+                  key={`${action}-${key}`}
+                  className={`cleargate-workspace__deep-review-item is-${action} ${
+                    enabled ? 'is-enabled' : ''
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={() => toggleDeepScanProposal(action, entity)}
+                  />
+                  <span className="cleargate-workspace__deep-review-action">
+                    {action === 'add'
+                      ? t('workspace.deepScanAdd')
+                      : t('workspace.deepScanRemove')}
+                  </span>
+                  <span className="cleargate-workspace__deep-review-type">
+                    {entity.entity_type}
+                  </span>
+                  <span className="cleargate-workspace__deep-review-text" title={entity.text}>
+                    {entity.text}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {!responseViewActive && (
         <EntityLegend
           counts={counts}
@@ -1847,7 +2055,7 @@ export function SplitWorkspace({
               });
               if (resolutions.length === 0) return;
               setManualResolutions(resolutions);
-              setDeanonymizeBusy(true);
+              setManualResolutionBusy(true);
               setDeanonymizeError(null);
               deanonymizeDocx(documentId, resolutions)
                 .then((dResult) => {
@@ -1865,10 +2073,13 @@ export function SplitWorkspace({
                     e instanceof Error ? e.message : String(e),
                   );
                 })
-                .finally(() => setDeanonymizeBusy(false));
+                .finally(() => setManualResolutionBusy(false));
             }}
+            disabled={manualResolutionBusy}
           >
-            {t('workspace.unresolvedApply')}
+            {manualResolutionBusy
+              ? t('workspace.unresolvedApplying')
+              : t('workspace.unresolvedApply')}
           </button>
         </div>
       )}

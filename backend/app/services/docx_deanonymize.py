@@ -225,6 +225,11 @@ class PlaceholderMatcher:
         if not m:
             # Can't parse — return stripped/uppercased as-is
             stripped = raw.strip().strip("[]").strip()
+            generic = re.match(r"^(.+?)\s*[-_\s]\s*0*(\d+)$", stripped)
+            if generic:
+                label = re.sub(r"\s+", "_", generic.group(1).strip()).upper()
+                number = generic.group(2).lstrip("0") or "1"
+                return f"[{label}_{number}]"
             return f"[{stripped.upper()}]"
 
         # The regex has two alternatives with different group layouts:
@@ -351,8 +356,12 @@ def deanonymize_docx(
         ``DeanonymizeResult`` with the output DOCX bytes, list of successful
         replacements, and list of unresolved placeholders.
     """
-    manual = manual_resolutions or {}
     matcher = PlaceholderMatcher(registry)
+    manual: dict[str, str] = {}
+    for raw_key, value in (manual_resolutions or {}).items():
+        if not raw_key or value is None:
+            continue
+        manual[matcher._normalize(raw_key)] = value
     document = Document(io.BytesIO(docx_bytes))
 
     # Phase 1: scan all paragraphs in document order, collecting an
