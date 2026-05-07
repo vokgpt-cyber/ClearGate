@@ -136,6 +136,30 @@ Installer делает:
 - `Qwen/Qwen3-32B-AWQ`;
 - `BAAI/bge-m3`.
 
+Важно про spaCy: pilot hotfix не использует `python -m spacy download` во время
+Docker build, потому что эта команда зависит от `raw.githubusercontent.com` и
+часто падает в корпоративных сетях с SSL EOF. Backend умеет работать без
+скачанной spaCy-модели: включается no-download tokenizer, а основные слои
+regex, GLiNER и локальный LLM/verifier остаются доступны.
+
+Если IT хочет поставить spaCy-модель из внутреннего mirror, можно добавить в
+`.env`:
+
+```bash
+SPACY_MODEL=ru_core_news_sm
+SPACY_MODEL_WHEEL_URL=https://internal-mirror/ru_core_news_sm-3.8.0-py3-none-any.whl
+```
+
+И пересобрать backend:
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.gpu.yml \
+  -f releases/CLEARGATE-v1.0.4-pilot/docker-compose.release.yml \
+  --profile gpu build backend
+```
+
 ## 6. TLS modes
 
 ### selfsigned
@@ -207,6 +231,29 @@ bash releases/CLEARGATE-v1.0.4-pilot/scripts/smoke-test.sh
 ```bash
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/logs-cleargate.sh
 ```
+
+## 7.1 Если предыдущая установка упала на `spacy download`
+
+Симптом:
+
+```text
+RUN python -m spacy download ru_core_news_sm
+SSLEOFError ... raw.githubusercontent.com/explosion/spacy-models/master/compatibility.json
+```
+
+Исправление:
+
+```bash
+cd /opt/cleargate
+git fetch --all --tags
+git checkout release/pilot-v1.0.4
+git pull --ff-only
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
+```
+
+После hotfix `pilot.1` Dockerfile больше не выполняет `python -m spacy download`.
+Если в старом `.env` осталось `SPACY_MODEL=ru_core_news_sm`, installer очистит
+это значение, если не указан `SPACY_MODEL_WHEEL_URL`.
 
 Открыть в браузере:
 

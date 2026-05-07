@@ -27,6 +27,20 @@ git checkout release/pilot-v1.0.4
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
 ```
 
+Если установка уже падала на `python -m spacy download ru_core_news_sm`:
+
+```bash
+cd /opt/cleargate
+git fetch --all --tags
+git checkout release/pilot-v1.0.4
+git pull --ff-only
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
+```
+
+Начиная с pilot.1 backend Docker build больше не обращается к
+`raw.githubusercontent.com` за spaCy compatibility.json. spaCy-модель для
+пилота опциональна; без нее backend использует no-download fallback.
+
 Если репозиторий уже склонирован:
 
 ```bash

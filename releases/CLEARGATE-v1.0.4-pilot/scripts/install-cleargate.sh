@@ -104,6 +104,9 @@ set_env_value OLLAMA_HOST "http://vllm:8000/v1"
 set_env_value OLLAMA_MODEL "cleargate-llm"
 set_env_value EMBEDDER_URL "http://bge-embedder:80"
 set_env_value CLEARGATE_DISABLE_LLM_LAYER "false"
+if [[ -z "${SPACY_MODEL_WHEEL_URL:-}" ]]; then
+  set_env_value SPACY_MODEL ""
+fi
 ok "Domain: $CLEARGATE_DOMAIN"
 ok "TLS mode: $CLEARGATE_TLS_MODE"
 

@@ -12,6 +12,11 @@
 - Task files для Claude Code (10 задач MVP)
 - Pre-commit hooks, pyproject.toml, docker-compose
 
+### Fixed
+- Backend Docker build больше не зависит от `python -m spacy download` и
+  `raw.githubusercontent.com`; spaCy model стала опциональной, а Presidio
+  получает no-download fallback NLP engine.
+
 ---
 
 ## [1.0.4] - 2026-05-06

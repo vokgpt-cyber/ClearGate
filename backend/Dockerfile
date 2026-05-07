@@ -5,6 +5,7 @@ WORKDIR /app
 # System dependencies for spaCy, PyMuPDF, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
     curl \
     tesseract-ocr \
     tesseract-ocr-eng \
@@ -13,7 +14,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir -e .
-RUN python -m spacy download ru_core_news_sm
+
+# Do not use `python -m spacy download ...` in Docker builds: it first fetches
+# compatibility.json from raw.githubusercontent.com, which is commonly blocked
+# or TLS-inspected in corporate networks. The app has a no-download fallback
+# NLP engine, so the model is optional. If IT has an approved wheel/mirror, pass
+# SPACY_MODEL_WHEEL_URL as a build arg to install it explicitly.
+ARG SPACY_MODEL_WHEEL_URL=""
+RUN if [ -n "$SPACY_MODEL_WHEEL_URL" ]; then \
+        pip install --no-cache-dir "$SPACY_MODEL_WHEEL_URL"; \
+    else \
+        echo "Skipping optional spaCy model install (SPACY_MODEL_WHEEL_URL is empty)"; \
+    fi
 
 COPY app/ app/
 

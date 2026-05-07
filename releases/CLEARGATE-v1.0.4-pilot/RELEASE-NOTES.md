@@ -41,6 +41,12 @@ Baseline commit приложения: `38077abbb0d8b1536479094880971914d0a730af`
 5. До подключения LDAP/AD пользователи управляются локально через админку или
    CLI `cleargate-admin` внутри backend-контейнера.
 
+6. Начиная с pilot hotfix, Docker build не скачивает `ru_core_news_sm` через
+   `python -m spacy download`, чтобы установка не зависела от
+   `raw.githubusercontent.com`. Если spaCy-модель не установлена, backend
+   использует no-download fallback и продолжает работать через regex, GLiNER и
+   локальный LLM/verifier.
+
 ## Что особенно тестировать
 
 - DOCX договоры: аренда, заем, агентский, NDA, акт сверки, приложения.

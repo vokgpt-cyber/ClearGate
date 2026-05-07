@@ -2,6 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
+Release package hotfix level: pilot.1
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -15,3 +16,5 @@ Policy:
   release/pilot-v1.0.4 without changing the application version.
 - Future application changes should bump the app version and get a new release
   package instead of silently replacing this baseline.
+- Pilot.1 changes only deployment hardening: Docker build no longer depends on
+  `python -m spacy download` / raw.githubusercontent.com.
