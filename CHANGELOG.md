@@ -17,6 +17,13 @@
   `raw.githubusercontent.com`; `ru_core_news_lg` ставится из direct wheel URL.
 - Убрана no-download fallback-ветка Presidio: backend теперь не стартует без
   обязательной Russian spaCy model, чтобы не снижать качество анонимизации.
+- GPU pilot inference stack обновлен до pinned Qwen3/BGE-M3-compatible images:
+  `vllm/vllm-openai:v0.9.2` и
+  `ghcr.io/huggingface/text-embeddings-inference:89-1.9`.
+- GPU compose больше не поднимает `ollama` по наследству из base profile;
+  backend зависит только от `vllm` и `bge-embedder`.
+- Installer валидирует `HF_ENDPOINT` как абсолютный URL и печатает container
+  logs/health details при долгом unhealthy-состоянии.
 
 ---
 

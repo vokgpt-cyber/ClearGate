@@ -136,6 +136,25 @@ Installer делает:
 - `Qwen/Qwen3-32B-AWQ`;
 - `BAAI/bge-m3`.
 
+Pinned inference images для pilot.3:
+
+- `VLLM_IMAGE=vllm/vllm-openai:v0.9.2` - версия с поддержкой Qwen3. Старый
+  `v0.7.3` падает с `KeyError: 'qwen3'` / `Transformers does not recognize this architecture`;
+- `TEI_IMAGE=ghcr.io/huggingface/text-embeddings-inference:89-1.9` - Ada/RTX
+  4090 compatible TEI build для BGE-M3. Старый `1.5` может падать на скачивании
+  артефактов BGE с `relative URL without a base`.
+
+Если организация использует внутреннее зеркало HuggingFace, задайте в `.env`:
+
+```bash
+HF_ENDPOINT=https://hf-mirror.company.local
+HF_HUB_DISABLE_XET=1
+HF_TOKEN=<optional-token>
+```
+
+`HF_ENDPOINT` обязан быть абсолютным URL с `http://` или `https://`; installer
+остановится до запуска Docker, если значение похоже на относительный путь.
+
 Важно про spaCy: pilot.2 не использует `python -m spacy download` во время
 Docker build, потому что эта команда зависит от `raw.githubusercontent.com` и
 часто падает в корпоративных сетях с SSL EOF. Вместо этого обязательная модель
@@ -257,6 +276,69 @@ Installer принудительно выставит `SPACY_MODEL=ru_core_news_
 URL. Если сервер не может скачать wheel с GitHub Releases, не отключайте
 модель: скачайте wheel через разрешенный канал, положите во внутренний mirror и
 замените `SPACY_MODEL_WHEEL_URL` в `.env`, затем повторите установку.
+
+## 7.2 Если `cleargate-vllm` падает на `model_type qwen3`
+
+Симптом:
+
+```text
+KeyError: 'qwen3'
+ValueError: Transformers does not recognize this architecture
+```
+
+Причина: старый `vllm/vllm-openai:v0.7.3` не поддерживает Qwen3.
+
+Исправление:
+
+```bash
+cd /opt/cleargate
+git fetch --all --tags
+git checkout release/pilot-v1.0.4
+git pull --ff-only
+grep '^VLLM_IMAGE=' .env
+```
+
+Должно быть:
+
+```bash
+VLLM_IMAGE=vllm/vllm-openai:v0.9.2
+```
+
+Если строка отсутствует, installer добавит ее автоматически. После обновления:
+
+```bash
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
+```
+
+## 7.3 Если `cleargate-bge` падает с `relative URL without a base`
+
+Симптом:
+
+```text
+Error: Could not download model artifacts
+request error: builder error: relative URL without a base
+```
+
+Проверьте:
+
+```bash
+grep -E '^(TEI_IMAGE|HF_ENDPOINT|HF_HUB_DISABLE_XET|EMBEDDER_MODEL)=' .env
+```
+
+Рекомендуемые значения для RTX 4090 / Ada GPU:
+
+```bash
+TEI_IMAGE=ghcr.io/huggingface/text-embeddings-inference:89-1.9
+HF_ENDPOINT=https://huggingface.co
+HF_HUB_DISABLE_XET=1
+EMBEDDER_MODEL=BAAI/bge-m3
+```
+
+Если используется внутреннее зеркало HF, `HF_ENDPOINT` должен быть абсолютным:
+
+```bash
+HF_ENDPOINT=https://hf-mirror.company.local
+```
 
 Открыть в браузере:
 

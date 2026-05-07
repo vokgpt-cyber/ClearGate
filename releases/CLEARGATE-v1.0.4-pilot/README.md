@@ -45,6 +45,15 @@ Releases. Если доступ к GitHub release assets закрыт, IT дол
 внутренний mirror через `SPACY_MODEL_WHEEL_URL`; запуск без модели запрещен,
 чтобы не снижать качество анонимизации.
 
+Начиная с pilot.3 также обновлены inference-контейнеры:
+
+- `vllm/vllm-openai:v0.9.2` вместо `v0.7.3`, потому что старый vLLM не
+  распознает `model_type: qwen3`;
+- `ghcr.io/huggingface/text-embeddings-inference:89-1.9` вместо `1.5` для
+  BGE-M3 на RTX 4090 / Ada GPU;
+- `HF_ENDPOINT` явно задается как абсолютный URL. Для внутреннего mirror
+  используйте, например, `HF_ENDPOINT=https://hf-mirror.company.local`.
+
 Если репозиторий уже склонирован:
 
 ```bash

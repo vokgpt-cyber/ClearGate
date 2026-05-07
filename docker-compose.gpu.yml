@@ -34,10 +34,13 @@
 # Variables (set in .env):
 #   CLEARGATE_DOMAIN         — public DNS name, e.g. cleargate.epam.ru
 #   CLEARGATE_TLS_MODE       — "letsencrypt" | "corp_ca" | "selfsigned"
+#   VLLM_IMAGE               — pinned vLLM image, default vllm/vllm-openai:v0.9.2
 #   VLLM_MODEL               — HF repo id, default Qwen/Qwen3-32B-AWQ
 #   VLLM_MAX_MODEL_LEN       — context window, default 16384
 #   VLLM_GPU_UTIL            — VRAM fraction for vLLM, default 0.85
+#   TEI_IMAGE                — pinned TEI image for Ada GPUs, default ghcr.io/huggingface/text-embeddings-inference:89-1.9
 #   EMBEDDER_MODEL           — HF repo id, default BAAI/bge-m3
+#   HF_ENDPOINT              — HuggingFace mirror endpoint, default https://huggingface.co
 #   HF_TOKEN                 — optional, speeds up + raises rate limits
 #   LDAP_URL, LDAP_BIND_DN, LDAP_BIND_PASSWORD, LDAP_BASE_DN — for AD auth
 # =============================================================================
@@ -56,7 +59,9 @@ services:
   #   - Production-grade: this is what serves production deployments at scale
   # ---------------------------------------------------------------------------
   vllm:
-    image: vllm/vllm-openai:v0.7.3
+    # v0.7.3 does not understand Qwen3 (`model_type: qwen3`). Keep this
+    # pinned to a Qwen3-capable image and bump deliberately after smoke tests.
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.9.2}
     container_name: cleargate-vllm
     profiles:
       - gpu
@@ -73,7 +78,10 @@ services:
     volumes:
       - cleargate-models:/root/.cache/huggingface
     environment:
+      - HF_TOKEN=${HF_TOKEN-}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN-}
+      - HF_ENDPOINT=${HF_ENDPOINT:-https://huggingface.co}
+      - HF_HUB_DISABLE_XET=${HF_HUB_DISABLE_XET:-1}
       # Tell vLLM to reuse the prefix cache across requests. Already on
       # by default in v0.7+, declared explicitly so future image bumps
       # don't surprise us.
@@ -81,11 +89,6 @@ services:
     command:
       - --model
       - ${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}
-      # AWQ already includes quantization config in the model files; we
-      # just declare the loader format. This produces ~22 GB on a 32B
-      # model, leaving comfortable headroom on a 48 GB card.
-      - --quantization
-      - awq_marlin
       # 16K context covers ~30-40 pages of Russian text — enough for
       # any legal document we've seen so far. Bigger contexts blow the
       # KV cache budget quickly even on big GPUs.
@@ -97,6 +100,11 @@ services:
       # requests are interleaved at the token level, so two concurrent
       # users see nearly identical latency to one.
       - --enable-prefix-caching
+      # Qwen3 can emit reasoning traces. Let vLLM parse reasoning separately
+      # so OpenAI-compatible clients receive a cleaner final answer.
+      - --enable-reasoning
+      - --reasoning-parser
+      - deepseek_r1
       # Tag the served model so the OpenAI-compat client can address it
       # by a fixed name regardless of how vLLM internally names the model.
       - --served-model-name
@@ -110,12 +118,12 @@ services:
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
-      # vLLM cold-load of a 32B AWQ model takes 60-120s; healthcheck
-      # patient enough to not flap during boot.
+      # First download/load of a 32B model can take many minutes on corporate
+      # networks and slower mirrors. Do not flap while the model is warming up.
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 180s
+      retries: 20
+      start_period: 1200s
     networks:
       - cleargate-net
 
@@ -133,7 +141,9 @@ services:
   # ~2 GB VRAM, runs comfortably alongside the 22 GB Qwen on a 48 GB card.
   # ---------------------------------------------------------------------------
   bge-embedder:
-    image: ghcr.io/huggingface/text-embeddings-inference:1.5
+    # 89-* is the CUDA 12 / compute capability 8.9 build for RTX 4090 /
+    # RTX 6000 Ada class GPUs. 1.5 was too old for reliable BGE-M3 downloads.
+    image: ${TEI_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:89-1.9}
     container_name: cleargate-bge
     profiles:
       - gpu
@@ -144,7 +154,10 @@ services:
     volumes:
       - cleargate-models:/data
     environment:
+      - HF_TOKEN=${HF_TOKEN-}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN-}
+      - HF_ENDPOINT=${HF_ENDPOINT:-https://huggingface.co}
+      - HF_HUB_DISABLE_XET=${HF_HUB_DISABLE_XET:-1}
     command:
       - --model-id
       - ${EMBEDDER_MODEL:-BAAI/bge-m3}
@@ -164,8 +177,8 @@ services:
       test: ["CMD", "curl", "-fsS", "http://localhost:80/health"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 60s
+      retries: 20
+      start_period: 900s
     networks:
       - cleargate-net
 
@@ -222,7 +235,7 @@ services:
       - LDAP_BASE_DN=${LDAP_BASE_DN-}
       - LDAP_ADMIN_GROUP_DN=${LDAP_ADMIN_GROUP_DN-}
       - LDAP_USER_GROUP_DN=${LDAP_USER_GROUP_DN-}
-    depends_on:
+    depends_on: !override
       vllm:
         condition: service_healthy
       bge-embedder:
@@ -299,6 +312,13 @@ services:
       start_period: 15s
     networks:
       - cleargate-net
+
+  # GPU release uses vLLM, not Ollama. The base compose service is kept for
+  # local/dev profiles, but should not start in the GPU pilot unless explicitly
+  # requested for diagnostics.
+  ollama:
+    profiles:
+      - ollama
 
 # =============================================================================
 # Volumes — persistence

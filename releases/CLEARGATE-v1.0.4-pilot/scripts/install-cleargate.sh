@@ -98,8 +98,38 @@ if [[ -t 0 ]]; then
 fi
 CLEARGATE_DOMAIN="${CLEARGATE_DOMAIN:-cleargate.local}"
 CLEARGATE_TLS_MODE="${CLEARGATE_TLS_MODE:-selfsigned}"
+HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
+case "$HF_ENDPOINT" in
+  http://*|https://*) ;;
+  *)
+    fail "HF_ENDPOINT must be an absolute URL with http:// or https://. Current value: $HF_ENDPOINT"
+    ;;
+esac
+HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
+VLLM_IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:v0.9.2}"
+if [[ "$VLLM_IMAGE" == "vllm/vllm-openai:v0.7.3" ]]; then
+  warn "VLLM_IMAGE=vllm/vllm-openai:v0.7.3 is incompatible with Qwen3. Upgrading to v0.9.2."
+  VLLM_IMAGE="vllm/vllm-openai:v0.9.2"
+fi
+VLLM_MODEL="${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}"
+VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-16384}"
+VLLM_GPU_UTIL="${VLLM_GPU_UTIL:-0.85}"
+TEI_IMAGE="${TEI_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:89-1.9}"
+if [[ "$TEI_IMAGE" == "ghcr.io/huggingface/text-embeddings-inference:1.5" ]]; then
+  warn "TEI_IMAGE=...:1.5 is too old for this pilot. Upgrading to 89-1.9."
+  TEI_IMAGE="ghcr.io/huggingface/text-embeddings-inference:89-1.9"
+fi
+EMBEDDER_MODEL="${EMBEDDER_MODEL:-BAAI/bge-m3}"
 set_env_value CLEARGATE_DOMAIN "$CLEARGATE_DOMAIN"
 set_env_value CLEARGATE_TLS_MODE "$CLEARGATE_TLS_MODE"
+set_env_value HF_ENDPOINT "$HF_ENDPOINT"
+set_env_value HF_HUB_DISABLE_XET "$HF_HUB_DISABLE_XET"
+set_env_value VLLM_IMAGE "$VLLM_IMAGE"
+set_env_value VLLM_MODEL "$VLLM_MODEL"
+set_env_value VLLM_MAX_MODEL_LEN "$VLLM_MAX_MODEL_LEN"
+set_env_value VLLM_GPU_UTIL "$VLLM_GPU_UTIL"
+set_env_value TEI_IMAGE "$TEI_IMAGE"
+set_env_value EMBEDDER_MODEL "$EMBEDDER_MODEL"
 set_env_value OLLAMA_HOST "http://vllm:8000/v1"
 set_env_value OLLAMA_MODEL "cleargate-llm"
 set_env_value EMBEDDER_URL "http://bge-embedder:80"
@@ -110,6 +140,9 @@ set_env_value SPACY_MODEL "$SPACY_MODEL"
 set_env_value SPACY_MODEL_WHEEL_URL "$SPACY_MODEL_WHEEL_URL"
 ok "Domain: $CLEARGATE_DOMAIN"
 ok "TLS mode: $CLEARGATE_TLS_MODE"
+ok "HF endpoint: $HF_ENDPOINT"
+ok "vLLM image/model: $VLLM_IMAGE / $VLLM_MODEL"
+ok "TEI image/model: $TEI_IMAGE / $EMBEDDER_MODEL"
 ok "Required spaCy model: $SPACY_MODEL"
 
 step "7/10 TLS certificates"
@@ -151,6 +184,7 @@ case "$CLEARGATE_TLS_MODE" in
 esac
 
 step "8/10 Build and start Docker stack"
+compose config --quiet
 compose pull || warn "Some images could not be pulled now; compose up/build will retry as needed."
 compose build backend frontend
 compose up -d

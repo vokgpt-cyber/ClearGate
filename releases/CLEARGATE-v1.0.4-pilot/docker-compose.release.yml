@@ -24,13 +24,14 @@ services:
     command:
       - --model
       - ${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}
-      - --quantization
-      - awq_marlin
       - --max-model-len
       - "${VLLM_MAX_MODEL_LEN:-16384}"
       - --gpu-memory-utilization
       - "${VLLM_GPU_UTIL:-0.85}"
       - --enable-prefix-caching
+      - --enable-reasoning
+      - --reasoning-parser
+      - deepseek_r1
       - --served-model-name
       - cleargate-llm
 

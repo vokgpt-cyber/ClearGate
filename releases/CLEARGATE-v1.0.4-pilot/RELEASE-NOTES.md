@@ -48,6 +48,13 @@ Baseline commit приложения: `38077abbb0d8b1536479094880971914d0a730af`
    зеркалировать во внутренний mirror и указать `SPACY_MODEL_WHEEL_URL`;
    запуск без spaCy-модели запрещен, чтобы не снижать качество.
 
+7. Начиная с pilot.3, GPU inference images обновлены до Qwen3/BGE-M3-совместимых
+   pinned versions: `vllm/vllm-openai:v0.9.2` и
+   `ghcr.io/huggingface/text-embeddings-inference:89-1.9`. `ollama` больше не
+   стартует в GPU-pilot по наследству из базового compose, а `HF_ENDPOINT`
+   валидируется как абсолютный URL, чтобы не получать ошибку TEI
+   `relative URL without a base`.
+
 ## Что особенно тестировать
 
 - DOCX договоры: аренда, заем, агентский, NDA, акт сверки, приложения.

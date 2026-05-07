@@ -103,6 +103,12 @@ wait_for_container_health() {
       warn "Still waiting for $container (${elapsed}s elapsed, state=$state)"
     fi
   done
+  warn "Last $container status:"
+  docker ps -a --filter "name=^/${container}$" || true
+  warn "Last $container logs:"
+  docker logs --tail=200 "$container" || true
+  warn "Last $container health detail:"
+  docker inspect "$container" --format '{{json .State.Health}}' 2>/dev/null || true
   fail "$container did not become healthy within ${max_seconds}s"
 }
 
