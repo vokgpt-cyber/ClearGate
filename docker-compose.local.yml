@@ -48,9 +48,8 @@ services:
       # Override via .env.local if a different model is preferred (e.g.
       # OLLAMA_MODEL=qwen2.5:14b-instruct-q4_K_M).
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b-instruct-q4_K_M}
-      # Fast local defaults: avoid multi-hundred-MB model downloads on first
-      # smoke test. Override via environment for higher-quality local runs.
-      - SPACY_MODEL=${SPACY_MODEL:-ru_core_news_sm}
+      # Keep local testing aligned with the pilot quality gate.
+      - SPACY_MODEL=${SPACY_MODEL:-ru_core_news_lg}
       - GLINER_MODEL=${GLINER_MODEL:-}
       - CLEARGATE_DEFAULT_GLINER_LABELS=${CLEARGATE_DEFAULT_GLINER_LABELS:-}
       - CLEARGATE_DISABLE_LLM_LAYER=true

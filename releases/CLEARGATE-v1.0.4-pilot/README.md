@@ -37,9 +37,13 @@ git pull --ff-only
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
 ```
 
-Начиная с pilot.1 backend Docker build больше не обращается к
-`raw.githubusercontent.com` за spaCy compatibility.json. spaCy-модель для
-пилота опциональна; без нее backend использует no-download fallback.
+Начиная с pilot.2 backend Docker build больше не использует
+`python -m spacy download`, поэтому не обращается к
+`raw.githubusercontent.com` за spaCy compatibility.json. Вместо этого
+обязательная модель `ru_core_news_lg` ставится из direct wheel URL GitHub
+Releases. Если доступ к GitHub release assets закрыт, IT должен указать
+внутренний mirror через `SPACY_MODEL_WHEEL_URL`; запуск без модели запрещен,
+чтобы не снижать качество анонимизации.
 
 Если репозиторий уже склонирован:
 

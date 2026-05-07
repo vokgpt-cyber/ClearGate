@@ -104,11 +104,13 @@ set_env_value OLLAMA_HOST "http://vllm:8000/v1"
 set_env_value OLLAMA_MODEL "cleargate-llm"
 set_env_value EMBEDDER_URL "http://bge-embedder:80"
 set_env_value CLEARGATE_DISABLE_LLM_LAYER "false"
-if [[ -z "${SPACY_MODEL_WHEEL_URL:-}" ]]; then
-  set_env_value SPACY_MODEL ""
-fi
+SPACY_MODEL="${SPACY_MODEL:-ru_core_news_lg}"
+SPACY_MODEL_WHEEL_URL="${SPACY_MODEL_WHEEL_URL:-https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl}"
+set_env_value SPACY_MODEL "$SPACY_MODEL"
+set_env_value SPACY_MODEL_WHEEL_URL "$SPACY_MODEL_WHEEL_URL"
 ok "Domain: $CLEARGATE_DOMAIN"
 ok "TLS mode: $CLEARGATE_TLS_MODE"
+ok "Required spaCy model: $SPACY_MODEL"
 
 step "7/10 TLS certificates"
 ACTIVE_CRT="$CERT_DIR/active.crt"

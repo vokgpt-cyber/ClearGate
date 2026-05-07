@@ -10,7 +10,7 @@
 #   backend        — FastAPI orchestrator (CPU; talks to vllm + bge)
 #   frontend       — Next.js static export served by `serve` (CPU)
 #   nginx          — TLS terminator + reverse proxy
-#   ollama         — kept available as fallback if vLLM is down (optional, --profile ollama)
+#   ollama         — optional manual diagnostics profile; not used automatically
 #
 # Usage:
 #   # Production (recommended):

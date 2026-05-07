@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.1
+Release package hotfix level: pilot.2
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -11,10 +11,12 @@ Target deployment: Ubuntu server with NVIDIA GPU, RTX 4090/48 GB class
 Inference profile: local GPU LLM verifier via vLLM + BGE-M3 embedder
 
 Policy:
-- Application code must stay on v1.0.4 for the pilot baseline.
-- Release scripts and documentation may receive pilot-only fixes on branch
-  release/pilot-v1.0.4 without changing the application version.
+- Application feature baseline stays on v1.0.4 for the pilot.
+- Pilot-only fixes on branch release/pilot-v1.0.4 may change deployment,
+  startup quality gates and documentation without changing the application
+  feature version.
 - Future application changes should bump the app version and get a new release
   package instead of silently replacing this baseline.
-- Pilot.1 changes only deployment hardening: Docker build no longer depends on
-  `python -m spacy download` / raw.githubusercontent.com.
+- Pilot.2 changes only deployment hardening: Docker build no longer depends on
+  `python -m spacy download` / raw.githubusercontent.com, but the required
+  `ru_core_news_lg` model is still installed and validated from a direct wheel.

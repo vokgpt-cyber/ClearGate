@@ -15,17 +15,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir -e .
 
-# Do not use `python -m spacy download ...` in Docker builds: it first fetches
-# compatibility.json from raw.githubusercontent.com, which is commonly blocked
-# or TLS-inspected in corporate networks. The app has a no-download fallback
-# NLP engine, so the model is optional. If IT has an approved wheel/mirror, pass
-# SPACY_MODEL_WHEEL_URL as a build arg to install it explicitly.
-ARG SPACY_MODEL_WHEEL_URL=""
-RUN if [ -n "$SPACY_MODEL_WHEEL_URL" ]; then \
-        pip install --no-cache-dir "$SPACY_MODEL_WHEEL_URL"; \
-    else \
-        echo "Skipping optional spaCy model install (SPACY_MODEL_WHEEL_URL is empty)"; \
-    fi
+# Install the Russian spaCy model from a direct wheel instead of
+# `python -m spacy download ...`: the CLI first fetches compatibility.json from
+# raw.githubusercontent.com, which often fails under corporate TLS inspection.
+#
+# Quality gate: the model is mandatory. If GitHub release assets are blocked,
+# IT must mirror this wheel internally and pass SPACY_MODEL_WHEEL_URL at build
+# time. Do not let the image build without a real model.
+ARG SPACY_MODEL=ru_core_news_lg
+ARG SPACY_MODEL_WHEEL_URL=https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl
+ENV SPACY_MODEL=${SPACY_MODEL}
+RUN test -n "$SPACY_MODEL_WHEEL_URL" \
+    && pip install --no-cache-dir "$SPACY_MODEL_WHEEL_URL" \
+    && python -c "import os, spacy; spacy.load(os.environ['SPACY_MODEL']); print('spaCy model OK:', os.environ['SPACY_MODEL'])"
 
 COPY app/ app/
 

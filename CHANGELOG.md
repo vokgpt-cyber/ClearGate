@@ -14,8 +14,9 @@
 
 ### Fixed
 - Backend Docker build больше не зависит от `python -m spacy download` и
-  `raw.githubusercontent.com`; spaCy model стала опциональной, а Presidio
-  получает no-download fallback NLP engine.
+  `raw.githubusercontent.com`; `ru_core_news_lg` ставится из direct wheel URL.
+- Убрана no-download fallback-ветка Presidio: backend теперь не стартует без
+  обязательной Russian spaCy model, чтобы не снижать качество анонимизации.
 
 ---
 

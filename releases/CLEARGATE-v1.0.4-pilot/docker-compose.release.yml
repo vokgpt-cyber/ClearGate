@@ -7,7 +7,8 @@ services:
   backend:
     build:
       args:
-        SPACY_MODEL_WHEEL_URL: ${SPACY_MODEL_WHEEL_URL:-}
+        SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
+        SPACY_MODEL_WHEEL_URL: ${SPACY_MODEL_WHEEL_URL:-https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl}
     environment:
       PYTHONPATH: /app
       CLEARGATE_PROFILE: gpu
@@ -15,7 +16,7 @@ services:
       OLLAMA_MODEL: cleargate-llm
       EMBEDDER_URL: http://bge-embedder:80
       CLEARGATE_DISABLE_LLM_LAYER: ${CLEARGATE_DISABLE_LLM_LAYER:-false}
-      SPACY_MODEL: ${SPACY_MODEL:-}
+      SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
       GLINER_MODEL: ${GLINER_MODEL:-urchade/gliner_medium-v2.1}
       BACKEND_CORS_ORIGINS: https://${CLEARGATE_DOMAIN:-cleargate.local}
 

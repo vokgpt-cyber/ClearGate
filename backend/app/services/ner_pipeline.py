@@ -14,13 +14,11 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Literal
 
 import structlog
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
-from presidio_analyzer.nlp_engine import NlpArtifacts, NlpEngine
 
 from app.models.entities import DetectedEntity
 from app.services.bge_retriever import BGERetriever
@@ -32,77 +30,6 @@ from app.services.stopwords import is_stopword
 
 logger = structlog.get_logger(__name__)
 
-
-class NoOpNlpEngine(NlpEngine):
-    """Minimal Presidio NLP engine for pattern-only analysis.
-
-    Corporate/offline Docker builds may skip downloadable spaCy models.
-    Presidio still needs an NLP engine object; otherwise it may construct its
-    own default engine and try to load/download models at runtime. This engine
-    tokenizes with spacy.blank() and returns no ML entities, leaving regex,
-    GLiNER, Natasha/Yargy and the local LLM verifier to do detection.
-    """
-
-    def __init__(self, languages: list[str] | None = None) -> None:
-        self._languages = languages or ["ru", "en"]
-        self._nlp_by_lang = {}
-
-    def load(self) -> None:
-        import spacy
-
-        for language in self._languages:
-            model_lang = language if language in {"ru", "en"} else "xx"
-            self._nlp_by_lang[language] = spacy.blank(model_lang)
-
-    def is_loaded(self) -> bool:
-        return all(language in self._nlp_by_lang for language in self._languages)
-
-    def _nlp(self, language: str):
-        if not self.is_loaded():
-            self.load()
-        if language not in self._nlp_by_lang:
-            import spacy
-
-            model_lang = language if language in {"ru", "en"} else "xx"
-            self._nlp_by_lang[language] = spacy.blank(model_lang)
-        return self._nlp_by_lang[language]
-
-    def process_text(self, text: str, language: str) -> NlpArtifacts:
-        doc = self._nlp(language)(text)
-        return NlpArtifacts(
-            entities=[],
-            tokens=doc,
-            tokens_indices=[token.idx for token in doc],
-            lemmas=[token.lemma_ or token.text.lower() for token in doc],
-            nlp_engine=self,
-            language=language,
-        )
-
-    def process_batch(
-        self,
-        texts: Iterable[str],
-        language: str,
-        batch_size: int = 1,
-        n_process: int = 1,
-        **kwargs,
-    ) -> Iterator[tuple[str, NlpArtifacts]]:
-        del batch_size, n_process, kwargs
-        for text in texts:
-            yield text, self.process_text(text, language)
-
-    def is_stopword(self, word: str, language: str) -> bool:
-        token = next(iter(self._nlp(language)(word)), None)
-        return bool(token and token.is_stop)
-
-    def is_punct(self, word: str, language: str) -> bool:
-        token = next(iter(self._nlp(language)(word)), None)
-        return bool(token and token.is_punct)
-
-    def get_supported_entities(self) -> list[str]:
-        return []
-
-    def get_supported_languages(self) -> list[str]:
-        return list(self._languages)
 
 # Presidio entity types → CLEARGATE entity types
 _PRESIDIO_TYPE_MAP: dict[str, str] = {
@@ -269,24 +196,28 @@ class NERPipeline:
 
     def _build_presidio_analyzer(self, spacy_model: str | None) -> AnalyzerEngine:
         """Build Presidio analyzer with spaCy and custom recognizers."""
-        nlp_engine = None
+        if not spacy_model:
+            raise RuntimeError(
+                "SPACY_MODEL is required. CLEARGATE refuses to start without "
+                "the Russian spaCy model because it would silently reduce "
+                "anonymization quality."
+            )
 
-        if spacy_model:
-            try:
-                from presidio_analyzer.nlp_engine import NlpEngineProvider
+        try:
+            from presidio_analyzer.nlp_engine import NlpEngineProvider
 
-                configuration = {
-                    "nlp_engine_name": "spacy",
-                    "models": [{"lang_code": "ru", "model_name": spacy_model}],
-                }
-                nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
-                logger.info("ner_pipeline.spacy_loaded", model=spacy_model)
-            except Exception:
-                logger.warning("ner_pipeline.spacy_failed", model=spacy_model, exc_info=True)
-        if nlp_engine is None:
-            nlp_engine = NoOpNlpEngine(languages=["ru", "en"])
-            nlp_engine.load()
-            logger.info("ner_pipeline.noop_nlp_loaded")
+            configuration = {
+                "nlp_engine_name": "spacy",
+                "models": [{"lang_code": "ru", "model_name": spacy_model}],
+            }
+            nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
+            logger.info("ner_pipeline.spacy_loaded", model=spacy_model)
+        except Exception as exc:
+            logger.error("ner_pipeline.spacy_required_failed", model=spacy_model, exc_info=True)
+            raise RuntimeError(
+                f"Required spaCy model '{spacy_model}' is unavailable. "
+                "Install it during Docker build via SPACY_MODEL_WHEEL_URL."
+            ) from exc
 
         registry = RecognizerRegistry(supported_languages=["ru", "en"])
         registry.load_predefined_recognizers(languages=["en"])

@@ -136,18 +136,19 @@ Installer делает:
 - `Qwen/Qwen3-32B-AWQ`;
 - `BAAI/bge-m3`.
 
-Важно про spaCy: pilot hotfix не использует `python -m spacy download` во время
+Важно про spaCy: pilot.2 не использует `python -m spacy download` во время
 Docker build, потому что эта команда зависит от `raw.githubusercontent.com` и
-часто падает в корпоративных сетях с SSL EOF. Backend умеет работать без
-скачанной spaCy-модели: включается no-download tokenizer, а основные слои
-regex, GLiNER и локальный LLM/verifier остаются доступны.
+часто падает в корпоративных сетях с SSL EOF. Вместо этого обязательная модель
+`ru_core_news_lg` ставится из direct wheel URL GitHub Releases и проверяется
+во время сборки. Backend не должен запускаться без этой модели: это quality
+gate, чтобы не снижать качество анонимизации.
 
-Если IT хочет поставить spaCy-модель из внутреннего mirror, можно добавить в
-`.env`:
+Если доступ к GitHub release assets тоже закрыт, IT должен заранее скачать
+wheel, положить его во внутренний mirror и указать в `.env`:
 
 ```bash
-SPACY_MODEL=ru_core_news_sm
-SPACY_MODEL_WHEEL_URL=https://internal-mirror/ru_core_news_sm-3.8.0-py3-none-any.whl
+SPACY_MODEL=ru_core_news_lg
+SPACY_MODEL_WHEEL_URL=https://internal-mirror/ru_core_news_lg-3.8.0-py3-none-any.whl
 ```
 
 И пересобрать backend:
@@ -251,9 +252,11 @@ git pull --ff-only
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
 ```
 
-После hotfix `pilot.1` Dockerfile больше не выполняет `python -m spacy download`.
-Если в старом `.env` осталось `SPACY_MODEL=ru_core_news_sm`, installer очистит
-это значение, если не указан `SPACY_MODEL_WHEEL_URL`.
+После hotfix `pilot.2` Dockerfile больше не выполняет `python -m spacy download`.
+Installer принудительно выставит `SPACY_MODEL=ru_core_news_lg` и direct wheel
+URL. Если сервер не может скачать wheel с GitHub Releases, не отключайте
+модель: скачайте wheel через разрешенный канал, положите во внутренний mirror и
+замените `SPACY_MODEL_WHEEL_URL` в `.env`, затем повторите установку.
 
 Открыть в браузере:
 
