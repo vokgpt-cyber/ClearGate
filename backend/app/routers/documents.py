@@ -96,7 +96,15 @@ async def _parse_upload_part(
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
-    return suffix, file.filename, len(content), processor.parse(content, format=suffix)
+    try:
+        result = processor.parse(content, format=suffix)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return suffix, file.filename, len(content), result
 
 
 def _reset_document_workflow(session) -> None:  # type: ignore[no-untyped-def]
@@ -457,12 +465,24 @@ async def import_response(
             detail=f"Session {session_id} not found or expired",
         )
 
+    if not file.filename or not file.filename.lower().endswith(".docx"):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="LLM response must be a DOCX file",
+        )
+
     content = await file.read()
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     processor = DocumentProcessor()
-    result = processor.parse(content, format="docx")
+    try:
+        result = processor.parse(content, format="docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
     # Transplant page geometry from the original DOCX so the deanonymized
     # preview renders with the same margins/page size as the left pane.

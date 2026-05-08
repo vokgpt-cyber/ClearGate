@@ -28,6 +28,7 @@ services:
       SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
       GLINER_MODEL: ${GLINER_MODEL:-urchade/gliner_medium-v2.1}
       BACKEND_CORS_ORIGINS: https://${CLEARGATE_DOMAIN:-cleargate.local}
+      CLEARGATE_AUTH_COOKIE_SECURE: "true"
 
   vllm:
     command:

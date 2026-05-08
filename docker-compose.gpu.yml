@@ -200,6 +200,8 @@ services:
   backend:
     profiles:
       - gpu
+    ports: !override
+      - "127.0.0.1:8000:8000"
     # Drop GPU reservation inherited from base (backend itself stays on CPU
     # — only vllm and bge-embedder need GPUs).
     deploy:
@@ -227,6 +229,7 @@ services:
       - EMBEDDER_URL=http://bge-embedder:80
       # Tighter CORS in GPU profile — only the public domain.
       - BACKEND_CORS_ORIGINS=https://${CLEARGATE_DOMAIN:-cleargate.local}
+      - CLEARGATE_AUTH_COOKIE_SECURE=true
       # AD/LDAP — read by app/services/auth_ldap.py (added in Phase 3).
       # Empty values disable LDAP and fall back to local password auth.
       - LDAP_URL=${LDAP_URL-}
@@ -240,6 +243,12 @@ services:
         condition: service_healthy
       bge-embedder:
         condition: service_healthy
+    cap_add: !override
+      - IPC_LOCK
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     networks:
       - cleargate-net
 
@@ -250,6 +259,8 @@ services:
     profiles:
       - gpu
     restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:3000:3000"
     depends_on:
       backend:
         condition: service_started
@@ -270,6 +281,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     networks:
       - cleargate-net
 
@@ -310,6 +325,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    security_opt:
+      - no-new-privileges:true
     networks:
       - cleargate-net
 

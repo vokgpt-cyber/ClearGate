@@ -15,6 +15,9 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
+_MAX_SCREENSHOT_BASE64_CHARS = 7_000_000
+_MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024
+
 
 # -----------------------------------------------------------------------
 # Schemas
@@ -28,7 +31,7 @@ class FeedbackSubmitRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=100_000)
     page_url: str | None = None
     session_id: str | None = None
-    screenshot: str | None = None  # base64-encoded image data
+    screenshot: str | None = Field(default=None, max_length=_MAX_SCREENSHOT_BASE64_CHARS)
 
 
 class FeedbackSubmitResponse(BaseModel):
@@ -103,7 +106,9 @@ async def submit_feedback(
         import base64
 
         try:
-            screenshot_bytes = base64.b64decode(feedback_request.screenshot)
+            screenshot_bytes = base64.b64decode(feedback_request.screenshot, validate=True)
+            if len(screenshot_bytes) > _MAX_SCREENSHOT_BYTES:
+                raise ValueError("screenshot too large")
         except Exception as e:
             logger.warning(
                 "feedback.submit.screenshot_decode_failed",

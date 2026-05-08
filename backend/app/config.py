@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     # to anyone inspecting browser devtools.
     cleargate_auth_cookie_name: str = "cg_session"
 
+    # Mark auth cookies Secure in HTTPS deployments. Local/dev profiles keep
+    # this false so localhost HTTP still works; GPU/release profiles set it true.
+    cleargate_auth_cookie_secure: bool = False
+
     # LDAP/AD authentication (v0.4.0 Phase 3). If LDAP_URL is empty, auth
     # falls back to local password-only mode. Production GPU deployment fills
     # these via .env; pilot leaves them blank.

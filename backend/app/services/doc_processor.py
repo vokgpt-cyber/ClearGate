@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import re
+import zipfile
 from copy import deepcopy
 
 import structlog
@@ -25,6 +26,10 @@ _REQUISITE_LABEL_INLINE = re.compile(
     r"\s+((?:Банк|ИНН|ОГРН|КПП|БИК|Адрес|Арендодатель|Арендатор)\s*:)",
     re.IGNORECASE,
 )
+
+_MAX_DOCX_ENTRIES = 2_000
+_MAX_DOCX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024
+_MAX_DOCX_COMPRESSION_RATIO = 100
 
 
 class ParseResult(BaseModel):
@@ -103,11 +108,42 @@ class DocumentProcessor:
         """Parse DOCX file using python-docx."""
         from docx import Document
 
-        doc = Document(io.BytesIO(content))
+        self._validate_docx_zip(content)
+        try:
+            doc = Document(io.BytesIO(content))
+        except Exception as exc:
+            raise ValueError("Invalid DOCX file") from exc
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         text = "\n".join(paragraphs)
         logger.info("doc_processor.docx", paragraphs=len(paragraphs))
         return ParseResult(text=text, render_docx_bytes=content)
+
+    def _validate_docx_zip(self, content: bytes) -> None:
+        """Reject malformed or suspiciously compressed DOCX packages."""
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                infos = archive.infolist()
+        except zipfile.BadZipFile as exc:
+            raise ValueError("Invalid DOCX file") from exc
+
+        if len(infos) > _MAX_DOCX_ENTRIES:
+            raise ValueError("DOCX file has too many internal entries")
+
+        total_uncompressed = 0
+        for info in infos:
+            filename = info.filename.replace("\\", "/")
+            if filename.startswith("/") or ".." in filename.split("/"):
+                raise ValueError("DOCX file contains unsafe internal paths")
+            if info.is_dir():
+                continue
+            total_uncompressed += info.file_size
+            if total_uncompressed > _MAX_DOCX_UNCOMPRESSED_BYTES:
+                raise ValueError("DOCX file expands to too much data")
+            if (
+                info.compress_size > 0
+                and info.file_size / info.compress_size > _MAX_DOCX_COMPRESSION_RATIO
+            ):
+                raise ValueError("DOCX file compression ratio is suspicious")
 
     def _parse_pdf(self, content: bytes) -> ParseResult:
         """Parse PDF file using PyMuPDF, with OCR fallback when available."""

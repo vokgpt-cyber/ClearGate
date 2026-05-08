@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.5
+Release package hotfix level: pilot.6
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -25,3 +25,7 @@ Policy:
   frontend bundles use same-origin `/api` and `/ws` by default, the initial
   `/api/auth/me` probe has an 8s timeout, and smoke tests now catch frontend
   bundles that accidentally bake `localhost` API URLs.
+- Pilot.6 adds deployment security hardening: backend/frontend bind only to
+  loopback behind nginx, HTTPS auth cookies are Secure, frontend dependency
+  audit is clean, login attempts are rate-limited, suspicious DOCX packages
+  are rejected, and IT gets an explicit security checklist.

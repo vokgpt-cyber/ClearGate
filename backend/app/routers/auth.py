@@ -8,10 +8,12 @@ would be a footgun for an on-premise tool.
 
 from __future__ import annotations
 
+from collections import defaultdict, deque
+from time import monotonic
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
 from app.config import settings
@@ -22,6 +24,10 @@ from app.services.user_store import UserRecord, UserStore
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_LOGIN_RATE_WINDOW_SECONDS = 300
+_LOGIN_RATE_MAX_FAILURES = 8
+_login_failures: dict[str, deque[float]] = defaultdict(deque)
 
 
 # ----------------------------------------------------------------------
@@ -88,19 +94,13 @@ class LoginResponse(BaseModel):
 
 
 def _set_session_cookie(response: Response, token: str, max_age_seconds: int) -> None:
-    """Install the session cookie on a response, with pilot-appropriate flags.
-
-    secure=False because the pilot runs HTTP on the internal VM; flipping
-    this to True requires HTTPS termination (documented as a Sprint C
-    follow-up).  samesite="lax" is the tightest setting that still lets
-    a lawyer click a link from Outlook into the app without losing auth.
-    """
+    """Install the session cookie on a response, with deployment flags."""
     response.set_cookie(
         key=settings.cleargate_auth_cookie_name,
         value=token,
         max_age=max_age_seconds,
         httponly=True,
-        secure=False,
+        secure=settings.cleargate_auth_cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -110,6 +110,8 @@ def _clear_session_cookie(response: Response) -> None:
     response.delete_cookie(
         key=settings.cleargate_auth_cookie_name,
         path="/",
+        secure=settings.cleargate_auth_cookie_secure,
+        samesite="lax",
     )
 
 
@@ -128,6 +130,37 @@ def _resolve_user_from_cookie(
     if rec is None or not rec.is_active:
         return None
     return rec
+
+
+def _login_rate_key(http_request: Request, username: str) -> str:
+    client_host = http_request.client.host if http_request.client else "unknown"
+    return f"{client_host}:{username.strip().casefold()}"
+
+
+def _prune_login_failures(key: str, now: float) -> deque[float]:
+    attempts = _login_failures[key]
+    cutoff = now - _LOGIN_RATE_WINDOW_SECONDS
+    while attempts and attempts[0] < cutoff:
+        attempts.popleft()
+    return attempts
+
+
+def _enforce_login_rate_limit(key: str) -> None:
+    attempts = _prune_login_failures(key, monotonic())
+    if len(attempts) >= _LOGIN_RATE_MAX_FAILURES:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+        )
+
+
+def _record_login_failure(key: str) -> None:
+    attempts = _prune_login_failures(key, monotonic())
+    attempts.append(monotonic())
+
+
+def _clear_login_failures(key: str) -> None:
+    _login_failures.pop(key, None)
 
 
 # ----------------------------------------------------------------------
@@ -174,12 +207,16 @@ async def get_current_user(
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: LoginRequest,
+    http_request: Request,
     response: Response,
     users: Annotated[UserStore, Depends(get_user_store_from_request)],
     auth: Annotated[AuthService, Depends(get_auth_service)],
     ldap: Annotated[LDAPAuthProvider | None, Depends(get_ldap_provider_from_request)],
 ) -> LoginResponse:
     """Verify credentials (LDAP-first, then local), issue a signed session cookie."""
+    login_key = _login_rate_key(http_request, request.username)
+    _enforce_login_rate_limit(login_key)
+
     # Step 1: try LDAP first if configured.
     user_record = None
     if ldap is not None:
@@ -210,6 +247,7 @@ async def login(
                 "Ym9ndXNib2d1c2JvZ3Vzbm90YXJlYWxoYXNoMTIzNDU2Nzg",
             )
             logger.info("auth.login.failed", username=request.username, reason="no_such_user_or_inactive")
+            _record_login_failure(login_key)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password",
@@ -217,6 +255,7 @@ async def login(
 
         if not auth.verify_password(request.password, local.password_hash):
             logger.info("auth.login.failed", user_id=local.user_id, reason="bad_password")
+            _record_login_failure(login_key)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password",
@@ -237,6 +276,7 @@ async def login(
     users.record_login(user_record.user_id)
     token = auth.issue_session_token(user_record.user_id)
     _set_session_cookie(response, token, auth.max_age_seconds)
+    _clear_login_failures(login_key)
     logger.info("auth.login.ok", user_id=user_record.user_id, username=user_record.username)
     return LoginResponse(user=UserPublic.from_record(user_record))
 

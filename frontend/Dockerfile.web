@@ -3,7 +3,7 @@ FROM node:22-slim
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 # Bundle `serve` into the image so the container doesn't do a lazy install
 # on first start (which slows pilot bring-up and can fail if the VM has
 # restricted outbound network access).
