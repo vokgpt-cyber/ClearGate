@@ -1,9 +1,18 @@
-function resolveApiUrl(): string {
-  const env = process.env.NEXT_PUBLIC_API_URL;
-  if (env === undefined) return 'http://localhost:18000';
-  if (env !== '') return env;
+function isLocalDevBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  const port = window.location.port;
+  return (
+    (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
+    (port === '3000' || port === '1420')
+  );
+}
 
-  if (typeof window !== 'undefined' && window.location.port === '3000') {
+function resolveApiUrl(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (env) return env;
+
+  if (isLocalDevBrowser()) {
     return `${window.location.protocol}//${window.location.hostname}:18000`;
   }
 
@@ -19,15 +28,14 @@ const API_URL = resolveApiUrl();
  * case that nginx proxies via `/ws/*`.
  */
 function wsUrl(): string {
-  const env = process.env.NEXT_PUBLIC_WS_URL;
-  if (env === undefined) return 'ws://localhost:18000'; // local dev
-  if (env !== '') return env; // explicit absolute URL
-  if (typeof window !== 'undefined' && window.location.port === '3000') {
+  const env = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  if (env) return env; // explicit absolute URL
+  if (isLocalDevBrowser()) {
     const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${scheme}//${window.location.hostname}:18000`;
   }
   // Same-origin: inherit whatever hostname:port the page is served from.
-  if (typeof window === 'undefined') return 'ws://localhost:18000';
+  if (typeof window === 'undefined') return '';
   const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${scheme}//${window.location.host}`;
 }
@@ -638,15 +646,22 @@ export async function logout(): Promise<void> {
  * user into an unauthenticated state and mask bugs.
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const response = await fetch(`${API_URL}/api/auth/me`, {
-    credentials: 'include',
-  });
-  if (response.status === 401) return null;
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`API error ${response.status}: ${body}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      credentials: 'include',
+      signal: controller.signal,
+    });
+    if (response.status === 401) return null;
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`API error ${response.status}: ${body}`);
+    }
+    return (await response.json()) as AuthUser;
+  } finally {
+    clearTimeout(timeout);
   }
-  return (await response.json()) as AuthUser;
 }
 
 // =================== Feedback (Phase 6) ===================

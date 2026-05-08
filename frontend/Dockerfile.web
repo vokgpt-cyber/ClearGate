@@ -14,10 +14,10 @@ COPY . .
 # Build-time configuration.
 # Next.js with `output: 'export'` inlines NEXT_PUBLIC_* values into the
 # static JS at build time — the same env vars set at runtime do NOTHING.
-# The pilot compose override passes the real server IP via build args so
-# the baked URL is correct for pilot lawyers' browsers.
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-ARG NEXT_PUBLIC_WS_URL=ws://localhost:8000
+# Empty values mean same-origin `/api` and `/ws` behind nginx.
+# Local compose/dev profiles pass explicit localhost args.
+ARG NEXT_PUBLIC_API_URL=
+ARG NEXT_PUBLIC_WS_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 

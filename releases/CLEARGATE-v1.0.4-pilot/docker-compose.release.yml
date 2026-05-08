@@ -4,6 +4,15 @@
 # of docker-compose.yml + docker-compose.gpu.yml without changing app code.
 
 services:
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_WS_URL: ""
+    environment:
+      NEXT_PUBLIC_API_URL: ""
+      NEXT_PUBLIC_WS_URL: ""
+
   backend:
     build:
       args:

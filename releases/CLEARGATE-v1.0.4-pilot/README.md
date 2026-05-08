@@ -27,6 +27,21 @@ git checkout release/pilot-v1.0.4
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
 ```
 
+Если браузер открывает страницу, но висит на "Проверяем сессию...":
+
+```bash
+cd /opt/cleargate
+git fetch --all --tags
+git checkout release/pilot-v1.0.4
+git pull --ff-only
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/update-cleargate.sh
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/smoke-test.sh
+```
+
+Начиная с pilot.5 frontend-сборка не должна содержать `localhost` API URL.
+Smoke-test отдельно проверяет, что `/api/auth/me` доступен через nginx и без
+cookie возвращает нормальный `401`, а не зависает.
+
 Если установка уже падала на `python -m spacy download ru_core_news_sm`:
 
 ```bash

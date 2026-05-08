@@ -31,6 +31,17 @@ container_healthy() {
   [[ "$health" == "healthy" || "$health" == "running" ]]
 }
 
+api_auth_me_requires_cookie() {
+  local code
+  code="$(curl -k -sS -o /dev/null -w '%{http_code}' https://127.0.0.1/api/auth/me || true)"
+  [[ "$code" == "401" ]]
+}
+
+frontend_uses_same_origin_api() {
+  docker exec cleargate-frontend sh -c \
+    "! grep -R -E 'localhost:(18000|8000)' /app/out/_next/static >/dev/null 2>&1"
+}
+
 check "vLLM container running" container_running cleargate-vllm
 check "BGE container running" container_running cleargate-bge
 check "Backend container running" container_running cleargate-backend
@@ -45,6 +56,8 @@ check "Nginx healthy" container_healthy cleargate-nginx
 
 check "Backend /health direct" curl -fsS http://127.0.0.1:8000/health
 check "Nginx /health" curl -fsS http://127.0.0.1/health
+check "Nginx /api/auth/me returns 401 without cookie" api_auth_me_requires_cookie
+check "Frontend bundle uses same-origin API" frontend_uses_same_origin_api
 check "vLLM /v1/models" curl -fsS http://127.0.0.1:8001/v1/models
 check "BGE /health" curl -fsS http://127.0.0.1:8002/health
 

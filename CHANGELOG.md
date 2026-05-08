@@ -13,6 +13,10 @@
 - Pre-commit hooks, pyproject.toml, docker-compose
 
 ### Fixed
+- Frontend production bundle no longer falls back to `localhost` API URLs when
+  `NEXT_PUBLIC_API_URL` is not set; nginx deployments use same-origin `/api`
+  and `/ws`, and `/api/auth/me` has a timeout so the UI cannot hang forever on
+  session check.
 - Backend Docker build больше не зависит от `python -m spacy download` и
   `raw.githubusercontent.com`; `ru_core_news_lg` ставится из direct wheel URL.
 - Убрана no-download fallback-ветка Presidio: backend теперь не стартует без
