@@ -340,6 +340,43 @@ EMBEDDER_MODEL=BAAI/bge-m3
 HF_ENDPOINT=https://hf-mirror.company.local
 ```
 
+## 7.4 Если nginx не видит TLS certificate/key
+
+Симптомы:
+
+```text
+cannot load certificate "/etc/cleargate-certs/active.crt"
+BIO_new_file() failed
+```
+
+В `pilot.4` installer создает относительные symlink'и для режимов
+`selfsigned` и `corp_ca`, потому что `/opt/cleargate/certs` внутри nginx
+монтируется как `/etc/cleargate-certs`. Абсолютные symlink'и вида
+`/opt/cleargate/certs/selfsigned.crt` на хосте работают, но внутри контейнера
+становятся битыми.
+
+Проверка на сервере:
+
+```bash
+ls -la /opt/cleargate/certs
+readlink /opt/cleargate/certs/active.crt
+readlink /opt/cleargate/certs/active.key
+```
+
+Для `selfsigned` ожидается:
+
+```text
+active.crt -> selfsigned.crt
+active.key -> selfsigned.key
+```
+
+Для `corp_ca` ожидается:
+
+```text
+active.crt -> <CLEARGATE_DOMAIN>.crt
+active.key -> <CLEARGATE_DOMAIN>.key
+```
+
 Открыть в браузере:
 
 ```text

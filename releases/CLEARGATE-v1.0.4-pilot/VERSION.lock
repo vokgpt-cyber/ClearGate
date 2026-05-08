@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.3
+Release package hotfix level: pilot.4
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -17,7 +17,7 @@ Policy:
   feature version.
 - Future application changes should bump the app version and get a new release
   package instead of silently replacing this baseline.
-- Pilot.3 changes only deployment hardening: Qwen3/BGE-M3 runtime images are
-  pinned to compatible versions, HF mirror configuration is validated, and the
-  required `ru_core_news_lg` model is still installed and validated from a
-  direct wheel.
+- Pilot.4 changes only deployment hardening: TLS symlinks for nginx are
+  container-safe, Qwen3/BGE-M3 runtime images are pinned to compatible
+  versions, HF mirror configuration is validated, and the required
+  `ru_core_news_lg` model is still installed and validated from a direct wheel.

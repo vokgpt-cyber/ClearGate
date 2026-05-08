@@ -158,15 +158,18 @@ case "$CLEARGATE_TLS_MODE" in
         -addext "subjectAltName=DNS:$CLEARGATE_DOMAIN"
       chmod 600 "$CERT_DIR/selfsigned.key"
     fi
-    ln -sf "$CERT_DIR/selfsigned.crt" "$ACTIVE_CRT"
-    ln -sf "$CERT_DIR/selfsigned.key" "$ACTIVE_KEY"
+    # Use relative symlinks: /opt/cleargate/certs is mounted into nginx as
+    # /etc/cleargate-certs, so absolute /opt/... links are broken in-container.
+    ln -sfn "selfsigned.crt" "$ACTIVE_CRT"
+    ln -sfn "selfsigned.key" "$ACTIVE_KEY"
     warn "Self-signed certificate is installed. Browser warning is expected."
     ;;
   corp_ca)
     [[ -f "$CERT_DIR/${CLEARGATE_DOMAIN}.crt" ]] || fail "Missing $CERT_DIR/${CLEARGATE_DOMAIN}.crt"
     [[ -f "$CERT_DIR/${CLEARGATE_DOMAIN}.key" ]] || fail "Missing $CERT_DIR/${CLEARGATE_DOMAIN}.key"
-    ln -sf "$CERT_DIR/${CLEARGATE_DOMAIN}.crt" "$ACTIVE_CRT"
-    ln -sf "$CERT_DIR/${CLEARGATE_DOMAIN}.key" "$ACTIVE_KEY"
+    # Use relative symlinks for the same container mount reason as selfsigned.
+    ln -sfn "${CLEARGATE_DOMAIN}.crt" "$ACTIVE_CRT"
+    ln -sfn "${CLEARGATE_DOMAIN}.key" "$ACTIVE_KEY"
     ok "Corporate certificate wired"
     ;;
   letsencrypt)
@@ -182,6 +185,9 @@ case "$CLEARGATE_TLS_MODE" in
     fail "Unknown CLEARGATE_TLS_MODE=$CLEARGATE_TLS_MODE"
     ;;
 esac
+[[ -r "$ACTIVE_CRT" ]] || fail "Active TLS certificate is not readable: $ACTIVE_CRT -> $(readlink "$ACTIVE_CRT" 2>/dev/null || echo missing)"
+[[ -r "$ACTIVE_KEY" ]] || fail "Active TLS key is not readable: $ACTIVE_KEY -> $(readlink "$ACTIVE_KEY" 2>/dev/null || echo missing)"
+ok "TLS cert symlinks: active.crt -> $(readlink "$ACTIVE_CRT"), active.key -> $(readlink "$ACTIVE_KEY")"
 
 step "8/10 Build and start Docker stack"
 compose config --quiet

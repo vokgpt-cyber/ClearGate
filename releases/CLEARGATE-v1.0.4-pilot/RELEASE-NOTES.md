@@ -55,6 +55,10 @@ Baseline commit приложения: `38077abbb0d8b1536479094880971914d0a730af`
    валидируется как абсолютный URL, чтобы не получать ошибку TEI
    `relative URL without a base`.
 
+8. Начиная с pilot.4, TLS symlink'и для `selfsigned` и `corp_ca` создаются
+   относительными путями, чтобы nginx видел их внутри mount
+   `/etc/cleargate-certs`.
+
 ## Что особенно тестировать
 
 - DOCX договоры: аренда, заем, агентский, NDA, акт сверки, приложения.

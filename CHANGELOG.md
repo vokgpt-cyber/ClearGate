@@ -24,6 +24,8 @@
   backend зависит только от `vllm` и `bge-embedder`.
 - Installer валидирует `HF_ENDPOINT` как абсолютный URL и печатает container
   logs/health details при долгом unhealthy-состоянии.
+- TLS symlinks для nginx в режимах `selfsigned` и `corp_ca` теперь создаются
+  относительными, чтобы не ломаться внутри mount `/etc/cleargate-certs`.
 
 ---
 
