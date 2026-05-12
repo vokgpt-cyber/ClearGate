@@ -1,0 +1,26 @@
+{
+  "id": "012_internal_ai_policy",
+  "text_file": "012_internal_ai_policy.txt",
+  "description": "Internal AI policy: redact EPAM bureau name, not generic policy/role/product words.",
+  "expected_entities": [
+    {"text": "Адвокатского Бюро ЕПАМ", "entity_type": "ORG"}
+  ],
+  "forbidden_entities": [
+    {"text": "Положение", "entity_type": "LOC"},
+    {"text": "Сотрудник", "entity_type": "PER"},
+    {"text": "Адвокатское Бюро", "entity_type": "LOC"},
+    {"text": "Адвокатское Бюро", "entity_type": "ORG"},
+    {"text": "Alice AI", "entity_type": "PER"},
+    {"text": "ChatGPT", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 1, "max": 2},
+    "PER": {"max": 0},
+    "LOC": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "Сотрудник", "entity_type": "PER", "score": 0.91},
+    {"text": "Адвокатское Бюро", "entity_type": "LOC", "score": 0.9},
+    {"text": "ChatGPT", "entity_type": "ORG", "score": 0.87}
+  ]
+}

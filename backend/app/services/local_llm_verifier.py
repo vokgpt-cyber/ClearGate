@@ -48,7 +48,7 @@ _PROMPT_PREFIX = """Ты эксперт по обработке юридичес
 entity_type должен быть ровно одним значением из списка:
 PER, ORG, LOC, ADDR, MON, RU_DATE, POSITION, RU_INN, RU_OGRN, RU_KPP,
 RU_BANK_ACCOUNT, RU_BIK, RU_PHONE, EMAIL_ADDRESS, RU_CASE_NUMBER,
-RU_CONTRACT_NUMBER.
+RU_CONTRACT_NUMBER, RU_POLICY_NUMBER.
 
 Верни строго JSON:
 {
@@ -84,7 +84,7 @@ _PROMPT_PREFIX_FIND_MISSED = """Ты эксперт по обработке юр
 entity_type должен быть ровно одним значением из списка:
 PER, ORG, LOC, ADDR, MON, RU_DATE, POSITION, RU_INN, RU_OGRN, RU_KPP,
 RU_BANK_ACCOUNT, RU_BIK, RU_PHONE, EMAIL_ADDRESS, RU_CASE_NUMBER,
-RU_CONTRACT_NUMBER.
+RU_CONTRACT_NUMBER, RU_POLICY_NUMBER.
 
 Верни строго JSON БЕЗ дополнительных пояснений:
 {
@@ -116,6 +116,9 @@ _ENTITY_TYPE_ALIASES = {
     "BANK_ACCOUNT": "RU_BANK_ACCOUNT",
     "CONTRACT": "RU_CONTRACT_NUMBER",
     "CONTRACT_NUMBER": "RU_CONTRACT_NUMBER",
+    "POLICY": "RU_POLICY_NUMBER",
+    "POLICY_NUMBER": "RU_POLICY_NUMBER",
+    "INSURANCE_POLICY": "RU_POLICY_NUMBER",
     "CASE": "RU_CASE_NUMBER",
     "CASE_NUMBER": "RU_CASE_NUMBER",
     "MONEY": "MON",

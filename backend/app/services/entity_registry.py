@@ -62,6 +62,7 @@ _RU_LABELS: dict[str, str] = {
     "EMAIL_ADDRESS": "EMAIL",
     "RU_CASE_NUMBER": "ДЕЛО",
     "RU_CONTRACT_NUMBER": "ДОГОВОР",
+    "RU_POLICY_NUMBER": "ПОЛИС",
     "POSITION": "ДОЛЖНОСТЬ",
     "PROJECT_CODENAME": "ПРОЕКТ",
 }
@@ -85,6 +86,7 @@ _EN_LABELS: dict[str, str] = {
     "EMAIL_ADDRESS": "EMAIL",
     "RU_CASE_NUMBER": "CASE",
     "RU_CONTRACT_NUMBER": "CONTRACT",
+    "RU_POLICY_NUMBER": "POLICY",
     "POSITION": "POSITION",
     "PROJECT_CODENAME": "PROJECT",
 }

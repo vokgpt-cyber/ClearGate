@@ -475,6 +475,88 @@ class TestDeepScanQaMode:
         assert [entity.text for entity in removals] == ["ВЫПИСКА"]
 
 
+    def test_policy_can_surface_review_only_weak_orgs(self, pipeline):
+        text = (
+            "\u0414\u043e\u0433\u043e\u0432\u043e\u0440\n"
+            "\u041c\u0415\u0416\u0414\u0423: \u0410\u041e \u00ab\u041d\u043e\u0440\u0434-\u0425\u0438\u043c\u00bb / EuroSoft Solutions"
+        )
+        value = "EuroSoft Solutions"
+        start = text.index(value)
+        candidate = DetectedEntity(
+            text=value,
+            entity_type="ORG",
+            start=start,
+            end=start + len(value),
+            score=0.82,
+            source_layer="llm-scan",
+        )
+
+        assert pipeline.post_process(text, [candidate]) == []
+
+        review = pipeline.post_process(text, [candidate], include_review=True)
+
+        assert len(review) == 1
+        assert review[0].metadata["policy_action"] == "review"
+        assert review[0].metadata["policy_reason"] == "weak_organization_candidate"
+
+
+class TestPolicyDrivenPrecision:
+    """Profile-aware policy for forms and internal policy documents."""
+
+    @pytest.mark.asyncio
+    async def test_dms_form_detects_person_policy_and_drops_public_leaflet_noise(self, pipeline):
+        text = (
+            "\u0417\u0430\u0441\u0442\u0440\u0430\u0445\u043e\u0432\u0430\u043d\u043d\u044b\u0439\n"
+            "\u041a\u0430\u0440\u0435\u043b\u0438\u043d\u0430 \u041e\u041b\u042c\u0413\u0410 \u0410\u041b\u0415\u041a\u0421\u0410\u041d\u0414\u0420\u041e\u0412\u041d\u0410\n"
+            "\u0414\u0430\u0442\u0430 \u0440\u043e\u0436\u0434\u0435\u043d\u0438\u044f\n"
+            "12.12.1986\n"
+            "\u041d\u043e\u043c\u0435\u0440 \u043f\u043e\u043b\u0438\u0441\u0430\n"
+            "001\u0414\u041c\u042138505624/558\n"
+            "\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f\n"
+            "\u0441 15.05.2026 \u043f\u043e 31.07.2027\n"
+            "\u041a\u0440\u0443\u0433\u043b\u043e\u0441\u0443\u0442\u043e\u0447\u043d\u044b\u0439\n"
+            "8 (800) 700-15-75 \u0444\u0435\u0434\u0435\u0440\u0430\u043b\u044c\u043d\u044b\u0439 \u043c\u0435\u0434\u0438\u0446\u0438\u043d\u0441\u043a\u0438\u0439\n"
+            "8 (495) 725-10-10 \u041c\u043e\u0441\u043a\u0432\u0430\n"
+            "8 (812) 320-87-26 \u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433\n"
+            "\u0412\u043e\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435\u0441\u044c \u043c\u043e\u0431\u0438\u043b\u044c\u043d\u044b\u043c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u043c "
+            "\u00ab\u0420\u0435\u043d\u0435\u0441\u0441\u0430\u043d\u0441 \u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435\u00bb."
+        )
+
+        entities = await pipeline.analyze(text)
+        by_type = {(entity.entity_type, entity.text) for entity in entities}
+        all_texts = {entity.text for entity in entities}
+
+        assert (
+            "PER",
+            "\u041a\u0430\u0440\u0435\u043b\u0438\u043d\u0430 \u041e\u041b\u042c\u0413\u0410 \u0410\u041b\u0415\u041a\u0421\u0410\u041d\u0414\u0420\u041e\u0412\u041d\u0410",
+        ) in by_type
+        assert ("RU_POLICY_NUMBER", "001\u0414\u041c\u042138505624/558") in by_type
+        assert ("RU_DATE", "12.12.1986") in by_type
+        assert not any(entity.entity_type == "RU_PHONE" for entity in entities)
+        assert "\u041c\u043e\u0441\u043a\u0432\u0430" not in all_texts
+        assert "\u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433" not in all_texts
+        assert "\u0420\u0435\u043d\u0435\u0441\u0441\u0430\u043d\u0441 \u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435" not in all_texts
+
+    @pytest.mark.asyncio
+    async def test_internal_policy_keeps_epam_but_ignores_generic_terms(self, pipeline):
+        text = (
+            "\u041f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u043e\u0431 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0438 \u0418\u0418\n"
+            "\u041d\u0430\u0441\u0442\u043e\u044f\u0449\u0435\u0435 \u041f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u044f\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 "
+            "\u0410\u0434\u0432\u043e\u043a\u0430\u0442\u0441\u043a\u043e\u0433\u043e \u0411\u044e\u0440\u043e \u0415\u041f\u0410\u041c.\n"
+            "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0411\u044e\u0440\u043e \u043c\u043e\u0436\u0435\u0442 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c ChatGPT, DeepSeek, Gemini, Claude, GigaChat, Alice AI.\n"
+            "\u0410\u0434\u0432\u043e\u043a\u0430\u0442\u0441\u043a\u043e\u0435 \u0411\u044e\u0440\u043e \u0443\u043f\u043e\u043c\u0438\u043d\u0430\u0435\u0442\u0441\u044f \u043a\u0430\u043a \u0440\u043e\u0434\u043e\u0432\u043e\u0439 \u0442\u0435\u0440\u043c\u0438\u043d."
+        )
+
+        entities = await pipeline.analyze(text)
+        orgs = {entity.text for entity in entities if entity.entity_type == "ORG"}
+        all_texts = {entity.text for entity in entities}
+
+        assert "\u0410\u0434\u0432\u043e\u043a\u0430\u0442\u0441\u043a\u043e\u0433\u043e \u0411\u044e\u0440\u043e \u0415\u041f\u0410\u041c" in orgs
+        assert "\u0410\u0434\u0432\u043e\u043a\u0430\u0442\u0441\u043a\u043e\u0435 \u0411\u044e\u0440\u043e" not in all_texts
+        assert "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a" not in all_texts
+        assert "Alice AI" not in all_texts
+
+
 class TestContractNumber:
     """Issue 4.1: Contract number not anonymized."""
 

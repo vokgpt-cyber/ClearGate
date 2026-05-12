@@ -21,6 +21,7 @@ import structlog
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 
 from app.models.entities import DetectedEntity
+from app.services.anonymization_policy import apply_policy_decisions
 from app.services.bge_retriever import BGERetriever
 from app.services.document_chunker import Chunk
 from app.services.gliner_recognizer import GLiNERRecognizer
@@ -100,6 +101,14 @@ _RELATIVE_DURATION_VALUE = re.compile(
     r"(?:дн(?:я|ей|ь)?|месяц(?:ев|а)?|мес\.?|лет|год(?:а|ов)?)\b",
     re.IGNORECASE,
 )
+_PHONE_IN_LINE = re.compile(
+    r"(?<!\d)(?:\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}(?!\d)"
+)
+_PUBLIC_SUPPORT_PHONE_CUE = re.compile(
+    r"\b(?:круглосуточн\w*|федеральн\w*|медицинск\w*|пульт\w*|"
+    r"москва|санкт[- ]петербург|renhealth|ренессанс)\b",
+    re.IGNORECASE,
+)
 _DOCUMENT_TITLE_WORDS = {
     "аренда",
     "агентский",
@@ -134,6 +143,7 @@ _ENTITY_TYPE_PRIORITY = {
     "EMAIL_ADDRESS": 80,
     "RU_CONTRACT_NUMBER": 75,
     "RU_CASE_NUMBER": 75,
+    "RU_POLICY_NUMBER": 75,
     "MON": 90,
     "RU_DATE": 65,
     "DATE": 65,
@@ -304,6 +314,8 @@ class NERPipeline:
         self,
         text: str,
         entities: list[DetectedEntity],
+        *,
+        include_review: bool = False,
     ) -> list[DetectedEntity]:
         """Apply shared entity cleanup after any detection source.
 
@@ -314,7 +326,9 @@ class NERPipeline:
         entities = self._filter_document_title_false_positives(text, entities)
         entities = self._filter_structured_false_positives(text, entities)
         entities = self._filter_invalid_structured_entities(text, entities)
-        entities = self._filter_organization_policy(text, entities)
+        entities = self._filter_public_support_phones(text, entities)
+        entities = self._filter_contact_location_false_positives(text, entities)
+        entities = apply_policy_decisions(text, entities, include_review=include_review)
         entities = self._expand_organization_aliases(text, entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)
@@ -377,6 +391,8 @@ class NERPipeline:
         additions: list[DetectedEntity] = []
         for entity in entities:
             if entity.entity_type != "ORG":
+                continue
+            if (entity.metadata or {}).get("policy_action") != "auto":
                 continue
             for alias in organization_aliases(entity):
                 pattern = re.compile(
@@ -489,6 +505,66 @@ class NERPipeline:
             if entity.entity_type in {"DATE", "RU_DATE"} and _RELATIVE_DURATION_VALUE.search(value):
                 logger.debug("ner_pipeline.relative_duration_date_filtered", text=entity.text)
                 continue
+            filtered.append(entity)
+        return filtered
+
+    def _filter_public_support_phones(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Drop public hotline/support phones in insurance leaflets."""
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            if entity.entity_type != "RU_PHONE":
+                filtered.append(entity)
+                continue
+
+            digits = re.sub(r"\D", "", entity.text)
+            line_start = text.rfind("\n", 0, entity.start) + 1
+            line_end = text.find("\n", entity.end)
+            if line_end == -1:
+                line_end = len(text)
+            line = text[line_start:line_end]
+            prev_line_start = text.rfind("\n", 0, max(0, line_start - 1)) + 1
+            prev_line = text[prev_line_start : max(0, line_start - 1)]
+            window = f"{prev_line}\n{line}"
+            is_toll_free = digits.startswith(("7800", "8800"))
+            if is_toll_free or _PUBLIC_SUPPORT_PHONE_CUE.search(window):
+                logger.debug("ner_pipeline.public_support_phone_filtered", text=entity.text)
+                continue
+
+            filtered.append(entity)
+        return filtered
+
+    def _filter_contact_location_false_positives(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Drop city/adjective tails that label support-phone routing.
+
+        DMS/insurance memos often list call-center phones like
+        "8 (495) ... Москва". The city after the phone is a routing label,
+        not a user-specific address. Real addresses are kept because they do
+        not appear as a trailing token on a phone line.
+        """
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            if entity.entity_type != "LOC":
+                filtered.append(entity)
+                continue
+
+            line_start = text.rfind("\n", 0, entity.start) + 1
+            line_end = text.find("\n", entity.end)
+            if line_end == -1:
+                line_end = len(text)
+            line = text[line_start:line_end]
+            relative_start = entity.start - line_start
+            if any(match.end() <= relative_start for match in _PHONE_IN_LINE.finditer(line)):
+                logger.debug("ner_pipeline.contact_location_filtered", text=entity.text)
+                continue
+
             filtered.append(entity)
         return filtered
 

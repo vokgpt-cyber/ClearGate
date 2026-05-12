@@ -1315,17 +1315,16 @@ export function SplitWorkspace({
         base: entities,
         suggestions,
         removals,
-        enabledSuggestionKeys: new Set(suggestions.map(entitySignature)),
-        enabledRemovalKeys: new Set(removals.map(entitySignature)),
+        enabledSuggestionKeys: new Set<string>(),
+        enabledRemovalKeys: new Set<string>(),
       };
       setDeepScanLayer(layer);
-      setDeepScanActive(true);
-      setDeepScanSummary(activeDeepScanCounts(layer));
-      if (suggestions.length > 0 || removals.length > 0) {
-        const merged = buildDeepScanEntities(layer);
-        applyEntities(merged);
-        onAnonymizationComplete?.(documentId, merged);
-      }
+      setDeepScanActive(false);
+      setDeepScanSummary({
+        added: 0,
+        removed: 0,
+        suggestions: suggestions.length + removals.length,
+      });
       setDeepScanProgress(100);
       // eslint-disable-next-line no-console
       console.info('[Cleargate] deep scan response', {
@@ -1345,16 +1344,12 @@ export function SplitWorkspace({
       setDeepScanBusy(false);
     }
   }, [
-    applyEntities,
-    activeDeepScanCounts,
     bothReady,
-    buildDeepScanEntities,
     deepScanActive,
     deepScanBusy,
     deepScanLayer,
     documentId,
     entities,
-    onAnonymizationComplete,
     setDeepScanLayerEnabled,
     status,
     toInteractiveEntities,
@@ -1385,6 +1380,9 @@ export function SplitWorkspace({
   const deepScanSummaryLabel = useMemo(() => {
     if (!deepScanSummary) return null;
     if (deepScanSummary.added === 0 && deepScanSummary.removed === 0) {
+      if (deepScanSummary.suggestions > 0) {
+        return `${t('workspace.deepScanSuggestions')}: ${deepScanSummary.suggestions}`;
+      }
       return t('workspace.deepScanNoChanges');
     }
     const prefix = deepScanActive

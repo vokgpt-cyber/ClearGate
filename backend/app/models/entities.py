@@ -26,6 +26,7 @@ KnownEntityType = Literal[
     "EMAIL_ADDRESS",
     "RU_CASE_NUMBER",
     "RU_CONTRACT_NUMBER",
+    "RU_POLICY_NUMBER",
     "POSITION",
     "PROJECT_CODENAME",
 ]
@@ -55,6 +56,7 @@ KNOWN_ENTITY_TYPES: tuple[str, ...] = (
     "EMAIL_ADDRESS",
     "RU_CASE_NUMBER",
     "RU_CONTRACT_NUMBER",
+    "RU_POLICY_NUMBER",
     "POSITION",
     "PROJECT_CODENAME",
 )

@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.11
+Release package hotfix level: pilot.12
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -39,3 +39,9 @@ Policy:
 - Pilot.11 removes selectable PDF text that is visually deleted by Word Track
   Changes strikeout geometry before anonymization, keeps underlined insertions,
   and filters generic policy-document label joins such as "Сотрудника / Примеры".
+- Pilot.12 adds a policy decision layer for auto/review/ignore anonymization:
+  DMS/insurance and internal policy documents now suppress generic labels such
+  as "Сотрудник", "Адвокатское бюро", public product/service names and support
+  contacts, while keeping FIO, policy numbers, dates and specific firms such as
+  "Адвокатское бюро ЕПАМ". Deep Scan no longer mutates markup automatically;
+  it only presents QA suggestions until a user explicitly selects and applies them.

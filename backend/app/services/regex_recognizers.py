@@ -452,6 +452,81 @@ class EmailRuRecognizer(PatternRecognizer):
         )
 
 
+class PersonNameRuRecognizer(GroupRegexRecognizer):
+    """Recognizes full Russian person names in labelled personal-data blocks.
+
+    spaCy is conservative with mixed-case insurance forms such as
+    "Карелина ОЛЬГА АЛЕКСАНДРОВНА". A label-scoped regex is safer than a
+    global FIO regex: it catches obvious personal data after "ФИО",
+    "Застрахованный", "Пациент", etc. without treating document headings as
+    names.
+    """
+
+    _NAME_TOKEN = r"(?:[А-ЯЁ][а-яё-]{1,}|[А-ЯЁ]{2,})(?:-(?:[А-ЯЁ][а-яё-]{1,}|[А-ЯЁ]{2,}))?"
+    _LABEL = (
+        r"(?:ф\.?\s*и\.?\s*о\.?|фио|фамилия\s+имя\s+отчество|"
+        r"застрахованн(?:ый|ая|ое|ого|ому|ым|ом)|застрахованное\s+лицо|"
+        r"пациент|клиент|сотрудник)"
+    )
+
+    PATTERNS = [
+        (
+            re.compile(
+                rf"(?m)^\s*(?i:{_LABEL})\s*:?\s*\n+\s*(?P<value>{_NAME_TOKEN}(?:\s+{_NAME_TOKEN}){{1,2}})\s*$",
+                re.UNICODE | re.MULTILINE,
+            ),
+            0.96,
+            "value",
+        ),
+        (
+            re.compile(
+                rf"(?m)^\s*(?i:{_LABEL})\s*:?\s+(?P<value>{_NAME_TOKEN}\s+[А-ЯЁ]\.\s*[А-ЯЁ]\.?)\b",
+                re.UNICODE | re.MULTILINE,
+            ),
+            0.92,
+            "value",
+        ),
+        (
+            re.compile(
+                rf"(?m)^\s*(?i:{_LABEL})\s*:?\s+(?P<value>{_NAME_TOKEN}(?:\s+{_NAME_TOKEN}){{1,2}})\b",
+                re.UNICODE | re.MULTILINE,
+            ),
+            0.9,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="PERSON",
+            name="Russian Person Name Recognizer",
+            supported_language=supported_language,
+        )
+
+
+class PolicyNumberRecognizer(GroupRegexRecognizer):
+    """Recognizes insurance policy numbers in labelled DMS forms."""
+
+    PATTERNS = [
+        (
+            re.compile(
+                r"(?im)^\s*(?:номер\s+полиса|полис\s*(?:№|n|no\.?)?)\s*:?\s*\n?\s*"
+                r"(?P<value>[A-ZА-ЯЁ0-9][A-ZА-ЯЁ0-9/-]{5,40})\s*$",
+                re.UNICODE | re.MULTILINE,
+            ),
+            0.93,
+            "value",
+        ),
+    ]
+
+    def __init__(self, supported_language: str = "ru") -> None:
+        super().__init__(
+            supported_entity="RU_POLICY_NUMBER",
+            name="Insurance Policy Number Recognizer",
+            supported_language=supported_language,
+        )
+
+
 class DateRuRecognizer(PatternRecognizer):
     """Recognizes Russian date formats.
 
@@ -866,6 +941,8 @@ def build_all_recognizers() -> list[EntityRecognizer]:
         KppRecognizer(),
         PhoneRuRecognizer(),
         EmailRuRecognizer(),
+        PersonNameRuRecognizer(),
+        PolicyNumberRecognizer(),
         DateRuRecognizer(),
         CaseNumberRecognizer(),
         ContractNumberRecognizer(),

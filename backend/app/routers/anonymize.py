@@ -227,7 +227,11 @@ async def deep_scan(
         if fixed is not None:
             aligned.append(fixed)
 
-    processed = session.pipeline.post_process(request.text, [*candidates, *aligned])
+    processed = session.pipeline.post_process(
+        request.text,
+        [*candidates, *aligned],
+        include_review=True,
+    )
     suggestions = _new_deep_scan_suggestions(candidates, processed)
     removals = _deep_scan_removal_suggestions(candidates, processed)
     entities = _prepare_response_entities(session, current_entities, previous=current_entities)
