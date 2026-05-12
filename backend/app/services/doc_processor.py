@@ -26,6 +26,7 @@ _REQUISITE_LABEL_INLINE = re.compile(
     r"\s+((?:Банк|ИНН|ОГРН|КПП|БИК|Адрес|Арендодатель|Арендатор)\s*:)",
     re.IGNORECASE,
 )
+_PDF_MULTI_SPACE = re.compile(r"[ \t]{2,}")
 
 _MAX_DOCX_ENTRIES = 2_000
 _MAX_DOCX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024
@@ -152,12 +153,15 @@ class DocumentProcessor:
         doc = pymupdf.open(stream=content, filetype="pdf")
         pages: list[str] = []
         ocr_used = False
+        strikeout_chars_removed = 0
         warnings: list[str] = []
         page_sizes: list[tuple[float, float]] = []
 
         for idx, page in enumerate(doc, start=1):
             page_sizes.append((float(page.rect.width), float(page.rect.height)))
             text = page.get_text("text", sort=True)
+            text, removed = self._extract_pdf_text_without_strikeouts(page, text)
+            strikeout_chars_removed += removed
             if not text.strip():
                 ocr_text = self._ocr_page_text(page, idx)
                 if ocr_text.strip():
@@ -175,6 +179,7 @@ class DocumentProcessor:
             "doc_processor.pdf",
             pages=page_count,
             ocr_used=ocr_used,
+            strikeout_chars_removed=strikeout_chars_removed,
             warnings=len(warnings),
         )
         return ParseResult(
@@ -223,6 +228,118 @@ class DocumentProcessor:
         normalized = re.sub(r"[ \t]+\n", "\n", normalized)
         normalized = re.sub(r"\n{3,}", "\n\n", normalized)
         return normalized
+
+    def _extract_pdf_text_without_strikeouts(self, page, fallback_text: str) -> tuple[str, int]:  # type: ignore[no-untyped-def]
+        """Extract text while removing Word Track Changes deletions.
+
+        Word exports deleted text as normal selectable PDF text and draws a
+        separate horizontal strike line through it. PyMuPDF therefore exposes
+        the deleted words through ``get_text("text")``. We remove only chars
+        crossed through the middle of their bbox; underlined inserted text
+        stays intact because underline geometry sits near the bbox bottom.
+        """
+        strike_lines = self._pdf_horizontal_lines(page)
+        if not strike_lines:
+            return fallback_text, 0
+
+        margin_start = self._pdf_revision_margin_start(page, strike_lines)
+        raw = page.get_text("rawdict", sort=True)
+        output_lines: list[str] = []
+        removed = 0
+
+        for block in raw.get("blocks", []):
+            if block.get("type") != 0:
+                continue
+            for line in block.get("lines", []):
+                line_bbox = line.get("bbox")
+                if (
+                    margin_start is not None
+                    and line_bbox is not None
+                    and float(line_bbox[0]) >= margin_start
+                ):
+                    removed += sum(
+                        1
+                        for span in line.get("spans", [])
+                        for char in span.get("chars", [])
+                        if char.get("c")
+                    )
+                    continue
+                chars: list[str] = []
+                for span in line.get("spans", []):
+                    for char in span.get("chars", []):
+                        value = char.get("c", "")
+                        bbox = char.get("bbox")
+                        if not value or bbox is None:
+                            continue
+                        if self._pdf_char_is_struck(bbox, strike_lines):
+                            removed += 1
+                            continue
+                        chars.append(value)
+                line_text = _PDF_MULTI_SPACE.sub(" ", "".join(chars)).rstrip()
+                if line_text.strip():
+                    output_lines.append(line_text)
+
+        if removed == 0:
+            return fallback_text, 0
+        return "\n".join(output_lines), removed
+
+    @staticmethod
+    def _pdf_horizontal_lines(page) -> list[tuple[float, float, float, float, object | None]]:  # type: ignore[no-untyped-def]
+        lines: list[tuple[float, float, float, float, object | None]] = []
+        for drawing in page.get_drawings():
+            color = drawing.get("color")
+            for item in drawing.get("items", []):
+                if item[0] == "l":
+                    p1, p2 = item[1], item[2]
+                    if abs(p1.y - p2.y) > 1.0 or abs(p1.x - p2.x) < 2.0:
+                        continue
+                    x0, x1 = sorted((float(p1.x), float(p2.x)))
+                    y = (float(p1.y) + float(p2.y)) / 2.0
+                    lines.append((x0, y, x1, y, color))
+                elif item[0] == "re":
+                    rect = item[1]
+                    if rect.width < 2.0 or rect.height > 2.0:
+                        continue
+                    y = (float(rect.y0) + float(rect.y1)) / 2.0
+                    lines.append((float(rect.x0), y, float(rect.x1), y, color))
+        return lines
+
+    @staticmethod
+    def _pdf_revision_margin_start(page, lines: list[tuple[float, float, float, float, object | None]]) -> float | None:  # type: ignore[no-untyped-def]
+        """Detect and drop Word Track Changes balloons in the right margin."""
+        page_width = float(page.rect.width)
+        right_third = page_width * 0.65
+        candidates = [
+            min(x0, x1)
+            for x0, _y0, x1, _y1, color in lines
+            if color is not None and min(x0, x1) >= right_third and abs(x1 - x0) >= 20
+        ]
+        if len(candidates) < 2:
+            return None
+        return min(candidates) - 2.0
+
+    @staticmethod
+    def _pdf_char_is_struck(
+        bbox: tuple[float, float, float, float],
+        lines: list[tuple[float, float, float, float, object | None]],
+    ) -> bool:
+        x0, y0, x1, y1 = map(float, bbox)
+        width = max(x1 - x0, 0.1)
+        height = max(y1 - y0, 0.1)
+        center_x = (x0 + x1) / 2.0
+
+        for line_x0, line_y, line_x1, _line_y1, _color in lines:
+            if center_x < min(line_x0, line_x1) - 0.5:
+                continue
+            if center_x > max(line_x0, line_x1) + 0.5:
+                continue
+            vertical_ratio = (line_y - y0) / height
+            if not 0.32 <= vertical_ratio <= 0.74:
+                continue
+            overlap = min(x1, max(line_x0, line_x1)) - max(x0, min(line_x0, line_x1))
+            if overlap / width >= 0.25:
+                return True
+        return False
 
     def _text_to_docx(self, text: str) -> bytes:
         """Create a simple DOCX wrapper for plain text."""

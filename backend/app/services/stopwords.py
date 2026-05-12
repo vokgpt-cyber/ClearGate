@@ -122,6 +122,8 @@ FORM_FIELD_STOPWORDS: set[str] = {
     "номер", "№", "n", "no",
     "от", "до",
     "ключевые", "ключевые правила",
+    "пример", "примера", "примеру", "примером", "примере",
+    "примеры", "примеров", "примерам", "примерами", "примерах",
 }
 
 # False ORG detections
@@ -237,6 +239,9 @@ def is_stopword(text: str, entity_type: str) -> bool:
     role_tokens = re.findall(r"[а-яёa-z]+", canonical)
     if len(role_tokens) >= 2:
         if all(t in LEGAL_ROLE_STOPWORDS or t in POSITION_STOPWORDS for t in role_tokens):
+            return True
+        generic_label_tokens = LEGAL_ROLE_STOPWORDS | POSITION_STOPWORDS | FORM_FIELD_STOPWORDS
+        if entity_type in {"PER", "ORG", "LOC"} and all(t in generic_label_tokens for t in role_tokens):
             return True
 
     generic_person_or_place_roots = _GENERIC_PER_ROOTS + _GENERIC_LOC_ROOTS

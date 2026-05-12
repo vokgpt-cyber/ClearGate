@@ -23,6 +23,19 @@ def _sample_pdf_bytes() -> bytes:
     return data
 
 
+def _track_changes_pdf_bytes() -> bytes:
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=120)
+    page.insert_text((72, 60), "Keep OLD NEW text", fontsize=12)
+    page.draw_line(pymupdf.Point(104, 55), pymupdf.Point(128, 55), color=(1, 0, 0), width=0.7)
+    page.draw_line(pymupdf.Point(132, 62), pymupdf.Point(157, 62), color=(0, 1, 0), width=0.7)
+    data = doc.tobytes()
+    doc.close()
+    return data
+
+
 def test_pdf_parse_extracts_text_and_builds_docx_preview() -> None:
     result = DocumentProcessor().parse(_sample_pdf_bytes(), "pdf")
 
@@ -36,6 +49,14 @@ def test_pdf_parse_extracts_text_and_builds_docx_preview() -> None:
     preview_text = "\n".join(p.text for p in doc.paragraphs)
     assert "DISTRIBUTION" in preview_text
     assert "Tianjin Forward Polymers Co." in preview_text
+
+
+def test_pdf_parse_removes_track_changes_deletions_but_keeps_insertions() -> None:
+    result = DocumentProcessor().parse(_track_changes_pdf_bytes(), "pdf")
+
+    assert result.text == "Keep NEW text"
+    assert "OLD" not in result.text
+    assert "NEW" in result.text
 
 
 def test_txt_parse_builds_docx_preview() -> None:

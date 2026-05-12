@@ -96,3 +96,10 @@ Gemma4 hotfix `pilot.8`:
   `OLLAMA_MODEL=cleargate-llm` на `gemma4:26b`;
 - если у IT есть внутренний pinned Ollama image от транскрибатора, укажите его
   в `.env` как `OLLAMA_IMAGE=<image>`.
+
+PDF Track Changes hotfix `pilot.11`:
+
+- после `git pull` запустите `scripts/update-cleargate.sh`;
+- backend надо пересобрать, потому что изменилась логика извлечения PDF-текста;
+- PDF, экспортированные из Word с включенными Track Changes, теперь очищаются
+  от зачеркнутых удалений до анонимизации; подчеркнутые вставки остаются.

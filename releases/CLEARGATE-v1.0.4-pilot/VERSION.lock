@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.8
+Release package hotfix level: pilot.11
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -36,3 +36,6 @@ Policy:
 - Pilot.8 switches the secondary local LLM verifier from Qwen/vLLM to
   Gemma4/Ollama (`gemma4:26b`) while keeping the primary anonymization
   pipeline unchanged.
+- Pilot.11 removes selectable PDF text that is visually deleted by Word Track
+  Changes strikeout geometry before anonymization, keeps underlined insertions,
+  and filters generic policy-document label joins such as "Сотрудника / Примеры".

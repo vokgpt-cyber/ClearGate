@@ -14,6 +14,7 @@ import pytest
 
 from app.models.entities import DetectedEntity
 from app.services.ner_pipeline import NERPipeline
+from app.services.stopwords import is_stopword
 
 FIXTURES = json.loads(
     (Path(__file__).parent.parent / "fixtures" / "sample_legal_texts.json").read_text(encoding="utf-8")
@@ -46,6 +47,11 @@ class TestPipelineBasics:
         result = await pipeline.analyze("Простой текст без персональных данных.")
         # May find some false positives but shouldn't crash
         assert isinstance(result, list)
+
+
+class TestStopwordFiltering:
+    def test_filters_policy_role_joined_with_document_label(self):
+        assert is_stopword("Сотрудника\nПримеры", "PER")
 
 
 class TestRegexLayer:

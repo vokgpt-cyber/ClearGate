@@ -34,6 +34,8 @@
   logs/health details при долгом unhealthy-состоянии.
 - TLS symlinks для nginx в режимах `selfsigned` и `corp_ca` теперь создаются
   относительными, чтобы не ломаться внутри mount `/etc/cleargate-certs`.
+- PDF, экспортированные из Word с Track Changes, теперь очищаются от
+  зачеркнутых удалений до анонимизации; подчеркнутые вставки сохраняются.
 
 ---
 
