@@ -68,6 +68,7 @@ LEGAL_ROLE_STOPWORDS: set[str] = {
 PUBLIC_PRODUCT_STOPWORDS: set[str] = {
     "alice ai", "chatgpt", "chat gpt", "deepseek", "gemini", "claude",
     "gigachat", "giga chat", "yandexgpt", "yandex gpt",
+    "алиса ai", "алиса ии",
     "atlas", "comet", "aria",
 }
 
@@ -120,6 +121,7 @@ FORM_FIELD_STOPWORDS: set[str] = {
     # Document-meta labels
     "номер", "№", "n", "no",
     "от", "до",
+    "ключевые", "ключевые правила",
 }
 
 # False ORG detections
@@ -197,6 +199,7 @@ def is_stopword(text: str, entity_type: str) -> bool:
     Uses exact matching, stem matching, and short-text filtering.
     """
     normalized = text.strip().rstrip(":;,.!?-").strip().lower()
+    normalized = re.sub(r"\s+", " ", normalized)
     canonical = normalized.replace("ё", "е")
 
     def in_stopwords(value: str, stopwords: set[str]) -> bool:

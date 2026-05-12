@@ -22,9 +22,13 @@ def test_policy_and_public_tool_words_are_not_locations_or_people() -> None:
     assert is_stopword("Положении", "LOC")
     assert is_stopword("Интернете", "LOC")
     assert is_stopword("Адвокатского Бюро", "LOC")
+    assert is_stopword("Адвокатского  Бюро", "LOC")
+    assert is_stopword("Российской  Федерации", "LOC")
     assert is_stopword("Сотрудниками Бюро", "LOC")
     assert is_stopword("Alice AI", "PER")
+    assert is_stopword("Алиса AI", "PER")
     assert is_stopword("ChatGPT", "ORG")
+    assert is_stopword("Ключевые", "PER")
 
 
 def test_professional_firm_genitive_recognizer_keeps_full_name_only() -> None:
