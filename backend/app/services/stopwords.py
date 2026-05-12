@@ -26,11 +26,27 @@ LEGAL_ROLE_STOPWORDS: set[str] = {
     "раскрывающая", "раскрывающей", "раскрывающую", "раскрывающим",
     "получающая", "получающей", "получающую", "получающим",
     "третье лицо", "третьи лица",
-    "принципал", "агент", "комиссионер", "комитент",
+    "принципал", "принципала", "принципалу", "принципалом",
+    "агент", "агента", "агенту", "агентом",
+    "комиссионер", "комиссионера", "комитент", "комитента",
     "лицензиар", "лицензиат", "правообладатель",
     "грузоотправитель", "грузополучатель", "перевозчик", "экспедитор",
+    # Internal-policy roles. These are role nouns, not personal names.
+    "сотрудник", "сотрудника", "сотруднику", "сотрудником", "сотруднике",
+    "сотрудники", "сотрудников", "сотрудникам", "сотрудниками", "сотрудниках",
+    "работник", "работника", "работнику", "работником", "работники", "работников",
+    "доверитель", "доверителя", "доверителю", "доверителем",
+    "доверители", "доверителей", "доверителям", "доверителями",
+    "контрагент", "контрагента", "контрагенту", "контрагентом",
+    "контрагенты", "контрагентов", "контрагентам", "контрагентами",
+    "кандидат", "кандидата", "кандидату", "кандидатом",
+    "кандидаты", "кандидатов", "кандидатам", "кандидатами",
+    "пользователь", "пользователя", "пользователю", "пользователем",
+    "пользователи", "пользователей",
     # Procedural roles
-    "истец", "ответчик", "заявитель", "участник", "представитель",
+    "истец", "ответчик", "заявитель", "участник", "участника", "участники",
+    "представитель", "представителя", "представителю", "представителем",
+    "представители", "представителей", "представителям",
     "обвиняемый", "потерпевший", "свидетель", "эксперт",
     # Document references
     "заявка", "заявки", "заявке", "заявку", "заявкой", "заявками",
@@ -38,9 +54,21 @@ LEGAL_ROLE_STOPWORDS: set[str] = {
     "дополнение", "акт", "протокол",
     "накладная", "договор", "контракт", "соглашение",
     "счёт-фактура", "счет-фактура",
+    "положение", "положения", "положении", "положению", "положением",
+    "политика", "политики", "политике", "политику", "политикой",
+    "памятка", "памятки", "памятке", "памятку", "памяткой",
     # Legal terms that spaCy mistakes for PER
     "заказчиком", "исполнителя", "заключен", "заключён", "заключено",
     "заключена", "заключили", "заключенный", "заключённый",
+}
+
+# Public AI tools and generic product names should not be treated as people,
+# organizations, or places unless a legal form / concrete party context
+# promotes them elsewhere in the pipeline.
+PUBLIC_PRODUCT_STOPWORDS: set[str] = {
+    "alice ai", "chatgpt", "chat gpt", "deepseek", "gemini", "claude",
+    "gigachat", "giga chat", "yandexgpt", "yandex gpt",
+    "atlas", "comet", "aria",
 }
 
 # Position titles -- not sensitive PII
@@ -110,6 +138,8 @@ ORG_STOPWORDS: set[str] = {
     "выписка", "выписка из егрюл",
     "роспатент", "федеральная служба по интеллектуальной собственности",
     "фнс", "федеральная налоговая служба", "росреестр",
+    "адвокатское бюро", "адвокатского бюро", "адвокатскому бюро",
+    "адвокатским бюро", "бюро",
     "rub", "rur", "usd", "eur", "cny", "cnh", "rmb", "gbp", "chf",
     "jpy", "hkd", "aed", "try", "kzt", "byn", "uah",
     "юань", "юаней", "юаня", "доллар", "доллары", "долларов", "евро",
@@ -126,10 +156,39 @@ LOC_STOPWORDS: set[str] = {
     "торговая", "логистическая", "центральная", "главная",
     "транспортная", "промышленная", "складская",
     "российской федерации", "российская федерация",
+    "рф",
     "устав", "устава", "уставе", "уставом",
+    "положение", "положения", "положении", "положению", "положением",
+    "политика", "политики", "политике", "политику", "политикой",
+    "интернет", "интернета", "интернете", "интернету", "интернетом",
+    "адвокатское бюро", "адвокатского бюро", "адвокатскому бюро",
+    "адвокатским бюро", "юридическая фирма", "юридической фирмы",
+    "юридическое бюро", "патентное бюро", "бюро",
+    "федеральный закон", "федерального закона", "федеральном законе",
+    "облачный ии", "облачного ии", "облачном ии",
     "мо",
     "кв.м", "кв.м.", "кв. м", "кв. м.", "м2", "кв м",
 }
+
+_GENERIC_PER_ROOTS = (
+    "сотрудник",
+    "работник",
+    "доверител",
+    "контрагент",
+    "кандидат",
+    "пользовател",
+    "представител",
+    "участник",
+    "оператор",
+)
+
+_GENERIC_LOC_ROOTS = (
+    "положени",
+    "политик",
+    "памятк",
+    "интернет",
+    "бюро",
+)
 
 
 def is_stopword(text: str, entity_type: str) -> bool:
@@ -143,6 +202,9 @@ def is_stopword(text: str, entity_type: str) -> bool:
     def in_stopwords(value: str, stopwords: set[str]) -> bool:
         return value in stopwords or value.replace("ё", "е") in stopwords
 
+    def all_tokens_match_roots(tokens: list[str], roots: tuple[str, ...]) -> bool:
+        return bool(tokens) and all(any(t.startswith(root) for root in roots) for t in tokens)
+
     # Very short entities (1-2 chars) are almost always false positives
     if len(normalized) <= 2 and entity_type in ("PER", "ORG", "LOC"):
         return True
@@ -150,6 +212,8 @@ def is_stopword(text: str, entity_type: str) -> bool:
     # Form-field labels — never sensitive PII themselves. Filter regardless
     # of which entity_type the NER model assigned to them.
     if in_stopwords(normalized, FORM_FIELD_STOPWORDS):
+        return True
+    if in_stopwords(normalized, PUBLIC_PRODUCT_STOPWORDS):
         return True
 
     # Exact match in global stopword lists
@@ -171,6 +235,14 @@ def is_stopword(text: str, entity_type: str) -> bool:
     if len(role_tokens) >= 2:
         if all(t in LEGAL_ROLE_STOPWORDS or t in POSITION_STOPWORDS for t in role_tokens):
             return True
+
+    generic_person_or_place_roots = _GENERIC_PER_ROOTS + _GENERIC_LOC_ROOTS
+    if entity_type == "PER" and all_tokens_match_roots(role_tokens, generic_person_or_place_roots):
+        return True
+    if entity_type == "LOC" and all_tokens_match_roots(role_tokens, generic_person_or_place_roots):
+        return True
+    if entity_type in {"PER", "ORG", "LOC"} and canonical.startswith(("ии-", "ai-")):
+        return True
 
     # Stem matching for multi-word position titles (handles declensions)
     if len(words) >= 2:

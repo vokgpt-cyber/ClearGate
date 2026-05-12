@@ -26,6 +26,29 @@
 import type { DocxAnchorMap } from './docx-anchor-map';
 import { entityClassName, getEntityTypeInfo } from './entity-types';
 
+const PLACEHOLDER_LABELS: Record<string, string[]> = {
+  PER: ['ЛИЦО', 'PERSON'],
+  ORG: ['ОРГАНИЗАЦИЯ', 'ORG'],
+  LOC: ['МЕСТО', 'LOCATION'],
+  ADDR: ['АДРЕС', 'ADDRESS'],
+  MON: ['СУММА', 'AMOUNT'],
+  DATE: ['ДАТА', 'DATE'],
+  RU_DATE: ['ДАТА', 'DATE'],
+  RU_INN: ['ИНН', 'INN'],
+  RU_OGRN: ['ОГРН', 'OGRN'],
+  RU_KPP: ['КПП', 'KPP'],
+  RU_SNILS: ['СНИЛС', 'SNILS'],
+  RU_PASSPORT: ['ПАСПОРТ', 'PASSPORT'],
+  RU_BANK_ACCOUNT: ['СЧЁТ', 'СЧЕТ', 'ACCOUNT'],
+  RU_BIK: ['БИК', 'BIK'],
+  RU_PHONE: ['ТЕЛЕФОН', 'PHONE'],
+  EMAIL_ADDRESS: ['EMAIL'],
+  RU_CASE_NUMBER: ['ДЕЛО', 'CASE'],
+  RU_CONTRACT_NUMBER: ['ДОГОВОР', 'CONTRACT'],
+  POSITION: ['ДОЛЖНОСТЬ', 'POSITION'],
+  PROJECT_CODENAME: ['ПРОЕКТ', 'PROJECT'],
+};
+
 /** Minimal shape of an entity record we need from the backend. */
 export interface OverlayEntity {
   text: string;
@@ -302,13 +325,11 @@ function replaceRangeWithPlaceholder(
   const doc = range.startContainer.ownerDocument;
   if (!doc) return [];
 
-  const placeholder =
-    (entity.metadata?.placeholder as string | undefined) ??
-    fallbackPlaceholder(entity);
+  const placeholder = displayPlaceholder(entity);
 
   const mark = doc.createElement('mark');
   mark.className = `${composeEntityClass(entity)} cleargate-entity--placeholder`;
-  applyEntityDataset(mark, entity);
+  applyEntityDataset(mark, entity, placeholder);
   mark.textContent = placeholder;
 
   range.deleteContents();
@@ -317,12 +338,21 @@ function replaceRangeWithPlaceholder(
   return [mark];
 }
 
-function applyEntityDataset(mark: HTMLElement, entity: OverlayEntity): void {
+function applyEntityDataset(
+  mark: HTMLElement,
+  entity: OverlayEntity,
+  displayPlaceholder?: string,
+): void {
   mark.dataset.entityType = entity.entity_type;
   mark.dataset.entityStart = String(entity.start);
   mark.dataset.entityEnd = String(entity.end);
-  if (entity.metadata?.placeholder) {
-    mark.dataset.placeholder = String(entity.metadata.placeholder);
+  if (displayPlaceholder) {
+    mark.dataset.placeholder = displayPlaceholder;
+  } else if (entity.metadata?.placeholder) {
+    const placeholder = String(entity.metadata.placeholder);
+    if (placeholderMatchesType(placeholder, entity.entity_type)) {
+      mark.dataset.placeholder = placeholder;
+    }
   }
   if (entity.source_layer) {
     mark.dataset.source = entity.source_layer;
@@ -339,9 +369,13 @@ function applyEntityDataset(mark: HTMLElement, entity: OverlayEntity): void {
     mark.dataset.entityState = interactive.state;
   }
   const info = getEntityTypeInfo(entity.entity_type);
-  mark.title = `${info.labelRu}${
-    entity.metadata?.placeholder ? ` → ${entity.metadata.placeholder}` : ''
-  }`;
+  const placeholder = displayPlaceholder ?? (
+    entity.metadata?.placeholder &&
+    placeholderMatchesType(String(entity.metadata.placeholder), entity.entity_type)
+      ? String(entity.metadata.placeholder)
+      : ''
+  );
+  mark.title = `${info.labelRu}${placeholder ? ` → ${placeholder}` : ''}`;
 }
 
 /**
@@ -359,7 +393,24 @@ function composeEntityClass(entity: OverlayEntity): string {
 /** Produce a placeholder when the backend didn't supply one. */
 function fallbackPlaceholder(entity: OverlayEntity): string {
   const info = getEntityTypeInfo(entity.entity_type);
-  return `[${info.labelRu.toUpperCase()}]`;
+  const label = PLACEHOLDER_LABELS[entity.entity_type]?.[0] ?? info.labelRu.toUpperCase();
+  return `[${label}]`;
+}
+
+function displayPlaceholder(entity: OverlayEntity): string {
+  const raw = entity.metadata?.placeholder as string | undefined;
+  if (raw && placeholderMatchesType(raw, entity.entity_type)) {
+    return raw;
+  }
+  return fallbackPlaceholder(entity);
+}
+
+function placeholderMatchesType(placeholder: string, entityType: string): boolean {
+  const match = /^\[?\s*([^_\]\s]+(?:\s+[^_\]\s]+)*)_?\d*\s*\]?$/u.exec(placeholder);
+  if (!match) return false;
+  const actual = match[1].trim().toUpperCase().replace('Ё', 'Е');
+  const expected = PLACEHOLDER_LABELS[entityType] ?? [getEntityTypeInfo(entityType).labelRu];
+  return expected.some((label) => label.toUpperCase().replace('Ё', 'Е') === actual);
 }
 
 /**

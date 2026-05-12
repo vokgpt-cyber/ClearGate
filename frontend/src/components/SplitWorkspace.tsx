@@ -1693,15 +1693,50 @@ export function SplitWorkspace({
   }, []);
 
   const changeType = useCallback(
-    (target: InteractiveEntity, newType: string) => {
-      setEntities((prev) =>
-        prev.map((e) =>
-          e.id === target.id ? { ...e, entity_type: newType } : e,
-        ),
-      );
+    async (target: InteractiveEntity, newType: string) => {
       setPopover(null);
+      try {
+        const result = await addCustomEntity(documentId, {
+          text: target.text,
+          entity_type: newType,
+          start: target.start,
+          end: target.end,
+        });
+        const updated: InteractiveEntity = {
+          text: result.entity.text,
+          entity_type: result.entity.entity_type,
+          start: result.entity.start,
+          end: result.entity.end,
+          score: result.entity.score,
+          source_layer: result.entity.source_layer,
+          metadata: {
+            ...result.entity.metadata,
+            placeholder: result.placeholder,
+          },
+          id: result.id,
+          state: target.state === 'rejected' ? 'pending' : target.state,
+        };
+        setEntities((prev) =>
+          prev.map((e) => (e.id === target.id ? updated : e)),
+        );
+      } catch {
+        setEntities((prev) =>
+          prev.map((e) =>
+            e.id === target.id
+              ? {
+                  ...e,
+                  entity_type: newType,
+                  metadata: {
+                    ...(e.metadata ?? {}),
+                    placeholder: undefined,
+                  },
+                }
+              : e,
+          ),
+        );
+      }
     },
-    [],
+    [documentId],
   );
 
   const remove = useCallback((target: InteractiveEntity) => {

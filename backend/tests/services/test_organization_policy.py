@@ -44,6 +44,24 @@ def test_professional_firm_with_distinctive_name_is_auto_org() -> None:
     assert should_keep_organization_entity(text, entity)
 
 
+def test_professional_firm_genitive_with_distinctive_name_is_auto_org() -> None:
+    text, entity = _org(
+        "Адвокатского Бюро ЕПАМ",
+        metadata={"gliner_label": "organization"},
+    )
+
+    assert should_keep_organization_entity(text, entity)
+
+
+def test_generic_professional_form_genitive_is_not_auto_org() -> None:
+    text, entity = _org(
+        "Адвокатского Бюро",
+        metadata={"gliner_label": "organization"},
+    )
+
+    assert not should_keep_organization_entity(text, entity)
+
+
 def test_short_name_after_professional_form_is_auto_org() -> None:
     text, entity = _org(
         "ЕПАМ",
