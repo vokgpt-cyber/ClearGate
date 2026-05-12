@@ -78,3 +78,12 @@ git checkout release/pilot-v1.0.4
 git pull --ff-only
 bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
 ```
+
+ORG quality hotfix `pilot.7`:
+
+- после обновления backend надо пересобрать, потому что изменилась логика
+  NER-пайплайна;
+- `CLEARGATE_DEFAULT_GLINER_LABELS` должен быть `person,address` или пустым,
+  если IT намеренно доверяет коду по умолчанию;
+- не задавайте старое значение с `organization,location`, иначе GLiNER снова
+  начнет давать избыточные ORG-кандидаты.

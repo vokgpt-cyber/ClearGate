@@ -508,6 +508,19 @@ bash releases/CLEARGATE-v1.0.4-pilot/scripts/update-cleargate.sh
 5. Перезапускает stack.
 6. Запускает smoke test.
 
+Для hotfix `pilot.7` важно: backend должен быть именно пересобран, а не просто
+перезапущен. В `.env` не должно оставаться старого значения
+`CLEARGATE_DEFAULT_GLINER_LABELS` с `organization` или `location`. Допустимые
+варианты:
+
+```bash
+CLEARGATE_DEFAULT_GLINER_LABELS=person,address
+```
+
+или полностью удалить эту строку из `.env`, тогда release-compose подставит
+такое же значение по умолчанию. Это сохраняет GLiNER в пайплайне, но убирает
+самый шумный автоматический поиск организаций.
+
 ## 13. Откат
 
 Быстрый rollback к baseline app commit:

@@ -25,6 +25,10 @@ from app.services.bge_retriever import BGERetriever
 from app.services.document_chunker import Chunk
 from app.services.gliner_recognizer import GLiNERRecognizer
 from app.services.local_llm_verifier import LocalLLMVerifier
+from app.services.organization_policy import (
+    organization_aliases,
+    should_keep_organization_entity,
+)
 from app.services.regex_recognizers import build_all_recognizers
 from app.services.stopwords import is_stopword
 
@@ -310,6 +314,8 @@ class NERPipeline:
         entities = self._filter_document_title_false_positives(text, entities)
         entities = self._filter_structured_false_positives(text, entities)
         entities = self._filter_invalid_structured_entities(text, entities)
+        entities = self._filter_organization_policy(text, entities)
+        entities = self._expand_organization_aliases(text, entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)
         entities.sort(key=lambda e: (e.start, -e.score))
@@ -324,6 +330,7 @@ class NERPipeline:
         entities = []
         for r in results:
             entity_type = _PRESIDIO_TYPE_MAP.get(r.entity_type, r.entity_type)
+            recognition_metadata = dict(getattr(r, "recognition_metadata", None) or {})
             entities.append(
                 DetectedEntity(
                     text=text[r.start : r.end],
@@ -332,10 +339,73 @@ class NERPipeline:
                     end=r.end,
                     score=r.score,
                     source_layer="regex" if r.score >= 0.7 else "ner",
-                    metadata={"presidio_type": r.entity_type},
+                    metadata={
+                        "presidio_type": r.entity_type,
+                        "recognizer_name": recognition_metadata.get("recognizer_name"),
+                        "recognition_metadata": recognition_metadata,
+                    },
                 )
             )
         return entities
+
+    def _filter_organization_policy(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Keep only high-confidence organization auto-redactions."""
+        filtered: list[DetectedEntity] = []
+        for entity in entities:
+            if entity.entity_type == "ORG" and not should_keep_organization_entity(text, entity):
+                logger.debug(
+                    "ner_pipeline.organization_policy_filtered",
+                    text=entity.text,
+                    source_layer=entity.source_layer,
+                    metadata=entity.metadata,
+                )
+                continue
+            filtered.append(entity)
+        return filtered
+
+    def _expand_organization_aliases(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Add exact short aliases derived from accepted organization spans."""
+        occupied = [(entity.start, entity.end) for entity in entities]
+        additions: list[DetectedEntity] = []
+        for entity in entities:
+            if entity.entity_type != "ORG":
+                continue
+            for alias in organization_aliases(entity):
+                pattern = re.compile(
+                    rf"(?<![\w-]){re.escape(alias)}(?![\w-])",
+                    re.IGNORECASE,
+                )
+                for match in pattern.finditer(text):
+                    if any(
+                        match.start() < end and start < match.end()
+                        for start, end in occupied
+                    ):
+                        continue
+                    additions.append(
+                        DetectedEntity(
+                            text=text[match.start() : match.end()],
+                            entity_type="ORG",
+                            start=match.start(),
+                            end=match.end(),
+                            score=min(entity.score, 0.88),
+                            source_layer=entity.source_layer,
+                            metadata={
+                                **entity.metadata,
+                                "derived_alias": True,
+                                "derived_from": entity.text,
+                            },
+                        )
+                    )
+                    occupied.append((match.start(), match.end()))
+        return [*entities, *additions]
 
     def _filter_stopwords(self, entities: list[DetectedEntity]) -> list[DetectedEntity]:
         """Remove entities that match legal/position stopwords."""

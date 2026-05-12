@@ -2,7 +2,7 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.6
+Release package hotfix level: pilot.7
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
@@ -29,3 +29,8 @@ Policy:
   loopback behind nginx, HTTPS auth cookies are Secure, frontend dependency
   audit is clean, login attempts are rate-limited, suspicious DOCX packages
   are rejected, and IT gets an explicit security checklist.
+- Pilot.7 adds precision-first organization filtering for the legal pilot:
+  broad GLiNER organization/location labels are no longer auto-applied,
+  generic descriptors such as "Адвокатское бюро" and "Бюро" are filtered,
+  professional-firm names such as "Адвокатское бюро ЕПАМ" are recognized, and
+  derived short aliases are added only from already accepted organizations.

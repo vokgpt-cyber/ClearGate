@@ -51,12 +51,10 @@ class Settings(BaseSettings):
     gliner_model: str = "urchade/gliner_medium-v2.1"
 
     # Default zero-shot labels GLiNER searches for when a session does not
-    # supply its own custom_entities list. Mix of English and Russian-
-    # specific legal terms. CSV-encoded so a single env var can override.
-    cleargate_default_gliner_labels: str = (
-        "person,organization,location,address,"
-        "должность,сумма контракта,наименование суда,кодовое название проекта"
-    )
+    # supply its own custom_entities list. Keep this conservative: broad
+    # "organization"/"location" labels caused many false positives in pilot
+    # legal documents, while strict regex recognizers handle legal entities.
+    cleargate_default_gliner_labels: str = "person,address"
 
     # BGE-M3 embedder URL (Phase 2 retrieval).
     embedder_url: str = "http://bge-embedder:80"

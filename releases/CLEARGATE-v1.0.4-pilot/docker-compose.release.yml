@@ -27,6 +27,7 @@ services:
       CLEARGATE_DISABLE_LLM_LAYER: ${CLEARGATE_DISABLE_LLM_LAYER:-false}
       SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
       GLINER_MODEL: ${GLINER_MODEL:-urchade/gliner_medium-v2.1}
+      CLEARGATE_DEFAULT_GLINER_LABELS: ${CLEARGATE_DEFAULT_GLINER_LABELS:-person,address}
       BACKEND_CORS_ORIGINS: https://${CLEARGATE_DOMAIN:-cleargate.local}
       CLEARGATE_AUTH_COOKIE_SECURE: "true"
 

@@ -393,6 +393,17 @@ class TestStopwordFiltering:
         assert "18%" not in money
         assert "0,1%" not in money
 
+    def test_professional_firm_name_recognizer_keeps_name_not_descriptor(self):
+        text = "Документ подготовило Адвокатское бюро ЕПАМ."
+
+        orgs = [
+            text[r.start:r.end]
+            for r in OrganizationRuRecognizer().analyze(text, ["ORG"])
+        ]
+
+        assert "Адвокатское бюро ЕПАМ" in orgs
+        assert "Адвокатское бюро" not in orgs
+
 
 class TestPerMerging:
     """Issue 4.5: First name and patronymic split into separate entities."""

@@ -13,6 +13,10 @@
 - Pre-commit hooks, pyproject.toml, docker-compose
 
 ### Fixed
+- ORG-анонимизация стала precision-first: широкие GLiNER `organization` /
+  `location` больше не применяются автоматически, родовые фразы вроде
+  `Адвокатское бюро` и `Бюро` фильтруются, а профессиональные фирмы с
+  отличительным названием вроде `Адвокатское бюро ЕПАМ` распознаются.
 - Frontend production bundle no longer falls back to `localhost` API URLs when
   `NEXT_PUBLIC_API_URL` is not set; nginx deployments use same-origin `/api`
   and `/ws`, and `/api/auth/me` has a timeout so the UI cannot hang forever on
