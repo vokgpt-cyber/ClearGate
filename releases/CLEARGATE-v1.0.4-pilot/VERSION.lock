@@ -2,13 +2,13 @@ CLEARGATE Pilot Release Lock
 ============================
 
 Release package: CLEARGATE-v1.0.4-pilot
-Release package hotfix level: pilot.7
+Release package hotfix level: pilot.8
 Application version: 1.0.4
 Application tag: v1.0.4
 Application baseline commit: 38077abbb0d8b1536479094880971914d0a730af
 Repository: https://github.com/vokgpt-cyber/ClearGate.git
 Target deployment: Ubuntu server with NVIDIA GPU, RTX 4090/48 GB class
-Inference profile: local GPU LLM verifier via vLLM + BGE-M3 embedder
+Inference profile: local GPU LLM verifier via Gemma4/Ollama + BGE-M3 embedder
 
 Policy:
 - Application feature baseline stays on v1.0.4 for the pilot.
@@ -18,8 +18,7 @@ Policy:
 - Future application changes should bump the app version and get a new release
   package instead of silently replacing this baseline.
 - Pilot.4 changes only deployment hardening: TLS symlinks for nginx are
-  container-safe, Qwen3/BGE-M3 runtime images are pinned to compatible
-  versions, HF mirror configuration is validated, and the required
+  container-safe, runtime image compatibility is validated, and the required
   `ru_core_news_lg` model is still installed and validated from a direct wheel.
 - Pilot.5 adds browser-session hardening for nginx deployments: production
   frontend bundles use same-origin `/api` and `/ws` by default, the initial
@@ -34,3 +33,6 @@ Policy:
   generic descriptors such as "Адвокатское бюро" and "Бюро" are filtered,
   professional-firm names such as "Адвокатское бюро ЕПАМ" are recognized, and
   derived short aliases are added only from already accepted organizations.
+- Pilot.8 switches the secondary local LLM verifier from Qwen/vLLM to
+  Gemma4/Ollama (`gemma4:26b`) while keeping the primary anonymization
+  pipeline unchanged.

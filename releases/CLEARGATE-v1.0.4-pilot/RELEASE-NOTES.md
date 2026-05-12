@@ -48,10 +48,10 @@ Baseline commit приложения: `38077abbb0d8b1536479094880971914d0a730af`
    зеркалировать во внутренний mirror и указать `SPACY_MODEL_WHEEL_URL`;
    запуск без spaCy-модели запрещен, чтобы не снижать качество.
 
-7. Начиная с pilot.3, GPU inference images обновлены до Qwen3/BGE-M3-совместимых
-   pinned versions: `vllm/vllm-openai:v0.9.2` и
-   `ghcr.io/huggingface/text-embeddings-inference:89-1.9`. `ollama` больше не
-   стартует в GPU-pilot по наследству из базового compose, а `HF_ENDPOINT`
+7. Начиная с pilot.3, GPU inference images были закреплены для совместимости
+   с BGE-M3 и серверным GPU. Начиная с pilot.8, активный LLM/verifier работает
+   через `ollama`/`gemma4:26b`, а `ghcr.io/huggingface/text-embeddings-inference:89-1.9`
+   остается для BGE-M3. `HF_ENDPOINT`
    валидируется как абсолютный URL, чтобы не получать ошибку TEI
    `relative URL without a base`.
 
@@ -66,6 +66,11 @@ Baseline commit приложения: `38077abbb0d8b1536479094880971914d0a730af`
    профессиональные фирмы с названием, например `АО «Норд-Хим»` и
    `Адвокатское бюро ЕПАМ`, продолжают анонимизироваться. Deep scan также
    получил более строгие инструкции и не должен добавлять спорные ORG.
+
+10. Начиная с pilot.8, вторичный LLM/verifier переведен с Qwen/vLLM на
+    Gemma4 через Ollama: по умолчанию `CLEARGATE_LLM_MODEL=gemma4:26b`.
+    Основной анонимизатор не менялся: правила, spaCy, GLiNER и BGE-M3
+    остаются теми же.
 
 ## Что особенно тестировать
 

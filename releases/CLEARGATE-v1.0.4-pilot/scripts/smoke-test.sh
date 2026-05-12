@@ -50,13 +50,13 @@ container_port_bound_to_loopback() {
   [[ -n "$bindings" ]] && ! grep -vqE '^(127\.0\.0\.1|\[::1\]):' <<<"$bindings"
 }
 
-check "vLLM container running" container_running cleargate-vllm
+check "Ollama container running" container_running cleargate-ollama
 check "BGE container running" container_running cleargate-bge
 check "Backend container running" container_running cleargate-backend
 check "Frontend container running" container_running cleargate-frontend
 check "Nginx container running" container_running cleargate-nginx
 
-check "vLLM healthy" container_healthy cleargate-vllm
+check "Ollama healthy" container_healthy cleargate-ollama
 check "BGE healthy" container_healthy cleargate-bge
 check "Backend healthy" container_healthy cleargate-backend
 check "Frontend healthy" container_healthy cleargate-frontend
@@ -68,7 +68,8 @@ check "Nginx /api/auth/me returns 401 without cookie" api_auth_me_requires_cooki
 check "Frontend bundle uses same-origin API" frontend_uses_same_origin_api
 check "Backend port bound to loopback only" container_port_bound_to_loopback cleargate-backend 8000
 check "Frontend port bound to loopback only" container_port_bound_to_loopback cleargate-frontend 3000
-check "vLLM /v1/models" curl -fsS http://127.0.0.1:8001/v1/models
+check "Ollama model list" docker exec cleargate-ollama ollama list
+check "Ollama /v1/models" curl -fsS http://127.0.0.1:11434/v1/models
 check "BGE /health" curl -fsS http://127.0.0.1:8002/health
 
 if [[ ${#FAILS[@]} -eq 0 ]]; then

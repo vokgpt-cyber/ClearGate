@@ -21,8 +21,8 @@ services:
     environment:
       PYTHONPATH: /app
       CLEARGATE_PROFILE: gpu
-      OLLAMA_HOST: http://vllm:8000/v1
-      OLLAMA_MODEL: cleargate-llm
+      OLLAMA_HOST: ${CLEARGATE_LLM_HOST:-http://ollama:11434}
+      OLLAMA_MODEL: ${CLEARGATE_LLM_MODEL:-gemma4:26b}
       EMBEDDER_URL: http://bge-embedder:80
       CLEARGATE_DISABLE_LLM_LAYER: ${CLEARGATE_DISABLE_LLM_LAYER:-false}
       SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
@@ -30,21 +30,35 @@ services:
       CLEARGATE_DEFAULT_GLINER_LABELS: ${CLEARGATE_DEFAULT_GLINER_LABELS:-person,address}
       BACKEND_CORS_ORIGINS: https://${CLEARGATE_DOMAIN:-cleargate.local}
       CLEARGATE_AUTH_COOKIE_SECURE: "true"
+    depends_on: !override
+      ollama:
+        condition: service_healthy
+      bge-embedder:
+        condition: service_healthy
 
   vllm:
+    profiles: !override
+      - vllm
     command:
       - --model
-      - ${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}
+      - ${VLLM_MODEL:-/models/gemma4}
       - --max-model-len
       - "${VLLM_MAX_MODEL_LEN:-16384}"
       - --gpu-memory-utilization
       - "${VLLM_GPU_UTIL:-0.85}"
       - --enable-prefix-caching
-      - --enable-reasoning
-      - --reasoning-parser
-      - deepseek_r1
       - --served-model-name
       - cleargate-llm
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: !override
+      - gpu
+    ports: !override
+      - "127.0.0.1:11434:11434"
+    environment: !override
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
 
   bge-embedder:
     command:

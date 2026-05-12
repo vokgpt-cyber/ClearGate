@@ -178,7 +178,7 @@ class NERPipeline:
         self,
         spacy_model: str | None = "ru_core_news_lg",
         gliner_model: str | None = "urchade/gliner_medium-v2.1",
-        ollama_model: str = "qwen2.5:7b-instruct-q4_K_M",
+        ollama_model: str = "gemma4:26b",
         enable_llm_layer: bool = True,
         default_gliner_labels: list[str] | None = None,
         embedder_url: str | None = None,

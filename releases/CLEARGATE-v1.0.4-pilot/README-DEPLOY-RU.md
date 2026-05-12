@@ -12,10 +12,11 @@ NVIDIA GPU. Предполагается, что IT имеет доступ к G
 - `frontend` - веб-интерфейс CLEARGATE;
 - `backend` - FastAPI backend, хранение сессий, пользователей и документов;
 - `nginx` - единая точка входа по HTTPS;
-- `vllm` - локальный GPU LLM/verifier;
+- `ollama` - локальный GPU LLM/verifier с Gemma4;
 - `bge-embedder` - локальный multilingual embedder для retrieval/QA слоя;
 - `cleargate-data` - persistent volume для SQLite, сессий, документов, ключей;
-- `cleargate-models` - persistent volume для HF/vLLM/BGE моделей.
+- `cleargate-models` - persistent volume для HF/BGE моделей;
+- `ollama-data` - persistent volume для Gemma4/Ollama моделей.
 
 Пользователи открывают только один URL:
 
@@ -126,20 +127,21 @@ Installer делает:
 7. Спрашивает домен и TLS mode.
 8. Генерирует self-signed certificate или подключает corporate/Let's Encrypt cert.
 9. Собирает backend/frontend images.
-10. Поднимает `vllm`, `bge-embedder`, `backend`, `frontend`, `nginx`.
+10. Поднимает `ollama`, `bge-embedder`, `backend`, `frontend`, `nginx`.
 11. Дожидается healthchecks.
 12. Создает локального admin-пользователя, если база пользователей пустая.
 13. Создает systemd service `cleargate.service`.
 
 Первый запуск может занять 15-40 минут из-за загрузки моделей:
 
-- `Qwen/Qwen3-32B-AWQ`;
+- `gemma4:26b`;
 - `BAAI/bge-m3`.
 
-Pinned inference images для pilot.3:
+Pinned inference images для pilot.8:
 
-- `VLLM_IMAGE=vllm/vllm-openai:v0.9.2` - версия с поддержкой Qwen3. Старый
-  `v0.7.3` падает с `KeyError: 'qwen3'` / `Transformers does not recognize this architecture`;
+- `OLLAMA_IMAGE=ollama/ollama:latest` - Gemma4-compatible Ollama image. IT может
+  заменить на внутренне проверенный/pinned образ транскрибатора;
+- `CLEARGATE_LLM_MODEL=gemma4:26b` - модель вторичного LLM/verifier слоя;
 - `TEI_IMAGE=ghcr.io/huggingface/text-embeddings-inference:89-1.9` - Ada/RTX
   4090 compatible TEI build для BGE-M3. Старый `1.5` может падать на скачивании
   артефактов BGE с `relative URL without a base`.
@@ -277,37 +279,32 @@ URL. Если сервер не может скачать wheel с GitHub Releas
 модель: скачайте wheel через разрешенный канал, положите во внутренний mirror и
 замените `SPACY_MODEL_WHEEL_URL` в `.env`, затем повторите установку.
 
-## 7.2 Если `cleargate-vllm` падает на `model_type qwen3`
+## 7.2 Если `cleargate-ollama` не скачивает или не видит Gemma4
 
-Симптом:
-
-```text
-KeyError: 'qwen3'
-ValueError: Transformers does not recognize this architecture
-```
-
-Причина: старый `vllm/vllm-openai:v0.7.3` не поддерживает Qwen3.
-
-Исправление:
+Проверить текущие значения:
 
 ```bash
 cd /opt/cleargate
-git fetch --all --tags
-git checkout release/pilot-v1.0.4
-git pull --ff-only
-grep '^VLLM_IMAGE=' .env
+grep -E '^(OLLAMA_IMAGE|CLEARGATE_LLM_MODEL|CLEARGATE_LLM_HOST|OLLAMA_HOST|OLLAMA_MODEL)=' .env
+docker logs --tail 200 cleargate-ollama
+docker exec cleargate-ollama ollama list
 ```
 
-Должно быть:
+Для стандартного пилота должно быть:
 
 ```bash
-VLLM_IMAGE=vllm/vllm-openai:v0.9.2
+OLLAMA_IMAGE=ollama/ollama:latest
+CLEARGATE_LLM_MODEL=gemma4:26b
+OLLAMA_HOST=http://ollama:11434
+OLLAMA_MODEL=gemma4:26b
 ```
 
-Если строка отсутствует, installer добавит ее автоматически. После обновления:
+Если IT использует внутренний mirror или уже проверенный образ Ollama от
+транскрибатора, можно заменить `OLLAMA_IMAGE` на этот pinned image. После
+изменения:
 
 ```bash
-bash releases/CLEARGATE-v1.0.4-pilot/scripts/install-cleargate.sh
+bash releases/CLEARGATE-v1.0.4-pilot/scripts/update-cleargate.sh
 ```
 
 ## 7.3 Если `cleargate-bge` падает с `relative URL without a base`
@@ -587,10 +584,10 @@ docker compose \
 docker logs --tail 200 -f cleargate-backend
 ```
 
-- Логи vLLM:
+- Логи Ollama/Gemma4:
 
 ```bash
-docker logs --tail 200 -f cleargate-vllm
+docker logs --tail 200 -f cleargate-ollama
 ```
 
 ## 16. Известная пометка для Deep scan

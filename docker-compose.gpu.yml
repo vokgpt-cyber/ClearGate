@@ -5,12 +5,12 @@
 # Tested target: Ubuntu 22.04 / 24.04 + RTX 4090 48 GB.
 #
 # Stack:
-#   vllm           — Qwen 3 32B AWQ via vLLM (GPU)
+#   ollama         — Gemma4 via Ollama (GPU)
 #   bge-embedder   — BGE-M3 via Text Embeddings Inference (GPU)
-#   backend        — FastAPI orchestrator (CPU; talks to vllm + bge)
+#   backend        — FastAPI orchestrator (CPU; talks to ollama + bge)
 #   frontend       — Next.js static export served by `serve` (CPU)
 #   nginx          — TLS terminator + reverse proxy
-#   ollama         — optional manual diagnostics profile; not used automatically
+#   vllm           — legacy optional diagnostics profile; not used automatically
 #
 # Usage:
 #   # Production (recommended):
@@ -19,11 +19,11 @@
 #
 #   # Diagnostics:
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
-#       --profile gpu logs -f vllm
+#       --profile gpu logs -f ollama
 #
 #   # Restart only the LLM after a model change (other services keep running):
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
-#       --profile gpu up -d --force-recreate vllm
+#       --profile gpu up -d --force-recreate ollama
 #
 # Why a SEPARATE compose file (not extending pilot):
 #   Pilot (docker-compose.pilot.yml) targets CPU-only Windows Server with
@@ -34,10 +34,8 @@
 # Variables (set in .env):
 #   CLEARGATE_DOMAIN         — public DNS name, e.g. cleargate.epam.ru
 #   CLEARGATE_TLS_MODE       — "letsencrypt" | "corp_ca" | "selfsigned"
-#   VLLM_IMAGE               — pinned vLLM image, default vllm/vllm-openai:v0.9.2
-#   VLLM_MODEL               — HF repo id, default Qwen/Qwen3-32B-AWQ
-#   VLLM_MAX_MODEL_LEN       — context window, default 16384
-#   VLLM_GPU_UTIL            — VRAM fraction for vLLM, default 0.85
+#   OLLAMA_IMAGE             — Ollama image, default ollama/ollama:latest
+#   CLEARGATE_LLM_MODEL      — Ollama model tag, default gemma4:26b
 #   TEI_IMAGE                — pinned TEI image for Ada GPUs, default ghcr.io/huggingface/text-embeddings-inference:89-1.9
 #   EMBEDDER_MODEL           — HF repo id, default BAAI/bge-m3
 #   HF_ENDPOINT              — HuggingFace mirror endpoint, default https://huggingface.co
@@ -48,7 +46,7 @@
 services:
 
   # ---------------------------------------------------------------------------
-  # vLLM — primary LLM inference engine.
+  # vLLM — optional legacy LLM inference engine.
   #
   # Why vLLM and not Ollama:
   #   - PagedAttention + continuous batching: 5-10x throughput under
@@ -59,12 +57,10 @@ services:
   #   - Production-grade: this is what serves production deployments at scale
   # ---------------------------------------------------------------------------
   vllm:
-    # v0.7.3 does not understand Qwen3 (`model_type: qwen3`). Keep this
-    # pinned to a Qwen3-capable image and bump deliberately after smoke tests.
     image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.9.2}
     container_name: cleargate-vllm
     profiles:
-      - gpu
+      - vllm
     restart: unless-stopped
     runtime: nvidia
     # vLLM uses PyTorch shared memory between processes; default 64MB shm
@@ -88,7 +84,7 @@ services:
       - VLLM_USE_V1=1
     command:
       - --model
-      - ${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}
+      - ${VLLM_MODEL:-/models/gemma4}
       # 16K context covers ~30-40 pages of Russian text — enough for
       # any legal document we've seen so far. Bigger contexts blow the
       # KV cache budget quickly even on big GPUs.
@@ -100,11 +96,6 @@ services:
       # requests are interleaved at the token level, so two concurrent
       # users see nearly identical latency to one.
       - --enable-prefix-caching
-      # Qwen3 can emit reasoning traces. Let vLLM parse reasoning separately
-      # so OpenAI-compatible clients receive a cleaner final answer.
-      - --enable-reasoning
-      - --reasoning-parser
-      - deepseek_r1
       # Tag the served model so the OpenAI-compat client can address it
       # by a fixed name regardless of how vLLM internally names the model.
       - --served-model-name
@@ -138,7 +129,7 @@ services:
   #   document + all candidates" to "few hundred tokens per candidate"
   #   and lets us scale to documents we couldn't fit before.
   #
-  # ~2 GB VRAM, runs comfortably alongside the 22 GB Qwen on a 48 GB card.
+  # ~2 GB VRAM, runs comfortably alongside Gemma4 on a 48 GB card.
   # ---------------------------------------------------------------------------
   bge-embedder:
     # 89-* is the CUDA 12 / compute capability 8.9 build for RTX 4090 /
@@ -192,8 +183,8 @@ services:
   #   - ADDS named volume cleargate-data:/app/data so users.db, sessions.db,
   #     and the cookie key SURVIVE container recreation. THIS FIXES THE
   #     long-standing pilot bug where users were lost on every redeploy.
-  #   - Points OLLAMA_HOST at the vLLM container's OpenAI endpoint instead
-  #     of an actual Ollama instance. The same OLLAMA_HOST env var is
+  #   - Points OLLAMA_HOST at Ollama's OpenAI-compatible endpoint. The same
+  #     OLLAMA_HOST env var is
   #     reused so the backend code doesn't need conditional logic per
   #     deployment — it's just an OpenAI-compat URL either way.
   # ---------------------------------------------------------------------------
@@ -203,7 +194,7 @@ services:
     ports: !override
       - "127.0.0.1:8000:8000"
     # Drop GPU reservation inherited from base (backend itself stays on CPU
-    # — only vllm and bge-embedder need GPUs).
+    # — only ollama and bge-embedder need GPUs).
     deploy:
       resources:
         reservations:
@@ -220,10 +211,9 @@ services:
       - PYTHONPATH=/app
       - CLEARGATE_PROFILE=gpu
       - BACKEND_WORKERS=2
-      # Point at the vLLM OpenAI endpoint via service-name DNS.
-      # The /v1 suffix is the OpenAI-compat path under vLLM.
-      - OLLAMA_HOST=http://vllm:8000/v1
-      - OLLAMA_MODEL=cleargate-llm
+      # Point at Ollama's OpenAI-compatible endpoint via service-name DNS.
+      - OLLAMA_HOST=${CLEARGATE_LLM_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL=${CLEARGATE_LLM_MODEL:-gemma4:26b}
       - SPACY_MODEL=ru_core_news_lg
       - GLINER_MODEL=urchade/gliner_medium-v2.1
       - EMBEDDER_URL=http://bge-embedder:80
@@ -239,7 +229,7 @@ services:
       - LDAP_ADMIN_GROUP_DN=${LDAP_ADMIN_GROUP_DN-}
       - LDAP_USER_GROUP_DN=${LDAP_USER_GROUP_DN-}
     depends_on: !override
-      vllm:
+      ollama:
         condition: service_healthy
       bge-embedder:
         condition: service_healthy
@@ -330,12 +320,14 @@ services:
     networks:
       - cleargate-net
 
-  # GPU release uses vLLM, not Ollama. The base compose service is kept for
-  # local/dev profiles, but should not start in the GPU pilot unless explicitly
-  # requested for diagnostics.
+  # GPU release uses Gemma4 through Ollama. Keep it loopback-only for host
+  # diagnostics.
   ollama:
     profiles:
-      - ollama
+      - gpu
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    ports: !override
+      - "127.0.0.1:11434:11434"
 
 # =============================================================================
 # Volumes — persistence
@@ -348,7 +340,7 @@ volumes:
     driver: local
     name: cleargate-data
 
-  # HuggingFace cache for vLLM and bge-embedder. ~30-40 GB after both
+  # HuggingFace cache for optional vLLM and bge-embedder. ~30-40 GB after both
   # models load. Separate volume so we never accidentally wipe it during
   # data restore.
   cleargate-models:

@@ -140,7 +140,7 @@ class LocalLLMVerifier:
     Supports both Ollama and vLLM backends through the OpenAI SDK.
 
     Args:
-        model: Model name (e.g., "qwen2.5:7b-instruct-q4_K_M").
+        model: Model name (e.g., "gemma4:26b").
         base_url: Explicit HTTP base URL (e.g., "http://ollama:11434" or "http://vllm:8000").
             If not given, falls back to the OLLAMA_HOST env var, then to
             http://localhost:11434/v1. The URL is normalized to include /v1.
@@ -150,7 +150,7 @@ class LocalLLMVerifier:
 
     def __init__(
         self,
-        model: str = "qwen2.5:7b-instruct-q4_K_M",
+        model: str = "gemma4:26b",
         base_url: str | None = None,
     ) -> None:
         self.model = model

@@ -36,7 +36,7 @@ if (( GPU_MEM_GB < 24 )); then
   fail "Need at least 24 GB VRAM for this GPU profile."
 fi
 if (( GPU_MEM_GB < 40 )); then
-  warn "Less than 40 GB VRAM. Qwen3-32B-AWQ + BGE-M3 may need a smaller model."
+  warn "Less than 40 GB VRAM. Gemma4 + BGE-M3 may need a smaller Gemma4 tag."
 fi
 
 step "2/10 Docker Engine"
@@ -106,14 +106,14 @@ case "$HF_ENDPOINT" in
     ;;
 esac
 HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
-VLLM_IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:v0.9.2}"
-if [[ "$VLLM_IMAGE" == "vllm/vllm-openai:v0.7.3" ]]; then
-  warn "VLLM_IMAGE=vllm/vllm-openai:v0.7.3 is incompatible with Qwen3. Upgrading to v0.9.2."
-  VLLM_IMAGE="vllm/vllm-openai:v0.9.2"
+OLLAMA_IMAGE="${OLLAMA_IMAGE:-ollama/ollama:latest}"
+CLEARGATE_LLM_MODEL="${CLEARGATE_LLM_MODEL:-${OLLAMA_MODEL:-gemma4:26b}}"
+if [[ "$CLEARGATE_LLM_MODEL" == "cleargate-llm" || "$CLEARGATE_LLM_MODEL" == Qwen/* || "$CLEARGATE_LLM_MODEL" == qwen* ]]; then
+  warn "Old Qwen/vLLM model value detected ($CLEARGATE_LLM_MODEL). Switching to Gemma4."
+  CLEARGATE_LLM_MODEL="gemma4:26b"
 fi
-VLLM_MODEL="${VLLM_MODEL:-Qwen/Qwen3-32B-AWQ}"
-VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-16384}"
-VLLM_GPU_UTIL="${VLLM_GPU_UTIL:-0.85}"
+CLEARGATE_LLM_HOST="${CLEARGATE_LLM_HOST:-}"
+EFFECTIVE_LLM_HOST="${CLEARGATE_LLM_HOST:-http://ollama:11434}"
 TEI_IMAGE="${TEI_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:89-1.9}"
 if [[ "$TEI_IMAGE" == "ghcr.io/huggingface/text-embeddings-inference:1.5" ]]; then
   warn "TEI_IMAGE=...:1.5 is too old for this pilot. Upgrading to 89-1.9."
@@ -124,14 +124,13 @@ set_env_value CLEARGATE_DOMAIN "$CLEARGATE_DOMAIN"
 set_env_value CLEARGATE_TLS_MODE "$CLEARGATE_TLS_MODE"
 set_env_value HF_ENDPOINT "$HF_ENDPOINT"
 set_env_value HF_HUB_DISABLE_XET "$HF_HUB_DISABLE_XET"
-set_env_value VLLM_IMAGE "$VLLM_IMAGE"
-set_env_value VLLM_MODEL "$VLLM_MODEL"
-set_env_value VLLM_MAX_MODEL_LEN "$VLLM_MAX_MODEL_LEN"
-set_env_value VLLM_GPU_UTIL "$VLLM_GPU_UTIL"
+set_env_value OLLAMA_IMAGE "$OLLAMA_IMAGE"
+set_env_value CLEARGATE_LLM_MODEL "$CLEARGATE_LLM_MODEL"
+set_env_value CLEARGATE_LLM_HOST "$CLEARGATE_LLM_HOST"
 set_env_value TEI_IMAGE "$TEI_IMAGE"
 set_env_value EMBEDDER_MODEL "$EMBEDDER_MODEL"
-set_env_value OLLAMA_HOST "http://vllm:8000/v1"
-set_env_value OLLAMA_MODEL "cleargate-llm"
+set_env_value OLLAMA_HOST "$EFFECTIVE_LLM_HOST"
+set_env_value OLLAMA_MODEL "$CLEARGATE_LLM_MODEL"
 set_env_value EMBEDDER_URL "http://bge-embedder:80"
 set_env_value CLEARGATE_DISABLE_LLM_LAYER "false"
 SPACY_MODEL="${SPACY_MODEL:-ru_core_news_lg}"
@@ -141,7 +140,7 @@ set_env_value SPACY_MODEL_WHEEL_URL "$SPACY_MODEL_WHEEL_URL"
 ok "Domain: $CLEARGATE_DOMAIN"
 ok "TLS mode: $CLEARGATE_TLS_MODE"
 ok "HF endpoint: $HF_ENDPOINT"
-ok "vLLM image/model: $VLLM_IMAGE / $VLLM_MODEL"
+ok "Gemma4 LLM: $OLLAMA_IMAGE / $CLEARGATE_LLM_MODEL via $EFFECTIVE_LLM_HOST"
 ok "TEI image/model: $TEI_IMAGE / $EMBEDDER_MODEL"
 ok "Required spaCy model: $SPACY_MODEL"
 
@@ -194,11 +193,21 @@ compose config --quiet
 compose pull || warn "Some images could not be pulled now; compose up/build will retry as needed."
 compose build backend frontend
 compose up -d
-warn "First start can take 15-40 minutes while vLLM/BGE download and load model weights."
+warn "First start can take 15-40 minutes while Ollama/Gemma4/BGE download and load model weights."
 
 step "9/10 Wait for services and seed admin"
-wait_for_container_health cleargate-vllm 2400
+wait_for_container_health cleargate-ollama 900
 wait_for_container_health cleargate-bge 900
+if [[ -z "$CLEARGATE_LLM_HOST" || "$CLEARGATE_LLM_HOST" == "http://ollama:11434" ]]; then
+  if docker exec cleargate-ollama ollama list | awk '{print $1}' | grep -Fxq "$CLEARGATE_LLM_MODEL"; then
+    ok "Ollama model already present: $CLEARGATE_LLM_MODEL"
+  else
+    step "Pull Gemma4 model into local Ollama: $CLEARGATE_LLM_MODEL"
+    docker exec cleargate-ollama ollama pull "$CLEARGATE_LLM_MODEL"
+  fi
+else
+  warn "Using external LLM endpoint: $CLEARGATE_LLM_HOST. Local Ollama model pull skipped."
+fi
 wait_for_container_health cleargate-backend 600
 wait_for_container_health cleargate-frontend 300
 wait_for_container_health cleargate-nginx 300

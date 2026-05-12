@@ -60,10 +60,11 @@ Releases. Если доступ к GitHub release assets закрыт, IT дол
 внутренний mirror через `SPACY_MODEL_WHEEL_URL`; запуск без модели запрещен,
 чтобы не снижать качество анонимизации.
 
-Начиная с pilot.3 также обновлены inference-контейнеры:
+Начиная с pilot.8 вторичный LLM/verifier переведен на Gemma4 через Ollama:
 
-- `vllm/vllm-openai:v0.9.2` вместо `v0.7.3`, потому что старый vLLM не
-  распознает `model_type: qwen3`;
+- `OLLAMA_IMAGE=ollama/ollama:latest`, либо внутренний pinned образ IT,
+  совместимый с Gemma4;
+- `CLEARGATE_LLM_MODEL=gemma4:26b`;
 - `ghcr.io/huggingface/text-embeddings-inference:89-1.9` вместо `1.5` для
   BGE-M3 на RTX 4090 / Ada GPU;
 - `HF_ENDPOINT` явно задается как абсолютный URL. Для внутреннего mirror
@@ -87,3 +88,11 @@ ORG quality hotfix `pilot.7`:
   если IT намеренно доверяет коду по умолчанию;
 - не задавайте старое значение с `organization,location`, иначе GLiNER снова
   начнет давать избыточные ORG-кандидаты.
+
+Gemma4 hotfix `pilot.8`:
+
+- после `git pull` запустите `scripts/update-cleargate.sh`;
+- скрипт мигрирует старые `OLLAMA_HOST=http://vllm:8000/v1` и
+  `OLLAMA_MODEL=cleargate-llm` на `gemma4:26b`;
+- если у IT есть внутренний pinned Ollama image от транскрибатора, укажите его
+  в `.env` как `OLLAMA_IMAGE=<image>`.

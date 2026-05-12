@@ -10,7 +10,7 @@ cd /opt/cleargate
 
 docker port cleargate-backend 8000/tcp
 docker port cleargate-frontend 3000/tcp
-docker port cleargate-vllm 8000/tcp
+docker port cleargate-ollama 11434/tcp
 docker port cleargate-bge 80/tcp
 ```
 

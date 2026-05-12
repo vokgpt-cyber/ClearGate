@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # Local LLM (Ollama) — surfaced in settings so startup logging can
     # show the resolved value without re-reading the env var by hand.
     ollama_host: str = "http://ollama:11434"
-    ollama_model: str = "qwen2.5:7b-instruct-q4_K_M"
+    ollama_model: str = "gemma4:26b"
 
     # Layer-2 NER models. Resolved from env vars SPACY_MODEL and GLINER_MODEL
     # (pydantic-settings auto-uppercases the field name). Defaults are the
