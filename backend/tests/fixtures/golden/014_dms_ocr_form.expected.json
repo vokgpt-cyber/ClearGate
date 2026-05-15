@@ -1,0 +1,32 @@
+{
+  "id": "014_dms_ocr_form",
+  "text_file": "014_dms_ocr_form.txt",
+  "description": "OCR-like DMS form: labelled FIO and policy are sensitive; public support data is not.",
+  "expected_entities": [
+    {"text": "Карелина ОЛЬГА АЛЕКСАНДРОВНА", "entity_type": "PER"},
+    {"text": "12.12.1986", "entity_type": "RU_DATE"},
+    {"text": "001ДМС38505624/558", "entity_type": "RU_POLICY_NUMBER"},
+    {"text": "15.05.2026", "entity_type": "RU_DATE"},
+    {"text": "31.07.2027", "entity_type": "RU_DATE"}
+  ],
+  "forbidden_entities": [
+    {"text": "Застрахованный", "entity_type": "PER"},
+    {"text": "Застрахованного", "entity_type": "PER"},
+    {"text": "Страховой", "entity_type": "PER"},
+    {"text": "8 (800) 700-15-75", "entity_type": "RU_PHONE"},
+    {"text": "8 (495) 725-10-10", "entity_type": "RU_PHONE"},
+    {"text": "Москва", "entity_type": "LOC"},
+    {"text": "Санкт-Петербург", "entity_type": "LOC"},
+    {"text": "Ренессанс Здоровье", "entity_type": "ORG"}
+  ],
+  "expected_type_counts": {
+    "PER": {"min": 1, "max": 1},
+    "RU_POLICY_NUMBER": {"min": 1, "max": 1},
+    "RU_PHONE": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "Застрахованный", "entity_type": "PER", "score": 0.9},
+    {"text": "Ренессанс Здоровье", "entity_type": "ORG", "score": 0.9},
+    {"text": "Москва", "entity_type": "LOC", "score": 0.87}
+  ]
+}

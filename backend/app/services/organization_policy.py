@@ -147,7 +147,7 @@ def should_keep_organization_entity(text: str, entity: DetectedEntity) -> bool:
 
     # GLiNER/spaCy/LLM guesses without a legal or professional-form signal are
     # useful as review suggestions, but too noisy for automatic redaction.
-    if entity.source_layer in {"ner", "llm", "llm-scan"}:
+    if entity.source_layer in {"ner", "llm", "llm-scan", "llm-map", "hybrid"}:
         return False
 
     return False

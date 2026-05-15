@@ -123,12 +123,20 @@ _PERSON_CONTEXT_RE = re.compile(
 )
 _PUBLIC_PHONE_CONTEXT_RE = re.compile(
     r"\b(?:круглосуточн\w*|федеральн\w*|медицинск\w*|пульт\w*|"
-    r"москва|санкт[- ]петербург|renhealth|ренессанс)\b",
+    r"renhealth|ренессанс)\b",
+    re.IGNORECASE,
+)
+_PUBLIC_PHONE_CITY_CONTEXT_RE = re.compile(
+    r"\b(?:москва|санкт[- ]петербург)\b",
     re.IGNORECASE,
 )
 _LEGAL_FORM_RE = re.compile(
     r"\b(?:ооо|оао|ао|пао|зао|нко|ип|llc|ltd\.?|limited|inc\.?|corp\.?|"
     r"corporation|company|co\.?|gmbh|ag|plc|pte\.?\s+ltd\.?)\b",
+    re.IGNORECASE,
+)
+_SENSITIVE_LOCATION_CONTEXT_RE = re.compile(
+    r"(?:место\s+рождения|адрес|местонахождение|место\s+нахождения)\W*$",
     re.IGNORECASE,
 )
 
@@ -234,6 +242,9 @@ def _decide_person(
     if _all_generic_descriptor_tokens(value):
         return PolicyDecision("ignore", "generic_person_descriptor", profile)
 
+    if profile in {"internal_policy", "insurance"} and _has_generic_descriptor_token(value):
+        return PolicyDecision("ignore", "generic_descriptor_person_phrase", profile)
+
     if _FIO_VALUE_RE.fullmatch(entity.text.strip()):
         return PolicyDecision("auto", "fio_shape", profile)
 
@@ -264,7 +275,11 @@ def _decide_location(
     if profile in {"internal_policy", "insurance"}:
         return PolicyDecision("ignore", "weak_location_in_public_or_policy_text", profile)
 
-    return PolicyDecision("auto", "location_model_candidate", profile)
+    before = text[max(0, entity.start - 80) : entity.start]
+    if _SENSITIVE_LOCATION_CONTEXT_RE.search(before):
+        return PolicyDecision("auto", "sensitive_location_context", profile)
+
+    return PolicyDecision("review", "weak_location_review_only", profile)
 
 
 def _with_policy_metadata(
@@ -300,6 +315,13 @@ def _all_generic_descriptor_tokens(value: str) -> bool:
     )
 
 
+def _has_generic_descriptor_token(value: str) -> bool:
+    return any(
+        any(token.startswith(root) for root in _GENERIC_DESCRIPTOR_ROOTS)
+        for token in _tokens(value)
+    )
+
+
 def _line_window(text: str, start: int, end: int) -> str:
     line_start = text.rfind("\n", 0, start) + 1
     line_end = text.find("\n", end)
@@ -313,7 +335,15 @@ def _looks_like_public_support_phone(text: str, entity: DetectedEntity) -> bool:
     digits = re.sub(r"\D", "", entity.text)
     if digits.startswith(("7800", "8800")):
         return True
-    return bool(_PUBLIC_PHONE_CONTEXT_RE.search(_line_window(text, entity.start, entity.end)))
+    line_start = text.rfind("\n", 0, entity.start) + 1
+    line_end = text.find("\n", entity.end)
+    if line_end == -1:
+        line_end = len(text)
+    line = text[line_start:line_end]
+    return bool(
+        _PUBLIC_PHONE_CONTEXT_RE.search(_line_window(text, entity.start, entity.end))
+        or _PUBLIC_PHONE_CITY_CONTEXT_RE.search(line)
+    )
 
 
 def _location_is_phone_tail(text: str, entity: DetectedEntity) -> bool:

@@ -1,0 +1,27 @@
+{
+  "id": "020_hr_employee_order",
+  "text_file": "020_hr_employee_order.txt",
+  "description": "HR order: concrete employee PII is sensitive, generic employee role is not.",
+  "expected_entities": [
+    {"text": "№ К-44/2026", "entity_type": "RU_CONTRACT_NUMBER"},
+    {"text": "01.04.2026", "entity_type": "RU_DATE"},
+    {"text": "Иванова Сергея Петровича", "entity_type": "PER"},
+    {"text": "125009, г. Москва, ул. Тверская, д. 8, кв. 15", "entity_type": "ADDR"},
+    {"text": "45 09 123456", "entity_type": "RU_PASSPORT"},
+    {"text": "112-233-445 95", "entity_type": "RU_SNILS"},
+    {"text": "+7 (916) 222-33-44", "entity_type": "RU_PHONE"}
+  ],
+  "forbidden_entities": [
+    {"text": "ПРИКАЗ", "entity_type": "ORG"},
+    {"text": "сотрудника", "entity_type": "PER"},
+    {"text": "Сотрудник", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "PER": {"min": 1, "max": 1},
+    "ADDR": {"min": 1},
+    "RU_PHONE": {"min": 1}
+  },
+  "llm_false_positives": [
+    {"text": "Сотрудник", "entity_type": "PER", "score": 0.9}
+  ]
+}

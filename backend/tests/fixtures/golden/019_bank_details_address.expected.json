@@ -1,0 +1,111 @@
+{
+  "id": "019_bank_details_address",
+  "text_file": "019_bank_details_address.txt",
+  "description": "Bank details line: address and bank are separate entities, address must not swallow bank name.",
+  "expected_entities": [
+    {
+      "text": "№ ОФ-31-2026",
+      "entity_type": "RU_CONTRACT_NUMBER"
+    },
+    {
+      "text": "10 марта 2026",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "ООО «Городские Пространства»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "АО «Норд-Хим»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "191025, Санкт-Петербург, Литейный проспект, д. 57, офис 12",
+      "entity_type": "ADDR"
+    },
+    {
+      "text": "1 250 000 (Один миллион двести пятьдесят тысяч) рублей",
+      "entity_type": "MON"
+    },
+    {
+      "text": "7812345670",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1157847000000",
+      "entity_type": "RU_OGRN"
+    },
+    {
+      "text": "ПАО ВТБ",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "044525187",
+      "entity_type": "RU_BIK"
+    },
+    {
+      "text": "40702810900000012345",
+      "entity_type": "RU_BANK_ACCOUNT"
+    },
+    {
+      "text": "7801456328",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1187847012345",
+      "entity_type": "RU_OGRN"
+    }
+  ],
+  "forbidden_entities": [
+    {
+      "text": "ДОГОВОР АРЕНДЫ ОФИСА",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "РЕКВИЗИТЫ",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Банк",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Арендодатель",
+      "entity_type": "LOC"
+    },
+    {
+      "text": "Санкт-Петербург",
+      "entity_type": "LOC"
+    },
+    {
+      "text": "Литейный проспект",
+      "entity_type": "LOC"
+    }
+  ],
+  "expected_type_counts": {
+    "ORG": {
+      "min": 3
+    },
+    "ADDR": {
+      "min": 1
+    },
+    "MON": {
+      "min": 1
+    },
+    "RU_BANK_ACCOUNT": {
+      "min": 1
+    }
+  },
+  "llm_false_positives": [
+    {
+      "text": "РЕКВИЗИТЫ",
+      "entity_type": "ORG",
+      "score": 0.9
+    },
+    {
+      "text": "Арендодатель",
+      "entity_type": "LOC",
+      "score": 0.88
+    }
+  ]
+}

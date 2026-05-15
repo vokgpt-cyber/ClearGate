@@ -25,6 +25,7 @@ from app.services.anonymization_policy import apply_policy_decisions
 from app.services.bge_retriever import BGERetriever
 from app.services.document_chunker import Chunk
 from app.services.gliner_recognizer import GLiNERRecognizer
+from app.services.llm_entity_map_extractor import LLMEntityMapExtractor
 from app.services.local_llm_verifier import LocalLLMVerifier
 from app.services.organization_policy import (
     organization_aliases,
@@ -34,6 +35,8 @@ from app.services.regex_recognizers import build_all_recognizers
 from app.services.stopwords import is_stopword
 
 logger = structlog.get_logger(__name__)
+
+EntityEngineMode = Literal["classic", "gemma_shadow", "gemma_primary", "hybrid_consensus"]
 
 
 # Presidio entity types → CLEARGATE entity types
@@ -106,7 +109,11 @@ _PHONE_IN_LINE = re.compile(
 )
 _PUBLIC_SUPPORT_PHONE_CUE = re.compile(
     r"\b(?:круглосуточн\w*|федеральн\w*|медицинск\w*|пульт\w*|"
-    r"москва|санкт[- ]петербург|renhealth|ренессанс)\b",
+    r"renhealth|ренессанс)\b",
+    re.IGNORECASE,
+)
+_PUBLIC_SUPPORT_PHONE_CITY_CUE = re.compile(
+    r"\b(?:москва|санкт[- ]петербург)\b",
     re.IGNORECASE,
 )
 _DOCUMENT_TITLE_WORDS = {
@@ -154,6 +161,25 @@ _ENTITY_TYPE_PRIORITY = {
     "LOC": 30,
 }
 
+_HIGH_PRECISION_BASE_TYPES = {
+    "ADDR",
+    "DATE",
+    "EMAIL_ADDRESS",
+    "MON",
+    "RU_BANK_ACCOUNT",
+    "RU_BIK",
+    "RU_CASE_NUMBER",
+    "RU_CONTRACT_NUMBER",
+    "RU_DATE",
+    "RU_INN",
+    "RU_KPP",
+    "RU_OGRN",
+    "RU_PASSPORT",
+    "RU_PHONE",
+    "RU_POLICY_NUMBER",
+    "RU_SNILS",
+}
+
 
 @dataclass
 class ChunkCache:
@@ -189,21 +215,31 @@ class NERPipeline:
         spacy_model: str | None = "ru_core_news_lg",
         gliner_model: str | None = "urchade/gliner_medium-v2.1",
         ollama_model: str = "gemma4:26b",
+        ollama_host: str | None = None,
         enable_llm_layer: bool = True,
         default_gliner_labels: list[str] | None = None,
         embedder_url: str | None = None,
+        entity_engine: EntityEngineMode = "classic",
     ) -> None:
         self.analyzer = self._build_presidio_analyzer(spacy_model)
         self.gliner = GLiNERRecognizer(gliner_model) if gliner_model else None
         self.llm_verifier = LocalLLMVerifier(ollama_model) if enable_llm_layer else None
+        self.llm_entity_map = (
+            LLMEntityMapExtractor(model=ollama_model, base_url=ollama_host)
+            if enable_llm_layer and entity_engine != "classic"
+            else None
+        )
         self.bge_retriever = BGERetriever(base_url=embedder_url)
         self.default_gliner_labels: list[str] = list(default_gliner_labels or [])
+        self.entity_engine: EntityEngineMode = entity_engine
+        self.last_entity_engine_report: dict[str, object] | None = None
 
         logger.info(
             "ner_pipeline.init",
             spacy=spacy_model or "disabled",
             gliner=gliner_model or "disabled",
             llm=ollama_model if enable_llm_layer else "disabled",
+            entity_engine=entity_engine,
             bge=embedder_url or "default",
             default_gliner_labels_count=len(self.default_gliner_labels),
         )
@@ -290,14 +326,43 @@ class NERPipeline:
         # (For brevity in this turn, we pass full text to LLM if BGE off; the
         # fancier retrieval-per-candidate path can land in a follow-up.)
 
-        # Layer 4: LLM verify
+        if self.entity_engine == "classic":
+            entities = await self._classic_llm_pass(text, entities)
+        elif self.entity_engine == "gemma_shadow":
+            classic_entities = await self._classic_llm_pass(text, list(entities))
+            await self._record_gemma_shadow_report(text, entities, classic_entities)
+            entities = classic_entities
+        elif self.entity_engine == "gemma_primary":
+            entities = await self._gemma_entity_map_pass(
+                text,
+                entities,
+                include_all_base=False,
+            )
+        elif self.entity_engine == "hybrid_consensus":
+            entities = await self._gemma_entity_map_pass(
+                text,
+                entities,
+                include_all_base=True,
+            )
+        else:
+            logger.warning("ner_pipeline.unknown_entity_engine", entity_engine=self.entity_engine)
+
+        entities = self.post_process(text, entities)
+        logger.info("ner_pipeline.analyze.done", entity_count=len(entities))
+        return entities
+
+    async def _classic_llm_pass(
+        self,
+        text: str,
+        entities: list[DetectedEntity],
+    ) -> list[DetectedEntity]:
+        """Run the existing LLM verifier/find-missed layers."""
         if self.llm_verifier:
             try:
                 entities = await self.llm_verifier.verify_and_refine(text, entities)
             except Exception:
                 logger.warning("ner_pipeline.llm_verifier_failed", exc_info=True)
 
-        # Layer 5: LLM scan-for-missed
         if self.llm_verifier:
             try:
                 missed = await self.llm_verifier.find_missed_entities(text, entities)
@@ -305,10 +370,80 @@ class NERPipeline:
                     entities.extend(missed)
             except Exception:
                 logger.warning("ner_pipeline.find_missed_failed", exc_info=True)
-
-        entities = self.post_process(text, entities)
-        logger.info("ner_pipeline.analyze.done", entity_count=len(entities))
         return entities
+
+    async def _gemma_entity_map_pass(
+        self,
+        text: str,
+        base_entities: list[DetectedEntity],
+        *,
+        include_all_base: bool,
+    ) -> list[DetectedEntity]:
+        """Combine deterministic candidates with validated Gemma span proposals."""
+        if not self.llm_entity_map:
+            return base_entities
+
+        try:
+            gemma_entities = await self.llm_entity_map.extract(
+                text,
+                known_entities=base_entities,
+            )
+        except Exception:
+            logger.warning("ner_pipeline.llm_entity_map_failed", exc_info=True)
+            return base_entities
+
+        if include_all_base:
+            selected_base = list(base_entities)
+        else:
+            selected_base = [
+                entity
+                for entity in base_entities
+                if entity.entity_type in _HIGH_PRECISION_BASE_TYPES
+                or (entity.source_layer == "regex" and entity.score >= 0.85)
+            ]
+
+        self.last_entity_engine_report = {
+            "engine": self.entity_engine,
+            "base_count": len(base_entities),
+            "selected_base_count": len(selected_base),
+            "gemma_count": len(gemma_entities),
+        }
+        return [*selected_base, *gemma_entities]
+
+    async def _record_gemma_shadow_report(
+        self,
+        text: str,
+        base_entities: list[DetectedEntity],
+        classic_entities: list[DetectedEntity],
+    ) -> None:
+        """Run Gemma-map out of band and store a compact comparison report."""
+        if not self.llm_entity_map:
+            return
+        try:
+            gemma_entities = await self.llm_entity_map.extract(
+                text,
+                known_entities=base_entities,
+            )
+        except Exception:
+            logger.warning("ner_pipeline.llm_entity_map_shadow_failed", exc_info=True)
+            return
+
+        classic_keys = {
+            (entity.start, entity.end, entity.entity_type, entity.text)
+            for entity in classic_entities
+        }
+        gemma_keys = {
+            (entity.start, entity.end, entity.entity_type, entity.text)
+            for entity in gemma_entities
+        }
+        self.last_entity_engine_report = {
+            "engine": "gemma_shadow",
+            "base_count": len(base_entities),
+            "classic_count": len(classic_entities),
+            "gemma_count": len(gemma_entities),
+            "gemma_only_count": len(gemma_keys - classic_keys),
+            "classic_only_count": len(classic_keys - gemma_keys),
+        }
 
     def post_process(
         self,
@@ -332,6 +467,10 @@ class NERPipeline:
         entities = self._expand_organization_aliases(text, entities)
         entities = self._merge_adjacent_per(entities, text)
         entities = self._merge_overlapping(entities)
+        # Merging can create a larger PER span from two noisy adjacent guesses
+        # (e.g. "Материалы" + "Доверителя"). Run the precision gate once more
+        # after merge/overlap resolution so merged spans cannot bypass policy.
+        entities = apply_policy_decisions(text, entities, include_review=include_review)
         entities.sort(key=lambda e: (e.start, -e.score))
         return entities
 
@@ -530,7 +669,11 @@ class NERPipeline:
             prev_line = text[prev_line_start : max(0, line_start - 1)]
             window = f"{prev_line}\n{line}"
             is_toll_free = digits.startswith(("7800", "8800"))
-            if is_toll_free or _PUBLIC_SUPPORT_PHONE_CUE.search(window):
+            if (
+                is_toll_free
+                or _PUBLIC_SUPPORT_PHONE_CUE.search(window)
+                or _PUBLIC_SUPPORT_PHONE_CITY_CUE.search(line)
+            ):
                 logger.debug("ner_pipeline.public_support_phone_filtered", text=entity.text)
                 continue
 

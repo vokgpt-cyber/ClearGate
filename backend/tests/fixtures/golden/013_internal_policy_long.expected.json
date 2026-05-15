@@ -1,0 +1,30 @@
+{
+  "id": "013_internal_policy_long",
+  "text_file": "013_internal_policy_long.txt",
+  "description": "Long internal AI policy: redact EPAM bureau only, keep generic roles and public AI tools.",
+  "expected_entities": [
+    {"text": "Адвокатском Бюро ЕПАМ", "entity_type": "ORG"},
+    {"text": "Адвокатского Бюро ЕПАМ", "entity_type": "ORG"}
+  ],
+  "forbidden_entities": [
+    {"text": "Положение", "entity_type": "LOC"},
+    {"text": "Сотрудник", "entity_type": "PER"},
+    {"text": "Сотрудники", "entity_type": "PER"},
+    {"text": "Адвокатского Бюро", "entity_type": "ORG"},
+    {"text": "Адвокатского Бюро", "entity_type": "LOC"},
+    {"text": "ChatGPT", "entity_type": "ORG"},
+    {"text": "Alice AI", "entity_type": "PER"},
+    {"text": "Бюро", "entity_type": "LOC"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 1, "max": 3},
+    "PER": {"max": 0},
+    "LOC": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "Сотрудник", "entity_type": "PER", "score": 0.92},
+    {"text": "Сотрудники", "entity_type": "PER", "score": 0.91},
+    {"text": "Адвокатского Бюро", "entity_type": "ORG", "score": 0.9},
+    {"text": "Alice AI", "entity_type": "PER", "score": 0.89}
+  ]
+}

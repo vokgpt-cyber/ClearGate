@@ -3,23 +3,66 @@
   "text_file": "004_agency_percent.txt",
   "description": "Agency agreement with individual entrepreneur, percent fee, phone, email and INN.",
   "expected_entities": [
-    {"text": "№ А-09-2025", "entity_type": "RU_CONTRACT_NUMBER"},
-    {"text": "17.03.2025", "entity_type": "RU_DATE"},
-    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
-    {"text": "ИП Кравцов А.В.", "entity_type": "ORG"},
-    {"text": "5% (пять процентов)", "entity_type": "MON"},
-    {"text": "+7 (916) 123-45-67", "entity_type": "RU_PHONE"},
-    {"text": "lawyer@example.ru", "entity_type": "EMAIL_ADDRESS"},
-    {"text": "7801456328", "entity_type": "RU_INN"}
+    {
+      "text": "№ А-09-2025",
+      "entity_type": "RU_CONTRACT_NUMBER"
+    },
+    {
+      "text": "17.03.2025",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "АО «Норд-Хим»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "ИП Кравцов А.В.",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "5% (пять процентов)",
+      "entity_type": "MON"
+    },
+    {
+      "text": "+7 (916) 123-45-67",
+      "entity_type": "RU_PHONE"
+    },
+    {
+      "text": "lawyer@example.ru",
+      "entity_type": "EMAIL_ADDRESS"
+    },
+    {
+      "text": "7801456328",
+      "entity_type": "RU_INN"
+    }
   ],
   "forbidden_entities": [
-    {"text": "АГЕНТСКИЙ ДОГОВОР", "entity_type": "ORG"},
-    {"text": "Агент", "entity_type": "PER"},
-    {"text": "Принципала", "entity_type": "PER"}
+    {
+      "text": "АГЕНТСКИЙ ДОГОВОР",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Агент",
+      "entity_type": "PER"
+    },
+    {
+      "text": "Принципала",
+      "entity_type": "PER"
+    },
+    {
+      "text": "Контакты Агента",
+      "entity_type": "PER"
+    }
   ],
   "expected_type_counts": {
-    "ORG": {"min": 2},
-    "MON": {"min": 1},
-    "RU_PHONE": {"min": 1}
+    "ORG": {
+      "min": 2
+    },
+    "MON": {
+      "min": 1
+    },
+    "RU_PHONE": {
+      "min": 1
+    }
   }
 }

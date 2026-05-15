@@ -1,0 +1,100 @@
+{
+  "id": "016_trademark_license",
+  "text_file": "016_trademark_license.txt",
+  "description": "Trademark license: redact parties and amount, not Rospatent or generic role labels.",
+  "expected_entities": [
+    {
+      "text": "№ ТЗ-05-2025",
+      "entity_type": "RU_CONTRACT_NUMBER"
+    },
+    {
+      "text": "19 июня 2025",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "ООО «Бренд-Холдинг»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "АО «Норд-Хим»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Восемь миллионов пятьсот тысяч (8 500 000) рублей",
+      "entity_type": "MON"
+    },
+    {
+      "text": "7805678901",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1027805678901",
+      "entity_type": "RU_OGRN"
+    },
+    {
+      "text": "7801456328",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1187847012345",
+      "entity_type": "RU_OGRN"
+    }
+  ],
+  "forbidden_entities": [
+    {
+      "text": "ЛИЦЕНЗИОННЫЙ ДОГОВОР",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Роспатент",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Лицензиар",
+      "entity_type": "PER"
+    },
+    {
+      "text": "Лицензиат",
+      "entity_type": "PER"
+    },
+    {
+      "text": "30 дней",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "Санкт-Петербург",
+      "entity_type": "LOC"
+    },
+    {
+      "text": "Классы",
+      "entity_type": "PER"
+    },
+    {
+      "text": "Лицензиара",
+      "entity_type": "LOC"
+    }
+  ],
+  "expected_type_counts": {
+    "ORG": {
+      "min": 2
+    },
+    "MON": {
+      "min": 1
+    },
+    "RU_DATE": {
+      "min": 1
+    }
+  },
+  "llm_false_positives": [
+    {
+      "text": "Роспатент",
+      "entity_type": "ORG",
+      "score": 0.9
+    },
+    {
+      "text": "30 дней",
+      "entity_type": "RU_DATE",
+      "score": 0.9
+    }
+  ]
+}

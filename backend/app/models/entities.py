@@ -35,7 +35,7 @@ KnownEntityType = Literal[
 # and LLM verification may return types added after this release.
 EntityType: TypeAlias = str
 
-SourceLayer = Literal["regex", "ner", "llm", "llm-scan"]
+SourceLayer = Literal["regex", "ner", "llm", "llm-scan", "llm-map", "hybrid"]
 
 KNOWN_ENTITY_TYPES: tuple[str, ...] = (
     "PER",

@@ -115,3 +115,14 @@ Quality policy hotfix `pilot.12`:
   номера полисов, даты и конкретные фирмы вроде `Адвокатское бюро ЕПАМ`;
 - Deep Scan больше не применяет предложения автоматически. Он показывает QA-
   предложения отдельным списком, а пользователь сам выбирает, что включить.
+## Entity engine experiment:
+
+- default remains `CLEARGATE_ENTITY_ENGINE=classic`;
+- Gemma4 candidate-map modes are available only as an explicit A/B experiment:
+  `gemma_shadow`, `gemma_primary`, `hybrid_consensus`;
+- rollback is immediate: set `CLEARGATE_ENTITY_ENGINE=classic` in `.env` and
+  recreate backend;
+- see `docs/GEMMA_ENTITY_MAP_EXPERIMENT.md` in the repository for the current
+  golden-corpus comparison. On the committed synthetic set, classic is faster
+  and matches Gemma modes on quality, so do not enable Gemma entity-map modes
+  for pilot users by default.

@@ -1,0 +1,27 @@
+{
+  "id": "017_epam_bureau_cases",
+  "text_file": "017_epam_bureau_cases.txt",
+  "description": "Professional firm inflections: keep full EPAM bureau name, ignore generic bureau descriptors.",
+  "expected_entities": [
+    {"text": "Адвокатского Бюро ЕПАМ", "entity_type": "ORG"},
+    {"text": "Адвокатского бюро ЕПАМ", "entity_type": "ORG"}
+  ],
+  "forbidden_entities": [
+    {"text": "Сотрудниками", "entity_type": "PER"},
+    {"text": "Положение", "entity_type": "LOC"},
+    {"text": "Бюро", "entity_type": "LOC"},
+    {"text": "Бюро", "entity_type": "ORG"},
+    {"text": "Адвокатское Бюро", "entity_type": "ORG"},
+    {"text": "Доверителя", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 1, "max": 3},
+    "PER": {"max": 0},
+    "LOC": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "Бюро", "entity_type": "LOC", "score": 0.92},
+    {"text": "Адвокатское Бюро", "entity_type": "ORG", "score": 0.9},
+    {"text": "Доверителя", "entity_type": "PER", "score": 0.9}
+  ]
+}

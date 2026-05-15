@@ -1,0 +1,28 @@
+{
+  "id": "015_public_ai_tools_memo",
+  "text_file": "015_public_ai_tools_memo.txt",
+  "description": "Public AI tools must not be treated as sensitive organizations or persons.",
+  "expected_entities": [
+    {"text": "Адвокатского бюро ЕПАМ", "entity_type": "ORG"}
+  ],
+  "forbidden_entities": [
+    {"text": "ChatGPT", "entity_type": "ORG"},
+    {"text": "Claude", "entity_type": "ORG"},
+    {"text": "Gemini", "entity_type": "ORG"},
+    {"text": "DeepSeek", "entity_type": "ORG"},
+    {"text": "Alice AI", "entity_type": "PER"},
+    {"text": "Доверитель", "entity_type": "PER"},
+    {"text": "Контрагент", "entity_type": "PER"},
+    {"text": "Кандидат", "entity_type": "PER"},
+    {"text": "Сотрудник", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 1, "max": 2},
+    "PER": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "ChatGPT", "entity_type": "ORG", "score": 0.88},
+    {"text": "Alice AI", "entity_type": "PER", "score": 0.88},
+    {"text": "Доверитель", "entity_type": "PER", "score": 0.9}
+  ]
+}

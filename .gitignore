@@ -43,6 +43,7 @@ venv/
 ENV/
 .venv/
 .venv.*/
+.venv-codex/
 build/
 develop-eggs/
 dist/

@@ -3,41 +3,147 @@
   "text_file": "010_pdf_lease_amounts.txt",
   "description": "PDF-like warehouse lease with word-first amount and duration false positives.",
   "expected_entities": [
-    {"text": "№ С-11-2024", "entity_type": "RU_CONTRACT_NUMBER"},
-    {"text": "18 июля 2024", "entity_type": "RU_DATE"},
-    {"text": "ООО «Промышленная недвижимость СПб»", "entity_type": "ORG"},
-    {"text": "АО «Норд-Хим»", "entity_type": "ORG"},
-    {"text": "Санкт-Петербург, Полюстровский пр., д. 47Б, этажи 2-3.", "entity_type": "ADDR"},
-    {"text": "Двести тысяч (200 000) рублей", "entity_type": "MON"},
-    {"text": "18.07.2024", "entity_type": "RU_DATE"},
-    {"text": "17.06.2025", "entity_type": "RU_DATE"},
-    {"text": "7802987654", "entity_type": "RU_INN"},
-    {"text": "1027801234567", "entity_type": "RU_OGRN"},
-    {"text": "СПб, ул. Литераторов, д. 20", "entity_type": "ADDR"},
-    {"text": "ПАО ВТБ", "entity_type": "ORG"}
+    {
+      "text": "№ С-11-2024",
+      "entity_type": "RU_CONTRACT_NUMBER"
+    },
+    {
+      "text": "18 июля 2024",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "ООО «Промышленная недвижимость СПб»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "АО «Норд-Хим»",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "Санкт-Петербург, Полюстровский пр., д. 47Б, этажи 2-3",
+      "entity_type": "ADDR"
+    },
+    {
+      "text": "Двести тысяч (200 000) рублей",
+      "entity_type": "MON"
+    },
+    {
+      "text": "18.07.2024",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "17.06.2025",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "7802987654",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1027801234567",
+      "entity_type": "RU_OGRN"
+    },
+    {
+      "text": "СПб, ул. Литераторов, д. 20",
+      "entity_type": "ADDR"
+    },
+    {
+      "text": "ПАО ВТБ",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "7801456328",
+      "entity_type": "RU_INN"
+    },
+    {
+      "text": "1187847012345",
+      "entity_type": "RU_OGRN"
+    }
   ],
   "forbidden_entities": [
-    {"text": "ДОГОВОР АРЕНДЫ СКЛАДА", "entity_type": "ORG"},
-    {"text": "РЕКВИЗИТЫ", "entity_type": "ORG"},
-    {"text": "кв.м.", "entity_type": "LOC"},
-    {"text": "18%", "entity_type": "MON"},
-    {"text": "0,1%", "entity_type": "MON"},
-    {"text": "10 дней", "entity_type": "RU_DATE"},
-    {"text": "11 месяцев", "entity_type": "RU_DATE"},
-    {"text": "30 дней", "entity_type": "RU_DATE"}
+    {
+      "text": "ДОГОВОР АРЕНДЫ СКЛАДА",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "РЕКВИЗИТЫ",
+      "entity_type": "ORG"
+    },
+    {
+      "text": "кв.м.",
+      "entity_type": "LOC"
+    },
+    {
+      "text": "18%",
+      "entity_type": "MON"
+    },
+    {
+      "text": "0,1%",
+      "entity_type": "MON"
+    },
+    {
+      "text": "10 дней",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "11 месяцев",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "30 дней",
+      "entity_type": "RU_DATE"
+    },
+    {
+      "text": "Санкт-Петербург",
+      "entity_type": "LOC"
+    }
   ],
   "expected_type_counts": {
-    "ORG": {"min": 3},
-    "ADDR": {"min": 2},
-    "MON": {"min": 1}
+    "ORG": {
+      "min": 3
+    },
+    "ADDR": {
+      "min": 2
+    },
+    "MON": {
+      "min": 1
+    }
   },
   "llm_false_positives": [
-    {"text": "кв.м.", "entity_type": "LOC", "score": 0.9},
-    {"text": "18%", "entity_type": "MON", "score": 0.9},
-    {"text": "пеня", "entity_type": "MON", "score": 0.9},
-    {"text": "10 дней", "entity_type": "RU_DATE", "score": 0.86},
-    {"text": "11 месяцев", "entity_type": "RU_DATE", "score": 0.86},
-    {"text": "30 дней", "entity_type": "RU_DATE", "score": 0.86},
-    {"text": "РЕКВИЗИТЫ", "entity_type": "ORG", "score": 0.9}
+    {
+      "text": "кв.м.",
+      "entity_type": "LOC",
+      "score": 0.9
+    },
+    {
+      "text": "18%",
+      "entity_type": "MON",
+      "score": 0.9
+    },
+    {
+      "text": "пеня",
+      "entity_type": "MON",
+      "score": 0.9
+    },
+    {
+      "text": "10 дней",
+      "entity_type": "RU_DATE",
+      "score": 0.86
+    },
+    {
+      "text": "11 месяцев",
+      "entity_type": "RU_DATE",
+      "score": 0.86
+    },
+    {
+      "text": "30 дней",
+      "entity_type": "RU_DATE",
+      "score": 0.86
+    },
+    {
+      "text": "РЕКВИЗИТЫ",
+      "entity_type": "ORG",
+      "score": 0.9
+    }
   ]
 }

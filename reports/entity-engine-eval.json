@@ -1,0 +1,1158 @@
+{
+  "created_at": "2026-05-15T15:38:12.854394+00:00",
+  "golden_dir": "C:\\Users\\BAZA\\Documents\\Codex\\Cleargate\\ClearGate\\backend\\tests\\fixtures\\golden",
+  "engines": [
+    {
+      "engine": "classic_no_llm",
+      "expected_found": 123,
+      "expected_total": 123,
+      "expected_recall": 1.0,
+      "forbidden_hit_count": 0,
+      "count_violation_count": 0,
+      "extra_detected_count": 0,
+      "duration_ms": 291,
+      "cases": [
+        {
+          "case_id": "001_distribution_cny",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 20
+        },
+        {
+          "case_id": "002_loan_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 14
+        },
+        {
+          "case_id": "003_lease_address_kpp",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "RU_OGRN": 1,
+            "ADDR": 1,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 14
+        },
+        {
+          "case_id": "004_agency_percent",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "RU_PHONE": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_INN": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 12
+        },
+        {
+          "case_id": "005_nda_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "ADDR": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 11
+        },
+        {
+          "case_id": "006_reconciliation_act",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 2,
+            "ORG": 3,
+            "MON": 1,
+            "RU_BANK_ACCOUNT": 1,
+            "RU_BIK": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 11
+        },
+        {
+          "case_id": "007_credit_bank",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 2,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 12
+        },
+        {
+          "case_id": "008_service_crossborder",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 9
+        },
+        {
+          "case_id": "009_egrul_extract",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_OGRN": 1,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "ORG": 2,
+            "ADDR": 1,
+            "PER": 1,
+            "RU_DATE": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 15
+        },
+        {
+          "case_id": "010_pdf_lease_amounts",
+          "expected_total": 14,
+          "expected_found": 14,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 16,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 3,
+            "ORG": 5,
+            "ADDR": 2,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 27
+        },
+        {
+          "case_id": "011_dms_policy_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 9
+        },
+        {
+          "case_id": "012_internal_ai_policy",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 11
+        },
+        {
+          "case_id": "013_internal_policy_long",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 18
+        },
+        {
+          "case_id": "014_dms_ocr_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 12
+        },
+        {
+          "case_id": "015_public_ai_tools_memo",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 11
+        },
+        {
+          "case_id": "016_trademark_license",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 11,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 21
+        },
+        {
+          "case_id": "017_epam_bureau_cases",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 9
+        },
+        {
+          "case_id": "018_pdf_redline_noise",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 14
+        },
+        {
+          "case_id": "019_bank_details_address",
+          "expected_total": 13,
+          "expected_found": 13,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 15,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 5,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2,
+            "ADDR": 1,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 20
+        },
+        {
+          "case_id": "020_hr_employee_order",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "PER": 1,
+            "ADDR": 1,
+            "RU_PASSPORT": 1,
+            "RU_SNILS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 10
+        }
+      ]
+    },
+    {
+      "engine": "gemma_primary",
+      "expected_found": 123,
+      "expected_total": 123,
+      "expected_recall": 1.0,
+      "forbidden_hit_count": 0,
+      "count_violation_count": 0,
+      "extra_detected_count": 0,
+      "duration_ms": 42969,
+      "cases": [
+        {
+          "case_id": "001_distribution_cny",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2244
+        },
+        {
+          "case_id": "002_loan_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1801
+        },
+        {
+          "case_id": "003_lease_address_kpp",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "RU_OGRN": 1,
+            "ADDR": 1,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2309
+        },
+        {
+          "case_id": "004_agency_percent",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "RU_PHONE": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_INN": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2256
+        },
+        {
+          "case_id": "005_nda_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "ADDR": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1614
+        },
+        {
+          "case_id": "006_reconciliation_act",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 2,
+            "ORG": 3,
+            "MON": 1,
+            "RU_BANK_ACCOUNT": 1,
+            "RU_BIK": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2044
+        },
+        {
+          "case_id": "007_credit_bank",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 2,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1899
+        },
+        {
+          "case_id": "008_service_crossborder",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1704
+        },
+        {
+          "case_id": "009_egrul_extract",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_OGRN": 1,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "ORG": 2,
+            "ADDR": 1,
+            "PER": 1,
+            "RU_DATE": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2316
+        },
+        {
+          "case_id": "010_pdf_lease_amounts",
+          "expected_total": 14,
+          "expected_found": 14,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 16,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 3,
+            "ORG": 5,
+            "ADDR": 2,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 3518
+        },
+        {
+          "case_id": "011_dms_policy_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2324
+        },
+        {
+          "case_id": "012_internal_ai_policy",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 954
+        },
+        {
+          "case_id": "013_internal_policy_long",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2704
+        },
+        {
+          "case_id": "014_dms_ocr_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2583
+        },
+        {
+          "case_id": "015_public_ai_tools_memo",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 956
+        },
+        {
+          "case_id": "016_trademark_license",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 11,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2908
+        },
+        {
+          "case_id": "017_epam_bureau_cases",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2280
+        },
+        {
+          "case_id": "018_pdf_redline_noise",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 816
+        },
+        {
+          "case_id": "019_bank_details_address",
+          "expected_total": 13,
+          "expected_found": 13,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 15,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 5,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2,
+            "ADDR": 1,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 3802
+        },
+        {
+          "case_id": "020_hr_employee_order",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "PER": 1,
+            "ADDR": 1,
+            "RU_PASSPORT": 1,
+            "RU_SNILS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1927
+        }
+      ]
+    },
+    {
+      "engine": "hybrid_consensus",
+      "expected_found": 123,
+      "expected_total": 123,
+      "expected_recall": 1.0,
+      "forbidden_hit_count": 0,
+      "count_violation_count": 0,
+      "extra_detected_count": 0,
+      "duration_ms": 42746,
+      "cases": [
+        {
+          "case_id": "001_distribution_cny",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1944
+        },
+        {
+          "case_id": "002_loan_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1791
+        },
+        {
+          "case_id": "003_lease_address_kpp",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "RU_OGRN": 1,
+            "ADDR": 1,
+            "MON": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2307
+        },
+        {
+          "case_id": "004_agency_percent",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "RU_PHONE": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_INN": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2230
+        },
+        {
+          "case_id": "005_nda_roles",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "ADDR": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1618
+        },
+        {
+          "case_id": "006_reconciliation_act",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 2,
+            "ORG": 3,
+            "MON": 1,
+            "RU_BANK_ACCOUNT": 1,
+            "RU_BIK": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2067
+        },
+        {
+          "case_id": "007_credit_bank",
+          "expected_total": 8,
+          "expected_found": 8,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 8,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 2,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1938
+        },
+        {
+          "case_id": "008_service_crossborder",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 2,
+            "MON": 1,
+            "EMAIL_ADDRESS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1756
+        },
+        {
+          "case_id": "009_egrul_extract",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 9,
+          "detected_counts": {
+            "RU_OGRN": 1,
+            "RU_INN": 1,
+            "RU_KPP": 1,
+            "ORG": 2,
+            "ADDR": 1,
+            "PER": 1,
+            "RU_DATE": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2314
+        },
+        {
+          "case_id": "010_pdf_lease_amounts",
+          "expected_total": 14,
+          "expected_found": 14,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 16,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 3,
+            "ORG": 5,
+            "ADDR": 2,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 3542
+        },
+        {
+          "case_id": "011_dms_policy_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2309
+        },
+        {
+          "case_id": "012_internal_ai_policy",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 931
+        },
+        {
+          "case_id": "013_internal_policy_long",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2693
+        },
+        {
+          "case_id": "014_dms_ocr_form",
+          "expected_total": 5,
+          "expected_found": 5,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 5,
+          "detected_counts": {
+            "PER": 1,
+            "RU_DATE": 3,
+            "RU_POLICY_NUMBER": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2568
+        },
+        {
+          "case_id": "015_public_ai_tools_memo",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 968
+        },
+        {
+          "case_id": "016_trademark_license",
+          "expected_total": 9,
+          "expected_found": 9,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 11,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 4,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2905
+        },
+        {
+          "case_id": "017_epam_bureau_cases",
+          "expected_total": 2,
+          "expected_found": 2,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 2,
+          "detected_counts": {
+            "ORG": 2
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 2291
+        },
+        {
+          "case_id": "018_pdf_redline_noise",
+          "expected_total": 1,
+          "expected_found": 1,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 1,
+          "detected_counts": {
+            "ORG": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 841
+        },
+        {
+          "case_id": "019_bank_details_address",
+          "expected_total": 13,
+          "expected_found": 13,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 15,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "ORG": 5,
+            "MON": 1,
+            "RU_INN": 2,
+            "RU_OGRN": 2,
+            "ADDR": 1,
+            "RU_BIK": 1,
+            "RU_BANK_ACCOUNT": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 3795
+        },
+        {
+          "case_id": "020_hr_employee_order",
+          "expected_total": 7,
+          "expected_found": 7,
+          "expected_missing": [],
+          "forbidden_hits": [],
+          "count_violations": [],
+          "detected_count": 7,
+          "detected_counts": {
+            "RU_CONTRACT_NUMBER": 1,
+            "RU_DATE": 1,
+            "PER": 1,
+            "ADDR": 1,
+            "RU_PASSPORT": 1,
+            "RU_SNILS": 1,
+            "RU_PHONE": 1
+          },
+          "extra_detected_count": 0,
+          "extra_detected": [],
+          "duration_ms": 1928
+        }
+      ]
+    }
+  ]
+}

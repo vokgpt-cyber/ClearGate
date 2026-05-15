@@ -41,7 +41,7 @@ def _trim_span(text: str, start: int, end: int) -> tuple[int, int]:
     """Trim separators which are useful in regexes but unsafe to redact."""
     while start < end and text[start].isspace():
         start += 1
-    while end > start and text[end - 1] in " \t\r\n,;:":
+    while end > start and text[end - 1] in " \t\r\n,;:|":
         end -= 1
     return start, end
 
@@ -823,6 +823,33 @@ class AddressRuRecognizer(GroupRegexRecognizer):
             supported_language=supported_language,
         )
 
+    def analyze(
+        self,
+        text: str,
+        entities: list[str],
+        nlp_artifacts: object | None = None,
+        regex_flags: int | None = None,
+    ) -> list[RecognizerResult]:
+        results = super().analyze(text, entities, nlp_artifacts, regex_flags)
+        adjusted: list[RecognizerResult] = []
+        for result in results:
+            start, end = result.start, result.end
+            while end > start and text[end - 1] in " .|":
+                end -= 1
+            if end <= start:
+                continue
+            adjusted.append(
+                RecognizerResult(
+                    entity_type=result.entity_type,
+                    start=start,
+                    end=end,
+                    score=result.score,
+                    analysis_explanation=result.analysis_explanation,
+                    recognition_metadata=result.recognition_metadata,
+                )
+            )
+        return adjusted
+
 
 class OrganizationRuRecognizer(GroupRegexRecognizer):
     """Recognizes common Russian legal-entity and sole-proprietor names."""
@@ -850,6 +877,14 @@ class OrganizationRuRecognizer(GroupRegexRecognizer):
                 _REGEX_FLAGS,
             ),
             0.93,
+            "value",
+        ),
+        (
+            re.compile(
+                r"(?P<value>\b(?:ООО|ОАО|АО|ПАО|ЗАО)\s+[А-ЯЁA-Z][А-ЯЁA-Z0-9&'’.\-]{1,40})(?=\s*(?:[|,;\n]|$))",
+                _REGEX_FLAGS,
+            ),
+            0.94,
             "value",
         ),
         (

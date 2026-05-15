@@ -59,12 +59,18 @@ class Settings(BaseSettings):
     # BGE-M3 embedder URL (Phase 2 retrieval).
     embedder_url: str = "http://bge-embedder:80"
 
-    # Kill switch for the LLM verification layer. On CPU-only pilot boxes
-    # LLM verification adds 30-60 s per request; IT can disable it without
-    # touching code by setting CLEARGATE_DISABLE_LLM_LAYER=true in .env.
-    # Layers 1-2 (regex + spaCy NER) keep working — anonymisation quality
-    # drops slightly but interactivity is restored.
+    # Kill switch for the optional LLM verification layer. This must be used
+    # deliberately: the primary anonymizer remains rules + spaCy + GLiNER, and
+    # quality-critical deployments should keep the verifier enabled unless QA
+    # explicitly approves the trade-off for a specific environment.
     cleargate_disable_llm_layer: bool = False
+
+    # Experimental entity-map engine. Keep ``classic`` as the safe default.
+    # Other values are for controlled A/B testing:
+    #   gemma_shadow      -> compute Gemma map but return classic output
+    #   gemma_primary     -> strict regex IDs + validated Gemma map
+    #   hybrid_consensus  -> current deterministic candidates + Gemma map
+    cleargate_entity_engine: str = "classic"
 
     # Auth (Sprint B.2) — HMAC secret for signing HttpOnly session cookies.
     # Must be stable across restarts (otherwise all users are logged out on

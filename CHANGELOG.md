@@ -8,6 +8,9 @@
 ## [Unreleased]
 
 ### Added
+- Experimental Gemma4 entity-map engine modes behind `CLEARGATE_ENTITY_ENGINE`
+  plus a 20-document synthetic golden-corpus evaluator. The production default
+  remains `classic`.
 - Документация и ADR (7 архитектурных решений)
 - Task files для Claude Code (10 задач MVP)
 - Pre-commit hooks, pyproject.toml, docker-compose

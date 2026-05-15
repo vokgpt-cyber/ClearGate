@@ -1,0 +1,26 @@
+{
+  "id": "018_pdf_redline_noise",
+  "text_file": "018_pdf_redline_noise.txt",
+  "description": "PDF OCR from redline-like policy text: role words and deleted text should not become PII.",
+  "expected_entities": [
+    {"text": "Адвокатского Бюро ЕПАМ", "entity_type": "ORG"}
+  ],
+  "forbidden_entities": [
+    {"text": "Положение", "entity_type": "LOC"},
+    {"text": "Сотрудник", "entity_type": "PER"},
+    {"text": "Сотрудниками", "entity_type": "PER"},
+    {"text": "доверителю", "entity_type": "PER"},
+    {"text": "Доверитель", "entity_type": "PER"},
+    {"text": "Контрагент", "entity_type": "PER"},
+    {"text": "Кандидат", "entity_type": "PER"}
+  ],
+  "expected_type_counts": {
+    "ORG": {"min": 1, "max": 2},
+    "PER": {"max": 0},
+    "LOC": {"max": 0}
+  },
+  "llm_false_positives": [
+    {"text": "Сотрудник", "entity_type": "PER", "score": 0.93},
+    {"text": "доверителю", "entity_type": "PER", "score": 0.9}
+  ]
+}

@@ -33,3 +33,22 @@ When adding a regression:
 5. Add `llm_false_positives` when deep scan previously degraded the markup.
 
 Real documents do not belong in this corpus. Use the private QA workflow instead.
+
+## Entity Engine Evaluation
+
+The synthetic corpus also has a multi-engine evaluator:
+
+```powershell
+.\.venv-codex\Scripts\python.exe scripts\evaluate_entity_engines.py `
+  --engines classic_no_llm,gemma_primary,hybrid_consensus `
+  --spacy-model ru_core_news_sm `
+  --gliner-model none `
+  --ollama-model gemma4:26b `
+  --ollama-host http://localhost:11434 `
+  --output reports\entity-engine-eval.json `
+  --fail-on-regression
+```
+
+As of 2026-05-15 the committed 20-document synthetic corpus contains 123
+must-detect entities plus explicit forbidden false positives. The latest report
+is committed in `reports/entity-engine-eval.md`.

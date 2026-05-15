@@ -66,8 +66,10 @@ class Session:
             spacy_model=self.spacy_model,
             gliner_model=settings.gliner_model,
             ollama_model=settings.ollama_model,
+            ollama_host=settings.ollama_host,
             enable_llm_layer=enable_llm_layer,
             default_gliner_labels=settings.default_gliner_labels_list,
+            entity_engine=settings.cleargate_entity_engine,
         )
         self.registry = EntityRegistry(
             master_key=master_key,

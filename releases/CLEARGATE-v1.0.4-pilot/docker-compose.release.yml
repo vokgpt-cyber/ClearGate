@@ -23,6 +23,7 @@ services:
       CLEARGATE_PROFILE: gpu
       OLLAMA_HOST: ${CLEARGATE_LLM_HOST:-http://ollama:11434}
       OLLAMA_MODEL: ${CLEARGATE_LLM_MODEL:-gemma4:26b}
+      CLEARGATE_ENTITY_ENGINE: ${CLEARGATE_ENTITY_ENGINE:-classic}
       EMBEDDER_URL: http://bge-embedder:80
       CLEARGATE_DISABLE_LLM_LAYER: ${CLEARGATE_DISABLE_LLM_LAYER:-false}
       SPACY_MODEL: ${SPACY_MODEL:-ru_core_news_lg}
